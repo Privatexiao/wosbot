@@ -104,6 +104,7 @@ public PolarTerrorHuntingRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTa
 
     private enum RallyLaunchOutcome {
         SUCCESS,
+        BEAR_TRAP_PROTECTED,
         SEARCH_FAILED,
         NO_SPECIAL_REWARDS,
         RALLY_BUTTON_MISSING,
@@ -238,6 +239,10 @@ private record RallyLaunchResult(RallyLaunchOutcome outcome, String detail) {
             if (result.outcome() == RallyLaunchOutcome.MARCH_QUEUE_FULL) {
                 logInfo(routineLogPolarTerrorHuntingLine("March queue popup detected after Rally. Waiting for a march slot to return."));
                 reschedule(LocalDateTime.now().plusMinutes(UNKNOWN_MARCH_RETRY_MINUTES));
+                return;
+            }
+
+            if (result.outcome() == RallyLaunchOutcome.BEAR_TRAP_PROTECTED) {
                 return;
             }
 
@@ -432,6 +437,10 @@ private RallyLaunchResult launchSingleRallyFlow(int polarLevel, boolean useFlag,
         logInfo(routineLogPolarTerrorHuntingLine(String.format(
                 "Deployment decision: Deploy found at %s score=%.2f; pressing",
                 deploy.getPoint(), deploy.getMatchScore())));
+        if (deferIfBearTrapBlocksRallyStart()) {
+            return fail(RallyLaunchOutcome.BEAR_TRAP_PROTECTED,
+                    "Bear Trap protection became active before deployment");
+        }
         tapPoint(deploy.getPoint());
         sleepTask(2000);
 
@@ -757,6 +766,10 @@ private RallyLaunchResult openUpRallyMenu() {
         logInfo(routineLogPolarTerrorHuntingLine(String.format(
                 "Rally button found at %s score=%.2f",
                 rallyButton.getPoint(), rallyButton.getMatchScore())));
+        if (deferIfBearTrapBlocksRallyStart()) {
+            return fail(RallyLaunchOutcome.BEAR_TRAP_PROTECTED,
+                    "Bear Trap protection became active before opening the rally");
+        }
         tapPoint(rallyButton.getPoint());
         sleepTask(1000);
 

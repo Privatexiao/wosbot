@@ -326,6 +326,9 @@ public class MercenaryEventRoutine extends DelayedTask {
             return;
         }
 
+        if (rally && deferIfBearTrapBlocksRallyStart()) {
+            return;
+        }
         logInfo(rally ? "Rallying mercenary." : "Attacking mercenary.");
         tapPoint(attackOrRallyButton.getPoint());
         sleepTask(1000);
@@ -364,6 +367,10 @@ public class MercenaryEventRoutine extends DelayedTask {
             logWarning("Deployment blocked by troops or stamina. No march was sent or deducted.");
             pressBack();
             reschedule(LocalDateTime.now().plusMinutes(5));
+            return;
+        }
+
+        if (rally && deferIfBearTrapBlocksRallyStart()) {
             return;
         }
 

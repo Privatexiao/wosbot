@@ -2,6 +2,7 @@ package dev.frostguard.engine.schedule;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -124,6 +125,37 @@ public class TaskQueue {
         return ref != null && taskBacklog.stream()
                 .filter(t -> t.equals(ref))
                 .anyMatch(t -> t.getDelay(TimeUnit.SECONDS) <= withinSec);
+    }
+
+    public synchronized boolean scheduleOrRescheduleQueuedTask(
+            TpDailyTaskEnum kind,
+            AccountDescriptor updatedProfile,
+            LocalDateTime nextRun) {
+        if (kind == null || updatedProfile == null || nextRun == null) {
+            return false;
+        }
+        DelayedTask ref = DelayedTaskRegistry.create(kind, updatedProfile);
+        if (ref == null) {
+            return false;
+        }
+        DelayedTask existing = taskBacklog.stream().filter(ref::equals).findFirst().orElse(null);
+        if (existing == null) {
+            if (isExecutingTask(kind)) {
+                return false;
+            }
+            ref.reschedule(nextRun);
+            ref.setRecurring(true);
+            taskBacklog.offer(ref);
+            emitInfoTask(ref, "Enqueued with aligned schedule " + nextRun.format(TS_FMT));
+            return true;
+        }
+
+        taskBacklog.remove(existing);
+        existing.setProfile(updatedProfile);
+        existing.reschedule(nextRun);
+        taskBacklog.offer(existing);
+        emitInfoTask(existing, "Schedule realigned to " + nextRun.format(TS_FMT));
+        return true;
     }
 
         // Changed by pernerch | Date: 2026-07-02 | Why: expose overdue runnable snapshot so
@@ -356,6 +388,8 @@ public class TaskQueue {
     }
 
     private void tryIdleInjection() {
+        if (BearTrapProtectionPolicy.isFullPauseActive(profile)) return;
+
         InjectionRule pending = GlobalMonitorService.getInstance().pollPendingInjection(profile.getId());
         if (pending == null) return;
         broadcastStatus("Injection: " + pending.getRuleName());
@@ -373,6 +407,9 @@ public class TaskQueue {
     private boolean executeTask(DelayedTask task) {
         if (shuttingDown) {
             emitInfo("Skipping task execution during shutdown: " + task.getTaskName());
+            return false;
+        }
+        if (deferForBearTrapProtection(task)) {
             return false;
         }
         if (task.getTpTask() == TpDailyTaskEnum.INITIALIZE && !shouldRunInitialize()) {
@@ -422,6 +459,54 @@ public class TaskQueue {
             }
         }
         return ok;
+    }
+
+    private boolean deferForBearTrapProtection(DelayedTask task) {
+        BearTrapProtectionPolicy.Decision decision =
+                BearTrapProtectionPolicy.evaluateTask(profile, task.getTpTask());
+        if (!decision.blocked()) {
+            return false;
+        }
+
+        LocalDateTime retryAt = LocalDateTime.ofInstant(
+                decision.releaseAt(), ZoneId.systemDefault());
+        task.reschedule(retryAt);
+        enqueue(task);
+
+        String reason = decision.reason() == BearTrapProtectionPolicy.BlockReason.ALL_TASKS
+                ? "all scheduled tasks are paused"
+                : "the task can start a rally";
+        emitInfoTask(task, "Bear Trap " + decision.trapNumbers()
+                + " protection window is active and " + reason
+                + ". Deferred until " + retryAt.format(TS_FMT));
+        try {
+            recordDeferredState(task);
+            ScheduleService.obtain().persistNextSchedule(
+                    profile, task.getTpTask(), retryAt, distinctTaskLabel(task));
+        } catch (Exception ex) {
+            emitWarnTask(task, "Could not persist Bear Trap deferral: " + ex.getMessage());
+        }
+        return true;
+    }
+
+    private void recordDeferredState(DelayedTask task) {
+        String customLabel = distinctTaskLabel(task);
+        TaskStateData previous = TaskManagementService.shared().lookupTaskState(
+                profile.getId(), task.getTpDailyTaskId(), customLabel);
+        TaskStateData deferred = TaskStateData.of(
+                profile.getId(),
+                task.getTpDailyTaskId(),
+                customLabel,
+                true,
+                false,
+                previous != null ? previous.getLastExecutionTime() : task.getLastExecutionTime(),
+                task.getScheduled());
+        TaskManagementService.shared().recordTaskState(profile.getId(), deferred);
+    }
+
+    private String distinctTaskLabel(DelayedTask task) {
+        Object key = task.getDistinctKey();
+        return key != null ? key.toString() : null;
     }
 
     // ---- helpers -----------------------------------------------------------

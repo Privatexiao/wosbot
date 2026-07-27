@@ -32,6 +32,7 @@ public class HeroMissionEventRoutine extends DelayedTask {
     private final TaskManagementService taskManagementService = TaskManagementService.shared();
     private int flagNumber = 0;
     private boolean useFlag = false;
+    private boolean bearProtectionDeferred = false;
 
     public HeroMissionEventRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
         super(profile, tpTask);
@@ -39,6 +40,7 @@ public class HeroMissionEventRoutine extends DelayedTask {
 
     @Override
     protected void execute() {
+        bearProtectionDeferred = false;
 
         flagNumber = profile.getConfig(ConfigurationKeyEnum.HERO_MISSION_FLAG_INT, Integer.class);
         useFlag = flagNumber > 0;
@@ -122,7 +124,7 @@ public class HeroMissionEventRoutine extends DelayedTask {
         }
 
         claimAllRewards();
-        if (!rallyReaper()) {
+        if (!rallyReaper() && !bearProtectionDeferred) {
             reschedule(LocalDateTime.now().plusMinutes(5));
         }
     }
@@ -165,6 +167,10 @@ public class HeroMissionEventRoutine extends DelayedTask {
             return false;
         }
 
+        if (deferIfBearTrapBlocksRallyStart()) {
+            bearProtectionDeferred = true;
+            return false;
+        }
         tapPoint(rallyButton.getPoint());
         sleepTask(1000);
 
@@ -200,6 +206,10 @@ public class HeroMissionEventRoutine extends DelayedTask {
             return false;
         }
 
+        if (deferIfBearTrapBlocksRallyStart()) {
+            bearProtectionDeferred = true;
+            return false;
+        }
         tapPoint(deploy.getPoint());
         sleepTask(2000);
 

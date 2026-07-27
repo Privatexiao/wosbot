@@ -11,6 +11,7 @@ import dev.frostguard.engine.helper.BearTrapHelper;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 import dev.frostguard.engine.nav.RallyFlagCoordinates;
 import dev.frostguard.engine.schedule.DelayedTask;
+import dev.frostguard.engine.schedule.BearTrapParticipationSchedule;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.engine.schedule.TaskQueue;
 import dev.frostguard.engine.service.BotOcrEngine;
@@ -123,7 +124,7 @@ private static final PointData FREE_MARCHES_OCR_BR_VALUE = new PointData(246, 22
 
 private static final int DEFAULT_TRAP_NUMBER_VALUE = 1;
 
-private static final int DEFAULT_PREPARATION_TIME_MINUTES_MS = 5;
+private static final int DEFAULT_PREPARATION_TIME_MINUTES_MS = 10;
 
 private static final int DEFAULT_OWN_RALLY_FLAG_VALUE = 1;
 
@@ -295,7 +296,7 @@ private void refreshNextWindowDateTime() {
 
         ConfigService.obtain().writeAccountSetting(
                 profile,
-                BEAR_TRAP_SCHEDULE_DATETIME_STRING,
+                selectedTrapScheduleKey(),
                 formattedDateTime);
     }
 
@@ -540,9 +541,9 @@ private boolean resolveConfigBoolean(ConfigurationKeyEnum key, boolean defaultVa
     }
 
 private void hydrateConfiguration() {
-        this.referenceTrapTime = resolveConfigDateTime(BEAR_TRAP_SCHEDULE_DATETIME_STRING);
-        this.trapPreparationTime = resolveConfigInt(BEAR_TRAP_PREPARATION_TIME_INT, DEFAULT_PREPARATION_TIME_MINUTES_MS);
         this.trapNumber = resolveConfigInt(BEAR_TRAP_NUMBER_INT, DEFAULT_TRAP_NUMBER_VALUE);
+        this.referenceTrapTime = resolveConfigDateTime(selectedTrapScheduleKey());
+        this.trapPreparationTime = resolveConfigInt(BEAR_TRAP_PREPARATION_TIME_INT, DEFAULT_PREPARATION_TIME_MINUTES_MS);
         this.callOwnRally = resolveConfigBoolean(BEAR_TRAP_CALL_RALLY_BOOL, DEFAULT_CALL_OWN_RALLY_VALUE);
         this.joinRally = resolveConfigBoolean(BEAR_TRAP_JOIN_RALLY_BOOL, DEFAULT_JOIN_RALLY_VALUE);
         this.usePets = resolveConfigBoolean(BEAR_TRAP_ACTIVE_PETS_BOOL, DEFAULT_USE_PETS_VALUE);
@@ -560,6 +561,10 @@ private void hydrateConfiguration() {
                 "Configuration loaded - Trap: %d, PrepTime: %dmin, OwnRally: %s (flag:%d), JoinRally: %s (flags:%s), Pets: %s, Recall: %s, SharedEmulator: %s",
                 trapNumber, trapPreparationTime, callOwnRally, ownRallyFlag, joinRally, joinFlags, usePets,
                 recallTroops, sharedEmulator)));
+    }
+
+private ConfigurationKeyEnum selectedTrapScheduleKey() {
+        return BearTrapParticipationSchedule.scheduleKey(trapNumber);
     }
 
 private int resolveNextJoinFlag() {
