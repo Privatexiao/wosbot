@@ -306,6 +306,12 @@ public record MarchesAvailable(boolean available, LocalDateTime rescheduleTo) {
 	}
 
 private void tryRescheduleFromCooldownFlow() {
+		int completedRewardsClaimed = redeemCompletedMissions();
+		if (completedRewardsClaimed > 0) {
+			logInfo(routineLogIntelligenceLine(
+					"Claimed " + completedRewardsClaimed + " completed Intel reward(s) before cooldown scheduling."));
+		}
+
 		logInfo(routineLogIntelligenceLine("Zero intel items detected. Attempting to read the cooldown timer."));
 
 		LocalDateTime cooldown = readCooldownFlow(
@@ -416,9 +422,10 @@ private MarchesAvailable resolveMarchesAvailable() {
 		return new MarchesAvailable(false, retryAt);
 	}
 
-private void redeemCompletedMissions() {
+private int redeemCompletedMissions() {
 		intelScreenHelper.ensureOnIntelScreen();
 		logInfo(routineLogIntelligenceLine("Scanning for completed missions to claim."));
+		int claimedRewards = 0;
 
 		for (int i = 0; i < 2; i++) {
 			logDebug(routineLogIntelligenceLine("Scanning for completed missions. Attempt " + (i + 1) + "."));
@@ -435,11 +442,14 @@ private void redeemCompletedMissions() {
 
 			for (ImageSearchResultData completedMission : completed) {
 				tapPoint(completedMission.getPoint());
+				claimedRewards++;
 				sleepTask(500);
 				tapRandomPoint(new PointData(700, 1270), new PointData(710, 1280), 3, 100);
 				sleepTask(500);
 			}
 		}
+
+		return claimedRewards;
 	}
 
 private void requeueGatherTasksFlow() {
