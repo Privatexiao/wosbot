@@ -1823,7 +1823,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
 
     @FXML
     private void openGithub() { /* internal */
-        openWebPage("https://github.com/Shederator/frostguard");
+        openWebPage("https://github.com/Shederator/wosbot");
     }
 
     private void openWebPage(String uri) { /* internal */
