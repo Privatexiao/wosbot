@@ -43,6 +43,7 @@ EMBED_FOOTER_LIMIT = 2048
 # and falls back to a link when the file is larger, because a failed upload
 # would otherwise swallow the notification entirely.
 ATTACHMENT_LIMIT_BYTES = 8 * 1024 * 1024
+MAX_CHANGE_FIELDS = 4
 
 STATUS_STYLE = {
     # Amber distinguishes an intentionally unstable Nightly from the green
@@ -89,6 +90,33 @@ def first_line(text: str) -> str:
     return (text or "").strip().splitlines()[0].strip() if (text or "").strip() else ""
 
 
+def change_fields(changes: str, repository: str) -> list[dict]:
+    """Split Nightly changes across readable fields within Discord's limits."""
+    lines = [truncate(line, EMBED_FIELD_VALUE_LIMIT) for line in changes.splitlines()
+             if line.strip()]
+    chunks: list[list[str]] = []
+    for line in lines:
+        if not chunks or len("\n".join([*chunks[-1], line])) > EMBED_FIELD_VALUE_LIMIT:
+            chunks.append([line])
+        else:
+            chunks[-1].append(line)
+
+    if len(chunks) > MAX_CHANGE_FIELDS:
+        chunks = chunks[-MAX_CHANGE_FIELDS:]
+        release_url = f"https://github.com/{repository}/releases/tag/nightly"
+        link = f"• Earlier changes: [view the complete Nightly changelog]({release_url})"
+        while chunks[0] and len("\n".join([link, *chunks[0]])) > EMBED_FIELD_VALUE_LIMIT:
+            chunks[0].pop(0)
+        chunks[0].insert(0, link)
+
+    return [{
+        "name": "Changes since the previous Nightly"
+        if index == 0 else "Changes since the previous Nightly (continued)",
+        "value": "\n".join(chunk),
+        "inline": False,
+    } for index, chunk in enumerate(chunks)]
+
+
 def redact(text: str) -> str:
     """Strip anything that looks like a webhook token out of diagnostics."""
     return re.sub(
@@ -127,11 +155,7 @@ def build_payload(args: argparse.Namespace) -> dict:
                 "launcher. Java 21 or newer is required."
             )
             if args.changes:
-                fields.append({
-                    "name": "Changes since the previous Nightly",
-                    "value": truncate(args.changes, EMBED_FIELD_VALUE_LIMIT),
-                    "inline": False,
-                })
+                fields.extend(change_fields(args.changes, args.repository))
         elif args.run_url:
             description_parts.append(
                 f"Build passed. The artifact is attached to "
