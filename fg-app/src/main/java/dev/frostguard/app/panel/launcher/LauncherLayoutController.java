@@ -197,6 +197,8 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
     private boolean allQueuesPaused = false;
     final private Map<Long, QueueProfileStateData> activeQueueStates = new HashMap<>();
     private Timeline autoStartTimeline;
+    private Timeline uptimeTimeline;
+    private long uptimeStartedAtNanos;
     private int autoStartSecondsRemaining;
     private boolean isStartup = true;
 
@@ -222,6 +224,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         initializeExternalLibraries();
         initializeTelegramBot();
         showVersion();
+        initializeUptime();
         buttonStartStop.setDisable(false);
         buttonPauseResume.setDisable(true);
         configurePauseMenu();
@@ -229,6 +232,26 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         initializeQuickNav();
         initializeSearch();
         setupSocialIcons();
+    }
+
+    private void initializeUptime() { /* internal */
+        uptimeStartedAtNanos = System.nanoTime();
+        updateUptimeLabel();
+        uptimeTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateUptimeLabel()));
+        uptimeTimeline.setCycleCount(Animation.INDEFINITE);
+        uptimeTimeline.play();
+    }
+
+    private void updateUptimeLabel() { /* internal */
+        long elapsedSeconds = (System.nanoTime() - uptimeStartedAtNanos) / 1_000_000_000L;
+        labelRunTime.setText("Uptime: " + formatUptime(elapsedSeconds));
+    }
+
+    static String formatUptime(long elapsedSeconds) {
+        long hours = elapsedSeconds / 3_600;
+        long minutes = elapsedSeconds % 3_600 / 60;
+        long seconds = elapsedSeconds % 60;
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     private void setupSocialIcons() { /* internal */
