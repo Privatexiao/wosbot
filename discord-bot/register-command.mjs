@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Synchronise the guild-scoped /build-pr command and remove its global copy.
+ * Synchronise Frostguard's guild-scoped commands and remove global copies.
  *
  * Frostguard currently targets one Discord server. Keeping only the guild
- * command prevents Discord from showing a duplicate global + guild command.
+ * commands prevents Discord from showing duplicate global + guild entries.
  */
 
 import { pathToFileURL } from "node:url";
@@ -30,6 +30,16 @@ export const buildPrCommand = {
   ],
   dm_permission: false,
 };
+
+export const reportingGuidanceCommand = {
+  name: "please-dont-make-me-say-it-again",
+  description: "Politely point bug reports and suggestions in the right direction",
+  dm_permission: false,
+  // Keep the public reminder available to members who can moderate messages.
+  default_member_permissions: "8192",
+};
+
+export const guildCommands = [buildPrCommand, reportingGuidanceCommand];
 
 async function clientCredentialsToken(fetchImpl, applicationId, clientSecret) {
   const body = new URLSearchParams({
@@ -69,7 +79,7 @@ async function discordRequest(fetchImpl, accessToken, url, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
-export async function syncCommand(env = process.env, fetchImpl = fetch) {
+export async function syncCommands(env = process.env, fetchImpl = fetch) {
   const clientSecret = env.DISCORD_CLIENT_SECRET;
   const applicationId = env.DISCORD_APPLICATION_ID;
   const guildId = env.DISCORD_GUILD_ID;
@@ -81,15 +91,19 @@ export async function syncCommand(env = process.env, fetchImpl = fetch) {
   const accessToken = await clientCredentialsToken(fetchImpl, applicationId, clientSecret);
 
   const guildUrl = `${API}/applications/${applicationId}/guilds/${guildId}/commands`;
-  const registered = await discordRequest(fetchImpl, accessToken, guildUrl, {
-    method: "POST",
-    body: JSON.stringify(buildPrCommand),
-  });
+  const registered = [];
+  for (const command of guildCommands) {
+    registered.push(await discordRequest(fetchImpl, accessToken, guildUrl, {
+      method: "POST",
+      body: JSON.stringify(command),
+    }));
+  }
 
   const globalUrl = `${API}/applications/${applicationId}/commands`;
   const globalCommands = await discordRequest(fetchImpl, accessToken, globalUrl);
+  const guildCommandNames = new Set(guildCommands.map(({ name }) => name));
   const duplicates = globalCommands.filter(
-    (candidate) => candidate.name === buildPrCommand.name && candidate.type === 1,
+    (candidate) => guildCommandNames.has(candidate.name) && candidate.type === 1,
   );
   for (const duplicate of duplicates) {
     await discordRequest(
@@ -103,17 +117,20 @@ export async function syncCommand(env = process.env, fetchImpl = fetch) {
   return { registered, deletedGlobalIds: duplicates.map(({ id }) => id) };
 }
 
+// Retain the original export for callers that predate multiple commands.
+export const syncCommand = syncCommands;
+
 async function main() {
-  const result = await syncCommand();
-  console.log(
-    `Registered guild /${result.registered.name} (id ${result.registered.id}).`,
-  );
+  const result = await syncCommands();
+  for (const command of result.registered) {
+    console.log(`Registered guild /${command.name} (id ${command.id}).`);
+  }
   if (result.deletedGlobalIds.length) {
     console.log(
-      `Deleted ${result.deletedGlobalIds.length} global /build-pr duplicate(s).`,
+      `Deleted ${result.deletedGlobalIds.length} global command duplicate(s).`,
     );
   } else {
-    console.log("No global /build-pr duplicate was present.");
+    console.log("No global command duplicate was present.");
   }
 }
 
