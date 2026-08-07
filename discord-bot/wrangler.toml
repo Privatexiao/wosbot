@@ -1,4 +1,4 @@
-# Cloudflare Worker config for the /build-pr Discord command.
+# Cloudflare Worker config for Frostguard Discord commands.
 #
 # Deploy with:  npx wrangler deploy
 # Secrets (never put these in this file):
@@ -23,3 +23,7 @@ DISCORD_APPLICATION_ID = "1532693190879215767"
 ALLOWED_CHANNEL_IDS = "1533460326111117322"
 # Minutes to wait between test builds (flood control).
 COOLDOWN_MINUTES = "10"
+# Channels linked by /please-dont-make-me-say-it-again. Leave either empty to
+# use the readable #bug-reports or #suggestions fallback instead of a link.
+BUG_REPORT_CHANNEL_ID = ""
+SUGGESTIONS_CHANNEL_ID = ""

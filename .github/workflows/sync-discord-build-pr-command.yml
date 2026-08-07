@@ -1,4 +1,4 @@
-name: Sync Discord Build PR Command
+name: Sync Discord Commands
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions: {}
 
 jobs:
   sync:
-    name: Keep the guild command and remove the global duplicate
+    name: Keep guild commands and remove global duplicates
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

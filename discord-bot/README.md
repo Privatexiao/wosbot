@@ -1,4 +1,19 @@
-# `/build-pr` — combined PR test builds from Discord
+# Frostguard Discord commands
+
+This Worker provides two guild-scoped commands:
+
+- `/build-pr` requests combined PR test builds.
+- `/please-dont-make-me-say-it-again` gives a friendly public reminder to put
+  bugs and suggestions in their dedicated channels and explain the underlying
+  problem or goal. It is limited to members with **Manage Messages**.
+
+Set `BUG_REPORT_CHANNEL_ID` and `SUGGESTIONS_CHANNEL_ID` in `wrangler.toml` to
+make the reminder link the server's channels. Without them it displays the
+plain-text fallbacks `#bug-reports` and `#suggestions`. Re-run the command-sync
+workflow after adding or changing commands; channel changes only require a
+Worker deployment.
+
+## `/build-pr` — combined PR test builds from Discord
 
 Lets Discord users request a public Windows test build that
 combines one or more **open** pull requests (including stacked PRs) without
@@ -126,10 +141,10 @@ DISCORD_CLIENT_SECRET=... DISCORD_APPLICATION_ID=... \
 DISCORD_GUILD_ID=<your server id> node register-command.mjs
 ```
 
-The script requires a guild ID, upserts that guild's `/build-pr`, and removes
-any global `/build-pr` registered for the same application. This intentionally
-leaves one command in the Frostguard server instead of a duplicate global and
-guild entry.
+The script requires a guild ID, upserts all configured guild commands, and
+removes global copies registered for the same application. This intentionally
+leaves one guild copy of each command instead of duplicate global and guild
+entries.
 
 Alternatively, store the client secret as the GitHub repository secret
 `DISCORD_CLIENT_SECRET` and run **Sync Discord Build PR Command** from the
@@ -185,6 +200,8 @@ only needs to:
 | `wrangler.toml` | `DISCORD_APPLICATION_ID` | application (client) ID |
 | `wrangler.toml` | `ALLOWED_CHANNEL_IDS` | CSV channel allowlist (empty = all) |
 | `wrangler.toml` | `COOLDOWN_MINUTES` | flood-control gap between builds |
+| `wrangler.toml` | `BUG_REPORT_CHANNEL_ID` | channel linked by the reporting reminder |
+| `wrangler.toml` | `SUGGESTIONS_CHANNEL_ID` | channel linked by the reporting reminder |
 | worker secret | `DISCORD_PUBLIC_KEY` | interaction signature verification |
 | worker secret | `GITHUB_TOKEN` | fine-grained dispatch-only token |
 | repo secret | `DISCORD_CLIENT_SECRET` | obtains a short-lived command-update token; no bot installation required |
