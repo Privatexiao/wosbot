@@ -21,6 +21,7 @@ import dev.frostguard.api.domain.ProfileStatusData;
 import dev.frostguard.api.domain.ProfileTagData;
 import dev.frostguard.engine.service.LoggingService;
 import dev.frostguard.engine.service.ProfileService;
+import dev.frostguard.engine.service.ScheduleService;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -65,6 +66,13 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
 public class ProfileManagerLayoutController implements IProfileChangeObserver {
+
+	private static final java.util.Set<ConfigurationKeyEnum> BEAR_PARTICIPATION_SCHEDULE_KEYS = java.util.Set.of(
+			ConfigurationKeyEnum.BEAR_TRAP_EVENT_BOOL,
+			ConfigurationKeyEnum.BEAR_TRAP_NUMBER_INT,
+			ConfigurationKeyEnum.BEAR_TRAP_PREPARATION_TIME_INT,
+			ConfigurationKeyEnum.BEAR_TRAP_SCHEDULE_DATETIME_STRING,
+			ConfigurationKeyEnum.BEAR_TRAP_TIMER_2_SCHEDULE_DATETIME_STRING);
 
 	private static final String SORT_NAME = "Name";
 	private static final String SORT_PRIORITY = "Priority";
@@ -1090,7 +1098,12 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 			}
 
 			loadedProfile.setConfig(key, value);
-			profileQueueExecutor.submit(() -> profileManagerActionController.saveProfile(loadedProfile));
+			profileQueueExecutor.submit(() -> {
+				boolean saved = profileManagerActionController.saveProfile(loadedProfile);
+				if (saved && BEAR_PARTICIPATION_SCHEDULE_KEYS.contains(key)) {
+					ScheduleService.obtain().realignBearTrapParticipationSchedule(loadedProfile.getId());
+				}
+			});
 		} catch (Exception e) {
 			e.printStackTrace();
 			LoggingService.obtain().emit(

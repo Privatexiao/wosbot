@@ -185,7 +185,7 @@ public abstract class AbstractProfileController implements IProfileLoadListener,
 		priorityListView.setOnChangeCallback(() -> publishWhenReady(configKey, priorityListView.toConfigString()));
 	}
 
-	private void publishWhenReady(ConfigurationKeyEnum configKey, Object value) {
+	protected final void publishWhenReady(ConfigurationKeyEnum configKey, Object value) {
 		if (!isLoadingProfile && profileObserver != null) {
 			profileObserver.notifyProfileChange(configKey, value);
 		}

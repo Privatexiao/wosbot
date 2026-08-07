@@ -1451,7 +1451,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
                     if (Character.isISOControl(c)) return;
 
                     Node focusOwner = navSearchField.getScene().getFocusOwner();
-                    if (focusOwner instanceof TextInputControl) return;
+                    if (isTextEntryControl(focusOwner)) return;
 
                     navSearchField.requestFocus();
                     navSearchField.appendText(character);
@@ -1460,6 +1460,13 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
                 });
             }
         });
+    }
+
+    private static boolean isTextEntryControl(Node node) {
+        return node instanceof TextInputControl
+                || node instanceof DatePicker datePicker && datePicker.isEditable()
+                || node instanceof Spinner<?> spinner && spinner.isEditable()
+                || node instanceof ComboBox<?> comboBox && comboBox.isEditable();
     }
 
     private void showSearchResults(String query) { /* internal */
