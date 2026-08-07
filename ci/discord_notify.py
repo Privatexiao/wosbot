@@ -237,7 +237,8 @@ def retry_after_seconds(error: urllib.error.HTTPError, body: str) -> float:
 
 
 def post(webhook: str, body: bytes, content_type: str, timeout: float,
-         method: str = "POST") -> bytes:
+         method: str = "POST",
+         credential_name: str = "DISCORD_NIGHTLY_WEBHOOK_URL") -> bytes:
     """Send a webhook request with retries for rate limits and transient errors."""
     last_error = "no attempt was made"
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -283,7 +284,7 @@ def post(webhook: str, body: bytes, content_type: str, timeout: float,
 
     raise SystemExit(
         f"::error::Could not deliver the Discord notification ({last_error}). "
-        "Check that the DISCORD_NIGHTLY_WEBHOOK_URL secret still points at a "
+        f"Check that the {credential_name} secret still points at a "
         "live webhook."
     )
 

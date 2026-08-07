@@ -445,7 +445,7 @@ async function handleButton(env, interaction) {
           `Building PRs ${state.order.map((n) => `#${n}`).join(", ")} with pinned heads.`,
           "",
           "The result (download link, conflict report or failure) will be",
-          "posted as a reply here when the workflow finishes. Progress: " +
+          "posted here and you will be mentioned when the workflow finishes. Progress: " +
           `<https://github.com/${env.GITHUB_REPO}/actions/workflows/pr-test-build.yml>`,
         ].join("\n"),
         footer: undefined,
