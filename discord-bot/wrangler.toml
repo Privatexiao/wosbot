@@ -25,5 +25,5 @@ ALLOWED_CHANNEL_IDS = "1533460326111117322"
 COOLDOWN_MINUTES = "10"
 # Channels linked by /please-dont-make-me-say-it-again. Leave either empty to
 # use the readable #bug-reports or #suggestions fallback instead of a link.
-BUG_REPORT_CHANNEL_ID = ""
-SUGGESTIONS_CHANNEL_ID = ""
+BUG_REPORT_CHANNEL_ID = "1479015808775749793"
+SUGGESTIONS_CHANNEL_ID = "1479016010924298312"
