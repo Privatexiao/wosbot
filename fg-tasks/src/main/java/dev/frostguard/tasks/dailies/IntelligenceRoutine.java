@@ -269,17 +269,22 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 	private boolean hasAnyIntelMissionAvailableFlow() {
 		intelScreenHelper.ensureOnIntelScreen();
 
-		if (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_COMPLETED, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+		if (!beastsEnabled && !fireBeastsEnabled && !survivorCampsEnabled && !explorationsEnabled) {
+			logWarning(routineLogIntelligenceLine("All Intel task types (Beasts, Fire Beasts, Survivor Camps, Explorations) are disabled in account profile configuration!"));
+		}
+
+		if (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_COMPLETED, INTEL_CARD_SEARCH_CONFIG).isFound()
+				|| templateSearchHelper.locatePattern(TemplatesEnum.INTEL_COMPLETED, INTEL_CARD_SEARCH_CONFIG).isFound()) {
 			return true;
 		}
 
-		if (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_AGNES, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+		if (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_AGNES, INTEL_CARD_SEARCH_CONFIG).isFound()
+				|| templateSearchHelper.locatePattern(TemplatesEnum.INTEL_AGNES, INTEL_CARD_SEARCH_CONFIG).isFound()) {
 			return true;
 		}
 
-		if (fireBeastsEnabled && templateSearchHelper
-				.locatePatternMono(TemplatesEnum.INTEL_FIRE_BEAST, INTEL_CARD_SEARCH_CONFIG)
-				.isFound()) {
+		if (fireBeastsEnabled && (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_FIRE_BEAST, INTEL_CARD_SEARCH_CONFIG).isFound()
+				|| templateSearchHelper.locatePattern(TemplatesEnum.INTEL_FIRE_BEAST, INTEL_CARD_SEARCH_CONFIG).isFound())) {
 			return true;
 		}
 
@@ -291,7 +296,8 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 			};
 
 			for (TemplatesEnum template : beastTemplates) {
-				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()
+						|| templateSearchHelper.locatePattern(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
 					return true;
 				}
 			}
@@ -303,7 +309,8 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 					TemplatesEnum.INTEL_SURVIVOR_GRAYSCALE
 			};
 			for (TemplatesEnum template : survivorTemplates) {
-				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()
+						|| templateSearchHelper.locatePattern(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
 					return true;
 				}
 			}
@@ -315,7 +322,8 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 					TemplatesEnum.INTEL_JOURNEY_GRAYSCALE
 			};
 			for (TemplatesEnum template : journeyTemplates) {
-				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()
+						|| templateSearchHelper.locatePattern(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
 					return true;
 				}
 			}
