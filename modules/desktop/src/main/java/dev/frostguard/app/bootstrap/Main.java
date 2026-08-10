@@ -15,6 +15,14 @@ public class Main {
 
 	public static void main(String[] args) {
 		try {
+			if (java.util.Arrays.asList(args).contains("--frostguard-native-smoke-test")) {
+				System.out.println("Frostguard native launcher smoke test passed");
+				System.out.println("channel=" + WORKSPACE.paths().channel().directoryName());
+				System.out.println("workspace=" + WORKSPACE.paths().root());
+				System.out.println("applicationDir=" + System.getProperty("user.dir"));
+				WORKSPACE.close();
+				return;
+			}
 			boolean isHeadless = false;
 			for (String arg : args) {
 				if ("--headless".equalsIgnoreCase(arg)) {

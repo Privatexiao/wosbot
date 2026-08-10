@@ -64,6 +64,7 @@ public class TelegramLayoutController {
 
     /** Shortcut name placed in the Windows Startup folder. */
     private static final String SHORTCUT_NAME = "Frostguard-Telegram-Watcher.lnk";
+    private static final String WATCHER_LAUNCHER_PROPERTY = "frostguard.watcher.launcher";
 
     @FXML
     public void initialize() {
@@ -283,15 +284,15 @@ public class TelegramLayoutController {
     }
 
     private void registerStartup() {
-        File batFile = resolveBatFile();
-        if (batFile == null) {
+        File watcherLauncher = resolveWatcherLauncher();
+        if (watcherLauncher == null) {
             showError("Cannot locate the Telegram Watcher launcher.");
             checkBoxAutoStart.setSelected(false);
             return;
         }
         Path shortcut = startupFolder().resolve(SHORTCUT_NAME);
         try {
-            Path workspaceLauncher = writeWorkspaceWatcherLauncher(batFile);
+            Path workspaceLauncher = writeWorkspaceWatcherLauncher(watcherLauncher);
             String vbs =
                 "Set oWS = WScript.CreateObject(\"WScript.Shell\")\n" +
                 "Set oLink = oWS.CreateShortcut(\"" + escapeVbsString(shortcut.toString()) + "\")\n" +
@@ -320,20 +321,23 @@ public class TelegramLayoutController {
         }
     }
 
-    private static Path writeWorkspaceWatcherLauncher(File batFile) throws IOException {
+    private static Path writeWorkspaceWatcherLauncher(File watcherLauncher) throws IOException {
         WorkspacePaths workspace = WorkspacePaths.current();
         Path launcher = workspace.watcher().resolve("Start-Frostguard-Watcher.cmd");
         Files.createDirectories(launcher.getParent());
-        Files.writeString(launcher, workspaceWatcherLauncherContent(batFile.toPath(), workspace));
+        Files.writeString(launcher, workspaceWatcherLauncherContent(watcherLauncher.toPath(), workspace));
         return launcher;
     }
 
-    static String workspaceWatcherLauncherContent(Path batFile, WorkspacePaths workspace) {
+    static String workspaceWatcherLauncherContent(Path watcherLauncher, WorkspacePaths workspace) {
+        String command = watcherLauncher.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".exe")
+                ? "start \"\" \"" + escapeBatchValue(watcherLauncher.toAbsolutePath().normalize().toString()) + "\""
+                : "call \"" + escapeBatchValue(watcherLauncher.toAbsolutePath().normalize().toString()) + "\"";
         return "@echo off\r\n"
                 + "setlocal DisableDelayedExpansion\r\n"
                 + "set \"FROSTGUARD_WORKSPACE=" + escapeBatchValue(workspace.root().toString()) + "\"\r\n"
                 + "set \"FROSTGUARD_CHANNEL=" + workspace.channel().directoryName() + "\"\r\n"
-                + "call \"" + escapeBatchValue(batFile.toAbsolutePath().normalize().toString()) + "\"\r\n";
+                + command + "\r\n";
     }
 
     private static String escapeBatchValue(String value) {
@@ -377,7 +381,12 @@ public class TelegramLayoutController {
      * Walks up the directory tree from several anchor points to find the watcher launcher.
      * Typical layout: frostguard/modules/desktop/target/frostguard-desktop-X.jar  →  frostguard/fg-watcher.bat
      */
-    private File resolveBatFile() {
+    private File resolveWatcherLauncher() {
+        String packagedLauncher = System.getProperty(WATCHER_LAUNCHER_PROPERTY, "").trim();
+        if (!packagedLauncher.isBlank()) {
+            File launcher = new File(packagedLauncher);
+            if (launcher.isFile()) return launcher;
+        }
         // 1. Walk up from the bot JAR path shown in the UI (most reliable)
         String jarPath = textFieldBotJarPath.getText().trim();
         if (!jarPath.isBlank()) {

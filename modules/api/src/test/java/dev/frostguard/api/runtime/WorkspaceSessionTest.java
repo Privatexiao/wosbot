@@ -47,6 +47,18 @@ class WorkspaceSessionTest {
     }
 
     @Test
+    void initializesACompanionWorkspaceWithoutTakingTheApplicationLock() {
+        WorkspacePaths paths = new WorkspacePaths(tempDir.resolve("watcher-only"), RuntimeChannel.STABLE);
+
+        WorkspaceSession.initializeLayout(paths);
+
+        assertTrue(paths.marker().toFile().isFile());
+        try (WorkspaceSession ignored = WorkspaceSession.open(paths)) {
+            assertTrue(paths.applicationLock().toFile().isFile());
+        }
+    }
+
+    @Test
     void derivesDefaultPortsAndIdentitiesFromTheWorkspace() {
         WorkspacePaths first = new WorkspacePaths(tempDir.resolve("bot-1"), RuntimeChannel.STABLE);
         WorkspacePaths second = new WorkspacePaths(tempDir.resolve("bot-2"), RuntimeChannel.STABLE);

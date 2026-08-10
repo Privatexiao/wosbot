@@ -13,7 +13,7 @@
 
     <artifactId>frostguard-desktop-package</artifactId>
     <name>Frostguard Desktop Packaging</name>
-    <description>Platform packaging inputs and transitional desktop bundle</description>
+    <description>Platform packaging inputs, native application images, and installers</description>
     <packaging>pom</packaging>
 
     <dependencies>
@@ -114,6 +114,59 @@
                             </resources>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>stage-template-browser-assets</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/input/templates</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.parent.basedir}/modules/vision/src/main/resources/templates</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stage-custom-task-examples</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/input/custom_tasks</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.parent.basedir}/examples/custom-tasks</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>prepare-jpackage-launchers</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/jpackage</outputDirectory>
+                            <encoding>UTF-8</encoding>
+                            <propertiesEncoding>UTF-8</propertiesEncoding>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/windows</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>Frostguard-Watcher.properties</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -138,4 +191,155 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>windows-app-image</id>
+            <activation>
+                <property>
+                    <name>windows.app.image</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-windows-app-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <condition property="jpackage.executable"
+                                                value="${java.home}/bin/jpackage.exe"
+                                                else="${java.home}/bin/jpackage">
+                                            <os family="windows" />
+                                        </condition>
+                                        <delete dir="${project.build.directory}/app-image/Frostguard" />
+                                        <mkdir dir="${project.build.directory}/app-image" />
+                                        <exec executable="powershell.exe" failonerror="true">
+                                            <arg value="-NoProfile" />
+                                            <arg value="-NonInteractive" />
+                                            <arg value="-ExecutionPolicy" />
+                                            <arg value="Bypass" />
+                                            <arg value="-File" />
+                                            <arg path="${maven.multiModuleProjectDirectory}/build-support/packaging/write_windows_icon.ps1" />
+                                            <arg value="-InputPath" />
+                                            <arg path="${maven.multiModuleProjectDirectory}/modules/desktop/src/main/resources/icons/appIcon.png" />
+                                            <arg value="-OutputPath" />
+                                            <arg path="${project.build.directory}/jpackage/Frostguard.ico" />
+                                        </exec>
+                                        <exec executable="${jpackage.executable}" failonerror="true">
+                                            <arg value="--type" />
+                                            <arg value="app-image" />
+                                            <arg value="--dest" />
+                                            <arg path="${project.build.directory}/app-image" />
+                                            <arg value="--input" />
+                                            <arg path="${project.build.directory}/input" />
+                                            <arg value="--name" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--app-version" />
+                                            <arg value="${project.version}" />
+                                            <arg value="--vendor" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--description" />
+                                            <arg value="Frostguard automation desktop application" />
+                                            <arg value="--icon" />
+                                            <arg path="${project.build.directory}/jpackage/Frostguard.ico" />
+                                            <arg value="--main-jar" />
+                                            <arg value="frostguard-desktop-${project.version}.jar" />
+                                            <arg value="--main-class" />
+                                            <arg value="dev.frostguard.app.bootstrap.Main" />
+                                            <arg value="--java-options" />
+                                            <arg value="--enable-native-access=ALL-UNNAMED" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.channel=stable" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Duser.dir=$APPDIR" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.launcher=$APPDIR/../Frostguard.exe" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe" />
+                                            <arg value="--add-launcher" />
+                                            <arg value="FrostguardWatcher=${project.build.directory}/jpackage/Frostguard-Watcher.properties" />
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>windows-installer</id>
+            <activation>
+                <property>
+                    <name>windows.installer</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-windows-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <condition property="jpackage.executable"
+                                                value="${java.home}/bin/jpackage.exe"
+                                                else="${java.home}/bin/jpackage">
+                                            <os family="windows" />
+                                        </condition>
+                                        <delete dir="${project.build.directory}/installers" />
+                                        <mkdir dir="${project.build.directory}/installers" />
+                                        <exec executable="${jpackage.executable}" failonerror="true">
+                                            <arg value="--verbose" />
+                                            <arg value="--type" />
+                                            <arg value="exe" />
+                                            <arg value="--dest" />
+                                            <arg path="${project.build.directory}/installers" />
+                                            <arg value="--name" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--app-version" />
+                                            <arg value="${project.version}" />
+                                            <arg value="--vendor" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--description" />
+                                            <arg value="Frostguard automation desktop application" />
+                                            <arg value="--app-image" />
+                                            <arg path="${project.build.directory}/app-image/Frostguard" />
+                                            <!-- Nested per-user install paths can trigger inconsistent WiX
+                                                 directory validation (JDK-8226534). -->
+                                            <arg value="--install-dir" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--win-per-user-install" />
+                                            <arg value="--win-dir-chooser" />
+                                            <arg value="--win-menu" />
+                                            <arg value="--win-menu-group" />
+                                            <arg value="Frostguard" />
+                                            <arg value="--win-shortcut-prompt" />
+                                            <arg value="--win-upgrade-uuid" />
+                                            <arg value="fa0d66f6-1f7d-4da8-9701-88f7b4570797" />
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

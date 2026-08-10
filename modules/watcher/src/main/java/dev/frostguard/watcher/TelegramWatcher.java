@@ -1,6 +1,7 @@
 package dev.frostguard.watcher;
 
 import dev.frostguard.api.runtime.WorkspacePaths;
+import dev.frostguard.api.runtime.WorkspaceSession;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -58,6 +60,9 @@ public class TelegramWatcher {
     private static final Logger logger = LoggerFactory.getLogger(TelegramWatcher.class);
     private static final String API_BASE         = "https://api.telegram.org/bot";
     private static final int    LONG_POLL_TIMEOUT = 30;
+    private static final String APP_LAUNCHER_PROPERTY = "frostguard.launcher";
+    private static final String WATCHER_LAUNCHER_PROPERTY = "frostguard.watcher.launcher";
+    private static final String NATIVE_SMOKE_ARGUMENT = "--frostguard-native-smoke-test";
 
     public static Path configFilePath() {
         return WorkspacePaths.current().watcherConfig();
@@ -66,6 +71,19 @@ public class TelegramWatcher {
     // ── entry point ───────────────────────────────────────────────────────────
 
     public static void main(String[] args) throws Exception {
+        WorkspacePaths workspace = WorkspacePaths.current();
+        WorkspaceSession.initializeLayout(workspace);
+        if (java.util.Arrays.asList(args).contains(NATIVE_SMOKE_ARGUMENT)) {
+            loadConfig();
+            Files.writeString(workspace.cache().resolve("native-watcher-smoke.properties"),
+                    "channel=" + workspace.channel().directoryName() + "\n"
+                            + "workspace=" + workspace.root() + "\n"
+                            + "applicationDir=" + System.getProperty("user.dir") + "\n"
+                            + "appLauncher=" + System.getProperty(APP_LAUNCHER_PROPERTY, "") + "\n"
+                            + "watcherLauncher=" + System.getProperty(WATCHER_LAUNCHER_PROPERTY, "") + "\n",
+                    StandardCharsets.UTF_8);
+            return;
+        }
         System.out.println("==============================================");
         System.out.println("  Frostguard – Telegram Watcher");
         System.out.println("  Config: " + configFilePath());
@@ -127,6 +145,7 @@ public class TelegramWatcher {
     private final long          allowedChatId;
     private final File          botJar;
     private final File          botJarDir;
+    private final File          botLauncher;
     private final int           localPort;
     private final String        workspaceId;
     private final HttpClient    httpClient;
@@ -145,6 +164,8 @@ public class TelegramWatcher {
         this.allowedChatId = allowedChatId;
         this.botJar        = new File(jarPath);
         this.botJarDir     = botJar.getParentFile();
+        String launcherPath = System.getProperty(APP_LAUNCHER_PROPERTY, "").trim();
+        this.botLauncher   = launcherPath.isBlank() ? null : new File(launcherPath);
         this.localPort     = localPort;
         this.workspaceId   = WorkspacePaths.current().identity();
         this.httpClient    = HttpClient.newBuilder()
@@ -267,29 +288,32 @@ public class TelegramWatcher {
                 sendMessage(chatId, "ℹ️ Bot app is already running.");
                 return;
             }
-            if (!botJar.exists()) {
+            if ((botLauncher == null || !botLauncher.isFile()) && !botJar.exists()) {
                 sendMessage(chatId, "❌ JAR not found at:\n`" + botJar.getAbsolutePath()
                         + "`\nCheck the path in the Telegram config panel.");
                 return;
             }
             try {
                 String javaExe = ProcessHandle.current().info().command().orElse("java");
-                java.util.List<String> command = new java.util.ArrayList<>();
-                command.add(javaExe);
-                command.add("-D" + WorkspacePaths.WORKSPACE_PROPERTY + "=" + WorkspacePaths.current().root());
-                command.add("-D" + WorkspacePaths.CHANNEL_PROPERTY + "="
-                        + WorkspacePaths.current().channel().directoryName());
-                command.add("-jar");
-                command.add(botJar.getAbsolutePath());
-                if (headless) command.add("--headless");
+                java.util.List<String> command = botLaunchCommand(
+                        botLauncher == null ? null : botLauncher.toPath(),
+                        Path.of(javaExe), botJar.toPath(), WorkspacePaths.current(), headless);
                 ProcessBuilder pb = new ProcessBuilder(command);
                 
                 // Use the parent of the bot jar as the working directory, unless it's in a 'target' dir
                 // (to support Maven multi-module dev workflows where the root is one level up).
-                File workDir = botJarDir;
-                if ("target".equalsIgnoreCase(botJarDir.getName())
-                        && botJarDir.toPath().endsWith(Path.of("modules", "desktop", "target"))) {
-                    workDir = botJarDir.getParentFile().getParentFile().getParentFile();
+                File workDir;
+                if (botLauncher != null && botLauncher.isFile()) {
+                    workDir = botLauncher.getParentFile();
+                    pb.environment().put("FROSTGUARD_WORKSPACE", WorkspacePaths.current().root().toString());
+                    pb.environment().put("FROSTGUARD_CHANNEL",
+                            WorkspacePaths.current().channel().directoryName());
+                } else {
+                    workDir = botJarDir;
+                    if ("target".equalsIgnoreCase(botJarDir.getName())
+                            && botJarDir.toPath().endsWith(Path.of("modules", "desktop", "target"))) {
+                        workDir = botJarDir.getParentFile().getParentFile().getParentFile();
+                    }
                 }
                 pb.directory(workDir);
 
@@ -306,6 +330,25 @@ public class TelegramWatcher {
         } finally {
             launchLock.unlock();
         }
+    }
+
+    static java.util.List<String> botLaunchCommand(Path nativeLauncher, Path javaExecutable,
+            Path botJar, WorkspacePaths workspace, boolean headless) {
+        java.util.List<String> command = new java.util.ArrayList<>();
+        if (nativeLauncher != null) {
+            command.add(nativeLauncher.toAbsolutePath().normalize().toString());
+        } else {
+            command.add(javaExecutable.toString());
+            command.add("-D" + WorkspacePaths.WORKSPACE_PROPERTY + "=" + workspace.root());
+            command.add("-D" + WorkspacePaths.CHANNEL_PROPERTY + "="
+                    + workspace.channel().directoryName());
+            command.add("-jar");
+            command.add(botJar.toAbsolutePath().normalize().toString());
+        }
+        if (headless) {
+            command.add("--headless");
+        }
+        return command;
     }
 
     private void handleKill(long chatId) {

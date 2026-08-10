@@ -55,6 +55,7 @@ import dev.frostguard.vision.convert.GameTimeUtils;
 public class TaskQueue {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskQueue.class);
+    private static final String APP_LAUNCHER_PROPERTY = "frostguard.launcher";
     private static final long   TICK_INTERVAL_MS = 999L;
     protected static final DateTimeFormatter TS_FMT =
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
@@ -808,18 +809,16 @@ public class TaskQueue {
             if (wake.isBefore(LocalDateTime.now())) wake = LocalDateTime.now().plusMinutes(1);
             String tm = DateTimeFormatter.ofPattern("HH:mm").format(wake);
             String dt = DateTimeFormatter.ofPattern("MM/dd/yyyy").format(wake);
-            String jar = resolveDesktopJarForAutostart();
             WorkspacePaths workspace = WorkspacePaths.current();
+            java.nio.file.Path runtimeCache = workspace.cache().resolve("runtime");
+            java.nio.file.Files.createDirectories(runtimeCache);
+            String taskCommand = resolveAutostartCommand(workspace, runtimeCache);
             String scheduledTaskName = "Frostguard_AutoStart_"
                     + Integer.toUnsignedString(workspace.root().toString().hashCode(), 36);
             new ProcessBuilder("schtasks","/create","/TN",scheduledTaskName,"/TR",
-                    "javaw.exe -D" + WorkspacePaths.WORKSPACE_PROPERTY + "=\"" + workspace.root()
-                            + "\" -D" + WorkspacePaths.CHANNEL_PROPERTY + "=" + workspace.channel().directoryName()
-                            + " -jar \""+jar+"\" --autostart",
+                    taskCommand,
                     "/SC","ONCE","/ST",tm,"/SD",dt,"/RL","HIGHEST","/F")
                     .redirectErrorStream(true).start().waitFor();
-            java.nio.file.Path runtimeCache = workspace.cache().resolve("runtime");
-            java.nio.file.Files.createDirectories(runtimeCache);
             java.nio.file.Path ws = runtimeCache.resolve("fg_wake.ps1");
             java.nio.file.Files.writeString(ws,
                     "$s=New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Priority 1\n"+
@@ -837,6 +836,36 @@ public class TaskQueue {
 
     private String resolveDesktopJarForAutostart() throws java.io.IOException {
         return resolveDesktopJarForAutostart(java.nio.file.Path.of(System.getProperty("user.dir")));
+    }
+
+    private String resolveAutostartCommand(WorkspacePaths workspace, java.nio.file.Path runtimeCache)
+            throws java.io.IOException {
+        String nativeLauncher = System.getProperty(APP_LAUNCHER_PROPERTY, "").trim();
+        if (!nativeLauncher.isBlank()) {
+            java.nio.file.Path launcher = java.nio.file.Path.of(nativeLauncher).toAbsolutePath().normalize();
+            if (java.nio.file.Files.isRegularFile(launcher)) {
+                java.nio.file.Path wrapper = runtimeCache.resolve("frostguard-autostart.cmd");
+                java.nio.file.Files.writeString(wrapper,
+                        nativeAutostartLauncherContent(launcher, workspace));
+                return "\"" + wrapper + "\"";
+            }
+        }
+        String jar = resolveDesktopJarForAutostart();
+        return "javaw.exe -D" + WorkspacePaths.WORKSPACE_PROPERTY + "=\"" + workspace.root()
+                + "\" -D" + WorkspacePaths.CHANNEL_PROPERTY + "=" + workspace.channel().directoryName()
+                + " -jar \"" + jar + "\" --autostart";
+    }
+
+    static String nativeAutostartLauncherContent(java.nio.file.Path launcher, WorkspacePaths workspace) {
+        return "@echo off\r\n"
+                + "setlocal DisableDelayedExpansion\r\n"
+                + "set \"FROSTGUARD_WORKSPACE=" + escapeBatchValue(workspace.root().toString()) + "\"\r\n"
+                + "set \"FROSTGUARD_CHANNEL=" + workspace.channel().directoryName() + "\"\r\n"
+                + "start \"\" \"" + escapeBatchValue(launcher.toString()) + "\" --autostart\r\n";
+    }
+
+    private static String escapeBatchValue(String value) {
+        return value.replace("^", "^^").replace("%", "%%");
     }
 
     static String resolveDesktopJarForAutostart(java.nio.file.Path workingDirectory)
