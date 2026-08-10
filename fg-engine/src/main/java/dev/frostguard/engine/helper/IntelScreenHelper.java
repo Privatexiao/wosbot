@@ -43,7 +43,7 @@ public class IntelScreenHelper {
         log.info("Checking Intel screen");
         if (isIntelScreenActive()) { log.info("Already on Intel"); return; }
 
-        log.warn("Not on Intel — routing via world view");
+        log.warn("Not on Intel - routing via world view");
         nav.ensureCorrectScreenLocation(LaunchPoint.WORLD);
 
         for (int i = 1; i <= MAX_NAV_PASSES; i++) {
@@ -56,7 +56,7 @@ public class IntelScreenHelper {
             pause(1000);
             if (isIntelScreenActive()) { log.info("Intel reached"); return; }
 
-            log.warn("Tap failed — backing out");
+            log.warn("Tap failed - backing out");
             emu.pressBack(dev);
             pause(500);
         }
