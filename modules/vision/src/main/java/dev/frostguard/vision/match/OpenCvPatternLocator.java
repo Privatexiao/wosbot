@@ -29,6 +29,7 @@ import dev.frostguard.api.domain.SizeData;
 import dev.frostguard.api.configs.TemplatesEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 /**
  * Performs normalised cross-correlation between device screen captures
@@ -1943,7 +1944,7 @@ public class OpenCvPatternLocator {
         String[] segments = resourcePath.split("/");
         String fileName = segments[segments.length - 1];
 
-        Path targetDir = Path.of("lib", "opencv");
+        Path targetDir = WorkspacePaths.current().cache().resolve("native").resolve("opencv");
         Files.createDirectories(targetDir);
         Path dest = targetDir.resolve(fileName);
 

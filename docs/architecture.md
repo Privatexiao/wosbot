@@ -134,7 +134,18 @@ FXML and CSS resources live in `modules/desktop/src/main/resources/layout` and `
 
 ## Runtime Decomposition
 
-At runtime, one process contains the JavaFX app or headless bootstrap, shared singleton services, and one task queue per enabled profile.
+At runtime, one process owns one exclusive workspace, then contains the JavaFX
+app or headless bootstrap, shared singleton services, and one task queue per
+enabled profile. `WorkspaceSession` creates and locks the workspace before
+logging or persistence initializes. All mutable state is resolved through
+`WorkspacePaths`; the installation and caller working directory are read-only
+runtime inputs.
+
+Installed defaults are `~/.frostguard/workspaces/<channel>/<name>`. Source and
+IDE launches detected inside a repository use its ignored `.frostguard-dev/`
+workspace. SQLite, logs, custom tasks, diagnostic/cache output, and Telegram
+watcher configuration and locking belong to that selected workspace. The
+watcher passes the same workspace identity to any bot process it launches.
 
 ```mermaid
 sequenceDiagram

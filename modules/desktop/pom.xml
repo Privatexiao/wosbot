@@ -131,6 +131,8 @@
 					<runtimePathOption>CLASSPATH</runtimePathOption>
 					<options>
 						<option>--enable-native-access=ALL-UNNAMED</option>
+						<option>-Dfrostguard.channel=development</option>
+						<option>-Dfrostguard.workspace=${maven.multiModuleProjectDirectory}/.frostguard-dev</option>
 					</options>
 				</configuration>
 			</plugin>

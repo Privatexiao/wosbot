@@ -1,5 +1,7 @@
 package dev.frostguard.engine.schedule;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -807,16 +809,24 @@ public class TaskQueue {
             String tm = DateTimeFormatter.ofPattern("HH:mm").format(wake);
             String dt = DateTimeFormatter.ofPattern("MM/dd/yyyy").format(wake);
             String jar = resolveDesktopJarForAutostart();
-            new ProcessBuilder("schtasks","/create","/TN","Frostguard_AutoStart","/TR",
-                    "javaw.exe -jar \""+jar+"\" --autostart","/SC","ONCE","/ST",tm,"/SD",dt,"/RL","HIGHEST","/F")
+            WorkspacePaths workspace = WorkspacePaths.current();
+            String scheduledTaskName = "Frostguard_AutoStart_"
+                    + Integer.toUnsignedString(workspace.root().toString().hashCode(), 36);
+            new ProcessBuilder("schtasks","/create","/TN",scheduledTaskName,"/TR",
+                    "javaw.exe -D" + WorkspacePaths.WORKSPACE_PROPERTY + "=\"" + workspace.root()
+                            + "\" -D" + WorkspacePaths.CHANNEL_PROPERTY + "=" + workspace.channel().directoryName()
+                            + " -jar \""+jar+"\" --autostart",
+                    "/SC","ONCE","/ST",tm,"/SD",dt,"/RL","HIGHEST","/F")
                     .redirectErrorStream(true).start().waitFor();
-            java.nio.file.Path ws = java.nio.file.Paths.get(System.getProperty("user.dir"),"fg_wake.ps1");
+            java.nio.file.Path runtimeCache = workspace.cache().resolve("runtime");
+            java.nio.file.Files.createDirectories(runtimeCache);
+            java.nio.file.Path ws = runtimeCache.resolve("fg_wake.ps1");
             java.nio.file.Files.writeString(ws,
                     "$s=New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Priority 1\n"+
-                    "Set-ScheduledTask -TaskName 'Frostguard_AutoStart' -Settings $s\n");
+                    "Set-ScheduledTask -TaskName '" + scheduledTaskName + "' -Settings $s\n");
             new ProcessBuilder("powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",ws.toString())
                     .redirectErrorStream(true).start().waitFor();
-            java.nio.file.Path ss = java.nio.file.Paths.get(System.getProperty("user.dir"),"fg_sleep.ps1");
+            java.nio.file.Path ss = runtimeCache.resolve("fg_sleep.ps1");
             java.nio.file.Files.writeString(ss,
                     "Start-Sleep -Seconds 2\nAdd-Type -AssemblyName System.Windows.Forms\n"+
                     "[System.Windows.Forms.Application]::SetSuspendState('Suspend',$false,$false)\n");

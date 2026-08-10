@@ -18,6 +18,10 @@
 
 	<!-- ─── Runtime dependencies ─── -->
 	<dependencies>
+		<dependency>
+			<groupId>dev.frostguard</groupId>
+			<artifactId>frostguard-api</artifactId>
+		</dependency>
 		<!-- JSON serialisation (version managed by parent) -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>

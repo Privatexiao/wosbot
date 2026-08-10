@@ -7,6 +7,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -33,11 +35,13 @@ public class WatcherCommandServer {
     private final int               port;
     private final TelegramBotService botService;
     private final ObjectMapper       mapper = new ObjectMapper();
+    private final String             workspaceId;
     private HttpServer               server;
 
     public WatcherCommandServer(int port, TelegramBotService botService) {
         this.port       = port;
         this.botService = botService;
+        this.workspaceId = WorkspacePaths.current().identity();
     }
 
     public void start() throws IOException {
@@ -72,10 +76,20 @@ public class WatcherCommandServer {
         try {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             JsonNode req  = mapper.readTree(body);
+            if (!workspaceId.equals(req.path("workspaceId").asText())) {
+                responseBytes = "{\"ok\":false,\"error\":\"workspace mismatch\"}"
+                        .getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(409, responseBytes.length);
+                exchange.getResponseBody().write(responseBytes);
+                exchange.close();
+                return;
+            }
             String   type = req.path("type").asText("message");
             long   chatId = req.path("chatId").asLong(-1);
 
-            if ("callback".equals(type)) {
+            if ("ping".equals(type)) {
+                // Identity validation above is the complete ping operation.
+            } else if ("callback".equals(type)) {
                 String callbackId = req.path("callbackId").asText("");
                 long   messageId  = req.path("messageId").asLong(-1);
                 String data       = req.path("data").asText("noop");
@@ -110,8 +124,10 @@ public class WatcherCommandServer {
         }
 
         try {
-            long pid = ProcessHandle.current().pid();
-            String response = "{\"pid\":" + pid + "}";
+            String response = mapper.createObjectNode()
+                    .put("pid", ProcessHandle.current().pid())
+                    .put("workspaceId", workspaceId)
+                    .toString();
             byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200, responseBytes.length);
             exchange.getResponseBody().write(responseBytes);

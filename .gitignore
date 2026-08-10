@@ -1,5 +1,6 @@
 # ── Maven build output ──
 target/
+.frostguard-dev/
 **/target/
 dependency-reduced-pom.xml
 

@@ -1,5 +1,7 @@
 package dev.frostguard.engine.service;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import dev.frostguard.api.configs.TpDailyTaskEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.engine.schedule.CustomTaskConfigurable;
@@ -155,7 +157,7 @@ public class CustomTaskService {
     // ========================================================================
 
     private CustomTaskService() {
-        compiledDir = Paths.get(System.getProperty("user.dir"), "custom_tasks");
+        compiledDir = WorkspacePaths.current().customTasks();
         jsonFile = compiledDir.resolve("custom_tasks.json");
         try {
             Files.createDirectories(compiledDir);

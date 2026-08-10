@@ -1,5 +1,6 @@
 package dev.frostguard.data.access;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -13,6 +14,7 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.TypedQuery;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 /**
  * Centralized transactional gateway for all Frostguard persistence operations.
@@ -31,7 +33,10 @@ public final class DataStore implements AutoCloseable {
 
 	private DataStore(Map<String, Object> overrides) {
 		try {
-			this.emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT, overrides);
+			Map<String, Object> effectiveOverrides = new HashMap<>(overrides);
+			effectiveOverrides.putIfAbsent("jakarta.persistence.jdbc.url",
+					"jdbc:sqlite:" + WorkspacePaths.current().database() + "?busy_timeout=1000&journal_mode=WAL");
+			this.emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT, effectiveOverrides);
 			DataSeeder.populate(this);
 			LOG.info("Frostguard data store initialized");
 		} catch (Exception cause) {

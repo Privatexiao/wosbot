@@ -66,6 +66,11 @@ For a source build, run from the repository root:
 .\mvnw.cmd javafx:run
 ```
 
+This automatically creates and uses `<worktree>\.frostguard-dev\`. Each
+worktree therefore has isolated database, logs, custom tasks, cache, and
+Telegram watcher state. `git clean -xdf` intentionally removes this disposable
+development workspace.
+
 For automatic startup through scripts or Task Scheduler:
 
 ```powershell

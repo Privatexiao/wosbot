@@ -1,5 +1,7 @@
 package dev.frostguard.watcher;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -19,7 +21,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Properties;
@@ -43,10 +44,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * Everything else is forwarded to http://127.0.0.1:{localPort}/command.
  * Callback queries (inline keyboard taps) are also forwarded to the app.
  *
- * Single-instance guarantee: a FileLock on %USERPROFILE%/.frostguard/watcher.lock
- * prevents multiple watcher processes from running simultaneously.
+ * Single-instance guarantee: a FileLock in the selected workspace's watcher
+ * directory prevents duplicate watcher processes for that workspace.
  *
- * Configuration: %USERPROFILE%\.frostguard\telegram-watcher.properties
+ * Configuration: &lt;workspace&gt;/watcher/telegram-watcher.properties
  *   token=<BotFather token>
  *   chatId=<your Telegram numeric chat-ID>
  *   botJarPath=<absolute path to frostguard-x.x.x.jar>
@@ -57,10 +58,9 @@ public class TelegramWatcher {
     private static final Logger logger = LoggerFactory.getLogger(TelegramWatcher.class);
     private static final String API_BASE         = "https://api.telegram.org/bot";
     private static final int    LONG_POLL_TIMEOUT = 30;
-    private static final int    DEFAULT_LOCAL_PORT = 8765;
 
     public static Path configFilePath() {
-        return Paths.get(System.getProperty("user.home"), ".frostguard", "telegram-watcher.properties");
+        return WorkspacePaths.current().watcherConfig();
     }
 
     // ── entry point ───────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ public class TelegramWatcher {
         System.out.println("==============================================");
 
         // ── Single-instance lock ───────────────────────────────────────────────
-        Path lockFilePath = configFilePath().resolveSibling("watcher.lock");
+        Path lockFilePath = WorkspacePaths.current().watcherLock();
         Files.createDirectories(lockFilePath.getParent());
         FileChannel lockChannel = FileChannel.open(lockFilePath,
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE);
@@ -94,9 +94,10 @@ public class TelegramWatcher {
         int    localPort;
         try {
             localPort = Integer.parseInt(
-                    cfg.getProperty("localPort", String.valueOf(DEFAULT_LOCAL_PORT)).trim());
+                    cfg.getProperty("localPort",
+                            String.valueOf(WorkspacePaths.current().defaultLocalPort())).trim());
         } catch (NumberFormatException e) {
-            localPort = DEFAULT_LOCAL_PORT;
+            localPort = WorkspacePaths.current().defaultLocalPort();
         }
 
         if (token.isBlank()) {
@@ -127,6 +128,7 @@ public class TelegramWatcher {
     private final File          botJar;
     private final File          botJarDir;
     private final int           localPort;
+    private final String        workspaceId;
     private final HttpClient    httpClient;
     private final ObjectMapper  mapper = new ObjectMapper();
 
@@ -144,6 +146,7 @@ public class TelegramWatcher {
         this.botJar        = new File(jarPath);
         this.botJarDir     = botJar.getParentFile();
         this.localPort     = localPort;
+        this.workspaceId   = WorkspacePaths.current().identity();
         this.httpClient    = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -271,9 +274,15 @@ public class TelegramWatcher {
             }
             try {
                 String javaExe = ProcessHandle.current().info().command().orElse("java");
-                ProcessBuilder pb = headless
-                        ? new ProcessBuilder(javaExe, "-jar", botJar.getName(), "--headless")
-                        : new ProcessBuilder(javaExe, "-jar", botJar.getName());
+                java.util.List<String> command = new java.util.ArrayList<>();
+                command.add(javaExe);
+                command.add("-D" + WorkspacePaths.WORKSPACE_PROPERTY + "=" + WorkspacePaths.current().root());
+                command.add("-D" + WorkspacePaths.CHANNEL_PROPERTY + "="
+                        + WorkspacePaths.current().channel().directoryName());
+                command.add("-jar");
+                command.add(botJar.getAbsolutePath());
+                if (headless) command.add("--headless");
+                ProcessBuilder pb = new ProcessBuilder(command);
                 
                 // Use the parent of the bot jar as the working directory, unless it's in a 'target' dir
                 // (to support Maven multi-module dev workflows where the root is one level up).
@@ -283,9 +292,6 @@ public class TelegramWatcher {
                     workDir = botJarDir.getParentFile().getParentFile().getParentFile();
                 }
                 pb.directory(workDir);
-
-                // When changing workDir, we must execute the jar using a path relative to workDir or absolute path.
-                pb.command().set(2, botJar.getAbsolutePath());
 
                 pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                 pb.redirectError(ProcessBuilder.Redirect.DISCARD);
@@ -319,22 +325,7 @@ public class TelegramWatcher {
         }
         
         // Try to get the PID from the bot's command server
-        Long remotePid = null;
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://127.0.0.1:" + localPort + "/pid"))
-                    .timeout(Duration.ofSeconds(2))
-                    .GET()
-                    .build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) {
-                JsonNode json = mapper.readTree(resp.body());
-                remotePid = json.path("pid").asLong(-1);
-                if (remotePid == -1) remotePid = null;
-            }
-        } catch (Exception e) {
-            logger.debug("Could not get PID from /pid endpoint: {}", e.getMessage());
-        }
+        Long remotePid = fetchWorkspacePid();
         
         // If we got a PID from the server, kill that process
         if (remotePid != null) {
@@ -367,6 +358,7 @@ public class TelegramWatcher {
                         || cmdLine.contains("dev.frostguard.app.bootstrap.Main")
                         || cmdLine.contains("dev.frostguard.app.bootstrap.FXApp")
                         || cmdLine.contains("dev.frostguard.app.bootstrap.HeadlessApp");
+                    matches = matches && cmdLine.contains(WorkspacePaths.current().root().toString());
                     
                     if (matches) {
                         logger.debug("Found matching process PID {}: {}", ph.pid(), cmdLine);
@@ -412,6 +404,7 @@ public class TelegramWatcher {
             body.put("type",   "message");
             body.put("chatId", chatId);
             body.put("text",   text);
+            body.put("workspaceId", workspaceId);
 
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("http://127.0.0.1:" + localPort + "/command"))
@@ -441,6 +434,7 @@ public class TelegramWatcher {
             body.put("messageId",  messageId);
             body.put("callbackId", callbackId);
             body.put("data",       data);
+            body.put("workspaceId", workspaceId);
 
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("http://127.0.0.1:" + localPort + "/command"))
@@ -469,27 +463,8 @@ public class TelegramWatcher {
             botProcess = null; // clear stale reference
         }
         
-        // Try to connect to the bot's command server as a reliable check
-        // If the server responds (even with an error), the bot is definitely running
-        try {
-            ObjectNode testBody = mapper.createObjectNode();
-            testBody.put("type", "ping");
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://127.0.0.1:" + localPort + "/command"))
-                    .timeout(Duration.ofSeconds(1))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(testBody.toString()))
-                    .build();
-            httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            // If we get ANY response (success or error), the server is up
+        if (fetchWorkspacePid() != null) {
             logger.debug("Bot process alive via network check on port {}", localPort);
-            return true;
-        } catch (ConnectException e) {
-            // Connection refused = server not running, continue to process search
-            logger.debug("Network check failed (connection refused), trying process search");
-        } catch (Exception e) {
-            // Any other response (including errors) means the server is up
-            logger.debug("Bot process alive via network check (got response: {})", e.getClass().getSimpleName());
             return true;
         }
         
@@ -498,10 +473,11 @@ public class TelegramWatcher {
                 .filter(ph -> ph.info().command().map(c -> c.toLowerCase().contains("java")).orElse(false))
                 .filter(ph -> {
                     String cmd = ph.info().commandLine().orElse("");
-                    return cmd.contains(botJar.getName())
+                    boolean matchesApp = cmd.contains(botJar.getName())
                         || cmd.contains("dev.frostguard.app.bootstrap.Main")
                         || cmd.contains("dev.frostguard.app.bootstrap.FXApp")
                         || cmd.contains("dev.frostguard.app.bootstrap.HeadlessApp");
+                    return matchesApp && cmd.contains(WorkspacePaths.current().root().toString());
                 })
                 .findFirst()
                 .isPresent();
@@ -512,6 +488,34 @@ public class TelegramWatcher {
             logger.debug("Bot process not found via any method");
         }
         return found;
+    }
+
+    private Long fetchWorkspacePid() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1:" + localPort + "/pid"))
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                logger.debug("PID endpoint on port {} replied HTTP {}", localPort, response.statusCode());
+                return null;
+            }
+            JsonNode json = mapper.readTree(response.body());
+            if (!workspaceId.equals(json.path("workspaceId").asText())) {
+                logger.warn("Ignoring command server on port {} because it belongs to another workspace", localPort);
+                return null;
+            }
+            long pid = json.path("pid").asLong(-1);
+            return pid > 0 ? pid : null;
+        } catch (ConnectException connectionRefused) {
+            logger.debug("No command server listening on port {}", localPort);
+            return null;
+        } catch (Exception failure) {
+            logger.debug("Could not read matching PID from port {}: {}", localPort, failure.getMessage());
+            return null;
+        }
     }
 
     private static String buildHelpMessage() {
@@ -616,7 +620,7 @@ public class TelegramWatcher {
                   + "token=\n"
                   + "chatId=\n"
                   + "botJarPath=\n"
-                  + "localPort=8765\n");
+                  + "localPort=" + WorkspacePaths.current().defaultLocalPort() + "\n");
             System.out.println("[INFO] Created config template at: " + cfg);
         }
         Properties props = new Properties();
