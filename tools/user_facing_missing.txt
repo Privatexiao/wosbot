@@ -1,0 +1,2392 @@
+Total user facing missing strings: 2390
+
+10 VIP XP
+100 VIP XP
+12m ago
+2 days 03:14:07
+24 Hours
+250 Hero Widget found and purchased on attempt
+3h ago
+50% discounted RFC available. Attempting to purchase.
+A free reward has been claimed.
+A task is already running - only one task can run at a time
+ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+ADB Slot Acquired
+ADB bridge restarted
+ADB error:
+ADB health check failed even after recovery attempts.
+ADB health check passed. Proceeding with emulator restart.
+ADB link broken
+ADB restart in progress elsewhere
+AFTER appointment window. Training maximum.
+Accepting task
+Accepting...
+Account identifier must not be null
+Activating checkbox
+Activating pets...
+Activation time
+Active
+Active checkbox found
+Active deployment detected
+Active deposit found. Reading remaining time
+Adb Capture Error:
+Added:
+Additional shards detected: %d. Planning next run in %d hours.
+Adjusted internal Intel march capacity to
+Advanced
+Advanced Teleport
+After
+After Blue button: performing upper screen click
+Age:
+Agnes
+Agnes icon found - claiming intel
+Agnes icon not found after
+Agnes stamina OCR result:
+AlCh
+AlChmp
+AlJoin
+AlMob
+AlPet
+AlShp
+AlTch
+AlTri
+All
+All button activation methods failed. Cannot start automation.
+All configured gather queues are currently active%s.
+All gather slots filled
+All gather troops recalled. Proceeding with intel processing.
+All march queues used. Earliest available march:
+All queues TRAINING but couldn't determine next ready time. Continuing.
+All queues TRAINING. Planning next run to earliest completion:
+All queues finished cleanly identified after retries.
+Alliance Help tap encountered an error.
+Alliance Monuments button detected at
+Alliance Monuments used finished cleanly
+Alliance Shop Purchases
+Alliance Shop enabled. Inspecting current coins.
+Alliance Shop is disabled. Skipping shop check.
+Alliance Tech task finished cleanly. Next execution in
+Alliance Triumph
+Alliance Triumph button detected. Pressing to open the menu.
+Alliance Triumph button not detected - unable to claim rewards
+Alliance War button not detected to disable autojoin
+Alliance War menu opened successfully
+Alliance auto-join configured successfully. Next execution in
+Alliance chest button not detected.
+Alliance chest task completed. Next run at:
+Alliance help button not detected
+Alliance treasure claimed successfully
+AllianceAutojoinRoutine |
+AllianceChampionshipLayout
+AllianceChampionshipRoutine |
+AllianceChestRoutine |
+AllianceLayout
+AllianceMobilizationLayout
+AllianceMobilizationRoutine |
+AllianceShop
+AllianceShopRoutine |
+AllianceTechRoutine |
+Already active — done
+Already at expert:
+Already on Intel
+Already on expert
+An error occurred during the Labyrinth task:
+An error occurred during the Mercenary Event task:
+Analyzing queue
+Analyzing queue for
+Any
+App com.gof.global is not in foreground
+App not running [
+Application com.gof.global launched
+Application launched
+Apply button not detected. May already have active appointment.
+Apply profile settings
+Applying auto-join queue count to
+Applying for ministry appointment
+Are you sure you want to remove '
+Arena Battles Lost
+Arena Battles Won
+Arena Gems Spent
+Arena Refreshes
+Arena run finished after using available eligible attempts.
+Arena score:
+Arena time must be 23:55 UTC or earlier.
+Arial
+Assigning survivors to available building slots.
+At least one queue UPGRADING. Planning next run check in
+Attack target icon should match the attack row:
+Attack text should match city attack rows:
+Attacking mercenary.
+Attempting Alliance Help tap
+Attempting fallback timer reading.
+Attempting promotion for:
+Attempting to buy weekly free scroll
+Attempting to execute challenge for dungeon
+Attempting to select difficulty:
+Attempting to send left truck.
+Attempting to send right truck.
+Attempts counter OcrSpec result: '
+Auto
+Auto button activated successfully after Blue button sequence
+Auto button activated successfully after Skip button
+Auto button found - clicking it
+Auto button not visible. Trying upper screen click to reveal buttons
+Auto-Start-Thread
+Auto-join activation command sent
+Auto-join disable workflow finished
+Auto-join is enabled and scheduled, proceeding to disable it.
+Auto-join ocrPreset popup should be open
+Auto-schedule mode - safety reschedule at:
+Auto-start: ✅ Registered
+Automation sequence started successfully
+Autostart flag detected. Starting automation...
+Avg ADB: %dms | Avg convert: %dms | Avg match: %dms | Avg total: %dms
+Avg cap: %dms | Avg hook: %dms | Avg scan: %dms | Avg logic: %dms
+Avg grab: %dms | Avg match: %dms | Avg total: %dms
+Avoid profile alliance
+Avoid profile server
+BEFORE appointment window. Time until appointment: %02d:%02d:%02d
+BELOW threshold
+Back Button
+Backend not initialised
+Bank option not found in deals menu
+Base City
+Battle
+Battle result: Defeat
+Battle result: Victory
+Battle timeout: Neither victory nor defeat screen found within 2 minutes.
+Bazaar
+Bear
+Bear Hunt is not running, continuing with Hero's Mission
+Bear Hunt is running, planning next run for
+Bear Hunt is running, rescheduling for
+Bear Trap Event
+Bear Trap pending within %d min. Deferring gather until %s.
+BearTrapActive
+BearTrapLayout
+BearTrapRoutine |
+Beast Attacks Sent
+Beast Cage button not found in Pets menu
+Beast Cage button not found in Pets menu. Will retry in
+Beast Hunting finished. No marches dispatched. Rescheduling in 5 minutes.
+Beast Hunting finished. Rescheduling to
+Beast attacked. March returns in ~
+Beast march already sent with flag. Skipping beast hunt.
+Beast march deployed finished cleanly.
+BeastHuntingLayout
+Beasts
+Berserk Cryptid
+Blue button found - clicking to potentially unlock Auto
+Blue button not found
+Blue button sequence did not result in active Auto button
+Boost replacement OCR: '
+Boost replacement dialog detected. Confirming replacement.
+Boost replacement dialog not present
+Bot activity statistics per profile
+Both
+Both truck times extracted. Next check:
+Both trucks already departed. Scheduling next check.
+Build button OCR failed:
+Build button OCR result: '
+Build button detected via OCR: '
+Build button not detected
+Bulk Update Profiles
+Bulk refinements completed.
+Bundled native not found:
+Buy button not found. Purchase may have failed.
+Buying
+Bypass
+CODE1 DD.MM.YYYY
+CODE2 DD.MM.YYYY
+Calculated troops is zero or negative. Skipping training.
+Calculating limited training. Time until appointment: %02d:%02d:%02d
+Calling own rally...
+Camp
+Cancelled pending rally reset task
+Cannot afford any more of item:
+Cannot afford item
+Cannot build prototype for removal:
+Cannot execute node: no active emulator
+Capture null
+Capturing screenshot from
+Card number must be between 1 and
+Caring
+Caring action completed successfully
+Caring button found. Performing caring action.
+Caring button not found after
+Cave Lion
+Challenge button not found.
+Champions
+Championship window:
+Change Emulator
+Chapter title must not confirm Daily Missions:
+Char mismatch
+Char verified OK
+Character not found after 3 passes — closing emulator
+Character switch successful. Waiting for game to reload...
+Character switching failed. Character not found. Continuing to next profile.
+Character verification passed - correct character is active.
+CharacterLayout
+Check Age
+Check Tips
+Check if the bot app is running
+Checkbox activation failed
+Checkbox already active
+Checkbox successfully activated
+Checking 'Don't show again' checkbox
+Checking Intel screen
+Checking emulator status...
+Checking for Obtain dialog
+Checking for boost replacement dialog
+Checking for daily caring attempts
+Checking for mercenary event buttons.
+Checking for purchase confirmation dialog
+Checking if any trucks are in transit...
+Checking if this is first arena run
+Chest found. Claiming reward.
+Chest not found after maximum attempts. Trying fallback timer reading.
+Chest time exceeds reset, capping at reset time.
+Chest time is in the past, treating as invalid.
+Chest: %s, Stamina: %s
+Chief Order Enact button not detected
+Chief Order menu button detected. Pressing to open menu
+Chief Order menu button not detected
+Chief Order: Productivity Day
+Chief Order: Rush Job
+Chief Order: Urgent Mobilization
+Chief Stamina Use button not found in the obtain-more dialog
+ChiefOrderLayout
+ChiefOrderRoutine |
+China
+Choose at least one destination profile before updating.
+City
+City Survivors
+City Upgrade Furnace
+City image detected. Screen state validated.
+CityEventsExtraLayout
+CityEventsLayout
+CityUpgradesLayout
+Claim button confirmed visible. Proceeding with claim.
+Claim button did not appear within timeout. Popup may not have loaded properly.
+Claim button found - claiming alliance treasure
+Claim button not detected. Consecutive failures:
+Claim button remained at
+Claim button visibility timeout after
+Claim search attempt
+Claimed
+Claimed %d base stamina + %d from Agnes bonus.
+Claiming completed chest
+Claiming free rewards
+Cleaning up Bear Trap state
+Clearing
+Clearing navigation overlay
+Clearing tutorial overlays if present
+Clicking Bag button
+Clicking stamina claim button at region
+Clinic
+Clip rect exceeds capture dimensions.
+Clip region extends beyond frame bounds
+Clip region has non-positive extent
+Close Game
+Close Game Option Selected
+Closing Growth menu
+Closing Pets menu
+Closing VIP menu
+Closing all menus and returning to world map
+Closing donation popup
+Closing down subsystems.
+Closing left menu
+Closing mail menu.
+Closing obtain-more dialog
+CoMob
+CoProd
+CoRush
+Coal Mine
+Coal icon should match the coal outbound row:
+Collecting VIP point rewards
+Collecting crystal...
+Collecting daily VIP chest rewards
+Collecting honor chest.
+Collecting individual gift #
+Collecting individual reward #
+Collecting loot chests.
+Collecting rewards in current tab.
+Color check did not complete for join button at
+Combat
+Compilation Failed
+Compilation failed for
+Completed task detected at
+Completed:
+Concluded processing all tabs for:
+Config missing — run initial setup
+Config resource level to highest available
+ConfigService
+Configuration - Auto-schedule: %s, Check offset: %d minutes
+Configuration loaded - Auto-accept: %s, Filter: %s, Min 200%%: %d, Min 120%%: %d
+Configuration loaded - Boost type: %s
+Configuration loaded - Buy monthly VIP: %s, Next buy: %s
+Configuration loaded - Deposit duration:
+Configuration loaded - Discounted RFC: %s, Weekly target: %d
+Configuration loaded - Min coins: %d, Min discount: %d%%
+Configuration loaded - Offset:
+Configuration loaded - Schedule offset:
+Configuration loaded - Stamina: %s, Food: %s, Treasure: %s, Gathering: %s
+Configuration loaded - Stored stamina time: %s
+Configuration loaded - Use all troops:
+Configuration loaded:
+Configured Polar Terror level
+Configured flag #
+Configured purchases made
+Configured troop type:
+Confirm failed, canceling
+Confirmed replacing existing boost.
+Confirmed: Bear Hunt is VISUALLY ACTIVE. Overriding time window check.
+Confirmed: We are INSIDE a valid execution window
+Confirming purchase
+Confirming redemption
+Connected
+Connection cancelled
+Connection error:
+Consecutive failure count reset after successful execution
+ConsoleLogLayout
+Content-Type
+Cookhouse
+Cooldown expired or not set. Inspecting VIP status.
+Cooldown from
+Cooldown:
+Copied All!
+Copied!
+Copied:
+Copy
+Could not OCR running research time. Retrying in
+Could not access task queue for profile
+Could not access task queue to re-queue autojoin for profile
+Could not activate checkbox. Skipping bag button.
+Could not capture screenshot for research template search.
+Could not compile
+Could not detect attempts counter. Proceeding with default processing.
+Could not detect current expert. Assuming first expert in detected order.
+Could not determine
+Could not determine card coordinates for item:
+Could not determine chest start status for
+Could not determine state for
+Could not disable auto-join, proceeding anyway.
+Could not extract
+Could not extract level from:
+Could not extract truck times. Fallback: next check in 30 minutes
+Could not find 'Deploy' button for dungeon
+Could not find Alliance Shop button
+Could not find Pets menu after 3 attempts.
+Could not find RFC refine button for bulk refinements.
+Could not find RFC refine button for discounted purchase.
+Could not find Tundra Truck event after
+Could not find mail menu icon.
+Could not find shop item for identifier:
+Could not find the 'Attack' button for the beast. Going back.
+Could not find the 'Explore' button for the journey. Going back.
+Could not find the 'Rescue' button for the survivor. Going back.
+Could not find the 'View' button for the beast. Going back.
+Could not find the 'View' button for the journey. Going back.
+Could not find the 'View' button for the survivor. Going back.
+Could not find the loaded profile to use as template.
+Could not load hook template - aborting.
+Could not load schedule dialog:
+Could not locate fg-watcher.bat to launch Telegram Watcher.
+Could not locate troops button. Navigation did not complete.
+Could not navigate after
+Could not navigate to Alliance Championship event
+Could not navigate to Alliance Mobilization event
+Could not navigate to Alliance Tech menu
+Could not navigate to Alliance War menu
+Could not navigate to Sunfire Castle. Skipping ministry appointment update.
+Could not navigate to War Academy.
+Could not navigate to shop or read coins. Task ending.
+Could not open Redeem section.
+Could not open VIP menu.
+Could not open mail menu. Retrying in
+Could not open polars menu.
+Could not open rally menu:
+Could not parse number from:
+Could not parse stored next monthly VIP buy time:
+Could not parse time from OCR. Using default 30 minutes.
+Could not parse time from OCR. Using default 60 minutes.
+Could not parse travel time via OCR. Holding slot for
+Could not parse travel time via OCR. Using 5 minute fallback reschedule.
+Could not read
+Could not read VIP expiration time from screen
+Could not read appointment time. Applying to now for normal training.
+Could not read available quantity for item:
+Could not read cooldown from
+Could not read cooldown time from
+Could not read cooldown timer via OCR. Planning next run in 10 minutes.
+Could not read current alliance coins.
+Could not read current alliance coins. Skipping shop trigger.
+Could not read final shards count.
+Could not read gathering skill status - OCR returned null or empty
+Could not read idle march slots:
+Could not read march time from screen, defaulting to 30 seconds
+Could not read points for
+Could not read points near bonus after OcrSpec attempts
+Could not read price for item:
+Could not read promotion completion time.
+Could not read remaining shards count.
+Could not read research queue time. Planning next run in 1 hour.
+Could not read selected building name:
+Could not read shards count via OCR.
+Could not read stamina or item count from the obtain-more dialog
+Could not read the production blocker timer. Retrying in 5 minutes.
+Could not read training data. Training maximum as fallback.
+Could not read travel time via OCR. Using 7-minute fallback.
+Could not redeem shards.
+Could not refill stamina from the obtain-more dialog
+Could not remove shortcut:
+Could not reopen pets menu to read gathering skill cooldown. Using fallback.
+Could not resolve device serial for emulator
+Could not resolve next gather redeploy time:
+Could not retrieve task queue for profile. Cannot trigger shop task.
+Could not return to home screen:
+Could not select highest troop level.
+Could not verify navigation to expert:
+Could not write watcher properties file:
+CrLab
+Create
+Create Character
+Creating
+Crediting
+Crystal Lab UI not detected. Retrying in 5min.
+Crystal Laboratory
+Crystal collecting completed - no more claims available.
+Crystal collecting process finished finished cleanly.
+CrystalLaboratoryRoutine |
+Current alliance coins:
+Current character does not match profile configuration. Switching character...
+Current coins below minimum threshold. Task ending.
+Current deployment position does not match desired. Switching position.
+Current deployment position matches desired. Zero position change needed.
+Current level detected:
+Current level: %d, adjusting to %d
+Current mercenary level:
+Current slot holders:
+Custom Task
+Custom task configs not found for:
+Custom task could not be created:
+Custom task not found:
+Custom tasks discovered:
+CustomTasksLayout
+DEBUG: Loaded pool config:
+DEBUG: Saving pool config:
+Daily
+Daily Caring Available
+Daily Missions
+Daily Missions Claimed
+Daily Refreshes Used
+Daily Triumph rewards already collected - planning next run for next game reset
+Daily Triumph rewards are available - collecting now
+Daily Triumph rewards not available - planning next run for
+Daily caring attempt is available
+Daily chest rewards collected
+Daily missions screen already selected
+Daily missions screen confirmed
+Daily missions title not detected after tab switch. Skipping claims
+Daily refresh is available. Using it now.
+Daily refresh used but no rewards or purchases found
+Daily refresh used successfully
+Daily rewards collected finished cleanly
+Daily rewards not collected yet, inspecting if they are available
+Daily tab button not detected. Skipping claims
+Daily tab should match the three-tab layout:
+Daily tab should match the two-tab layout:
+Daily title should confirm an automatically selected Daily tab:
+DailyMissionRoutine |
+Deals button not found
+DebuggingLayout
+Decoded frame is empty
+Deducting
+Default
+Default -
+Defeated.. Rescheduling...
+Delete Profile
+Deploy button detected. Proceeding with formation ocrPreset.
+Deploy button not detected after selecting flag.
+Deploy button not detected. Ending task.
+Deploy button not detected. Planning next run to try again in 5 minutes.
+Deploy button not found
+Deploy button not found. Rescheduling to try again in 5 minutes.
+Deploy button not restored after stamina refill
+Deploy cost
+Deploy cost red check failed:
+Deploy stamina cost is red and stamina item use is disabled
+Deployed march returned. Slot restored to available pool.
+Deploying gather march
+Deploying gathering march for:
+Deploying gathering skill march...
+Deployment cost OCR failed
+Deployment cost:
+Deployment decision:
+Deposit created. Next check scheduled for:
+Deposit not ready. Rescheduled for:
+Deposit option not found
+Deposit ready for withdrawal
+Deposit successfully withdrawn
+Desired level already selected
+Detected
+Detected %d Research Centers.
+Detected %d shards to redeem.
+Detected an active green Join button at
+Detected attempts counter:
+Detected current expert:
+Detected highest level:
+Detected left timer:
+Detected points on overview:
+Detected right timer:
+Detected task availability timers - using shortest:
+Detected task type:
+Detected:
+Detecting current attempt position via price
+Detecting task type near bonus location:
+Dev
+Device Slot:
+Device closed until
+Device offline - re-acquiring slot
+Device sent to background until
+Dialog name OK: '
+Didn't find any chests to be claimed.
+Disable 🔴
+Disabled Claim pattern should identify the grey button:
+Disabled and narrow Claim patterns should refer to the same button
+Disabling auto-join
+Disabling autojoin...
+Discounted RFC purchased finished cleanly.
+Dispatch
+Don't show again today
+Don't show this confirmation again today
+Donations completed finished cleanly
+Done
+Down
+Download log files
+Drag on the preview to draw swipe trajectory...
+Dummy Task disabled in configs. Stopping task.
+DummyLayout
+Dungeon
+ERROR: token is empty
+Easy
+Economy
+Edit Profile -
+Elapsed: %dms | Process FPS: %.1f | Decode FPS: %.1f
+EmuConfigLayout
+Emulator Not Found
+Emulator is running.
+Emulator not found. Attempting to start it
+Emulator not found. Attempting to start it...
+Emulator number
+Emulator: `
+EmulatorController
+EmulatorInstance
+Enable
+Enable 🟢
+Enabled Claim All should match strongly:
+Enabled Claim must not be classified as disabled:
+Enabled Tasks:
+Enabled claim button not detected on attempt
+Enabled claim button remained after all claim attempts. Rescheduling normally.
+Enabled individual Claim should match strongly:
+Enabled skills:
+Enabling auto-join
+Enact button detected. Pressing to enact order
+Encampment icon should match the encamped row:
+Energy regeneration tick failed
+Engine Settings:
+Engine launch aborted:
+Enqueued
+Entering Alliance War menu
+Entering Redeem section
+Entering Research section
+Entering VIP menu
+Entering alliance coins popup
+Entering alliance gifts section.
+Entering arena
+Entering auto-join ocrPreset popup
+Entering deploy loop - will deploy up to
+Entering mail menu.
+Entering rally menu...
+Entering rally section
+Entering shop details to read coins...
+Entering war section to check for rallies
+Epic
+Equalize button not detected for march
+Equalize button not found in the bottom button bar
+Error
+Error analyzing construction queues:
+Error checking available trucks:
+Error checking if watcher is running
+Error deleting profile.
+Error deploying gathering march:
+Error deploying gathering skill march:
+Error executing OpenCvPatternLocator:
+Error extracting
+Error extracting promotion completion time:
+Error extracting queue state text:
+Error extracting training completion time:
+Error extracting training time:
+Error loading FXML
+Error loading profiles:
+Error loading screenshot:
+Error occurred while updating profiles. Some profiles may not have been updated.
+Error opening logs folder:
+Error parsing time string '
+Error while saving profile:
+Error:
+Error: Failed to capture ADB image.
+Error: HTTP
+Error: No region selected. Please click and drag to select a region.
+Error: No screenshot loaded.
+Error: No screenshot loaded. Please drag and drop an image first.
+Error: No task active or no nodes present.
+Error: Please select a profile first.
+Error: Please select a template from the list.
+Event has ended. Task disabled.
+Event in countdown. Waiting for next activation time.
+Events button not detected
+Events panel missed
+EventsLayout
+Every target was contested after %d retries. Searching again in %d min.
+Everything
+Example: 10-06-2026 19:30
+Example: 15:30
+Exception decoding mono reference:
+Exception decoding reference:
+Exception during mono pattern correlation
+Exception during mono pattern correlation with raw data
+Exception during multi-hit correlation
+Exception during multi-hit correlation with raw data
+Exception during multi-hit mono correlation
+Exception during multi-scale correlation
+Exception during pattern correlation
+Executable Files
+Execute Task
+Execute called OUTSIDE valid window. Planning next run...
+Executed scheduled task
+Executed task
+Executing challenges for
+Executing promotion for:
+Executing promotion-priority training for
+Executing resource search
+Executing task:
+Executing:
+Executing…
+Execution state reset
+Execution stopped:
+Exhausted retries for
+Exited fullscreen
+Exiting Life Essence interface
+Exiting normally after timeout
+ExpCh
+Expert Agnes Intel
+Expert Romulus Tag
+Expert Romulus Troops
+Expert Skill Training
+Expert not found in available list. Current:
+Expert not unlocked. Using standard coordinates.
+ExpertsLayout
+Exploration Chest
+Exploration Fights Lost
+Exploration Fights Won
+Exploration button not found
+Exploration rewards claimed.
+Exploration screen confirmed on attempt
+Exploration screen could not be confirmed.
+Exploration screen not confirmed on attempt
+ExplorationRoutine |
+Exploring...
+Export Java Bot Task
+Export failed:
+Exported Java class to:
+Extracting
+Extracting next truck return times
+Extracting remaining time via OCR
+FC Analysis - Available: %d, Current RFC: %d, Target: %d, Needed: %d
+Failed during beast attack:
+Failed to activate Auto button
+Failed to activate boost. Rescheduling in 5 minutes.
+Failed to capture screenshot for task builder
+Failed to check Skip Tutorial task status:
+Failed to check task status:
+Failed to close emulator
+Failed to create custom_tasks directory
+Failed to create package directory
+Failed to deploy gathering march
+Failed to deploy troops
+Failed to determine deployment status
+Failed to enact order
+Failed to execute resource search
+Failed to extract
+Failed to extract remaining time after
+Failed to fetch next queue time for queue
+Failed to handle obtain dialog
+Failed to inject dark title bar logic:
+Failed to interpret time token:
+Failed to load OpenCV:
+Failed to navigate to Alliance Tech menu
+Failed to navigate to Hero's Mission event
+Failed to navigate to Hero's Mission event. Attempt
+Failed to navigate to Intel screen
+Failed to navigate to Life Essence menu. Retrying in
+Failed to navigate to Mercenary event
+Failed to navigate to Tundra Truck event
+Failed to navigate to Tundra menu
+Failed to navigate to alliance screen
+Failed to navigate to arena.
+Failed to navigate to championship event
+Failed to navigate to gathering speed menu. Rescheduling in 5 minutes.
+Failed to navigate to the Labyrinth menu
+Failed to open Alliance War menu
+Failed to open Chief Order menu
+Failed to open Pets menu. Rescheduling for retry.
+Failed to open Storehouse.
+Failed to open alliance chest screen
+Failed to open auto-join ocrPreset
+Failed to open bulk update dialog:
+Failed to open challenge list.
+Failed to open edit profile dialog:
+Failed to open resource search menu
+Failed to parse activation time '
+Failed to parse activation time:
+Failed to parse next scroll time:
+Failed to parse reapers rallied count via OCR: '
+Failed to parse stored stamina claim time:
+Failed to parse travel time via OCR. Rescheduling in 10 minutes as fallback.
+Failed to read Stamina skill level. Using fallback value:
+Failed to read arena score, assuming not first run
+Failed to read chest timer, using fallback.
+Failed to read cooldown for
+Failed to read current level via OCR
+Failed to read custom_tasks.json
+Failed to read initial attempts.
+Failed to read or parse the next reward time. Rescheduling for 1 hour from now.
+Failed to read reference bytes from:
+Failed to read single attempt price
+Failed to register startup shortcut:
+Failed to reschedule for today's activation time:
+Failed to reschedule with activation time:
+Failed to select resource tile
+Failed to set class output location
+Failed to set resource level
+Failed to start Telegram Watcher bat file
+Failed to start automation sequence
+Failed to update deployment
+Failed to update profile '
+Failed to update profile. Please try again.
+Failed to update profile:
+Failed to write custom_tasks.json
+Failed — restarting bridge
+Falling back to 5 min before game reset time
+Fetched
+Fetching gift codes...
+File not valid, please select:
+Filling resources.
+Fishing Minigame
+Fishing Minigame: hook detected - entering game loop.
+Fishing Minigame: hook never appeared - aborting.
+FishingLayout
+Flag #
+Flag bar:
+Flag configuration detected for march
+Force-Start-Thread
+Force-close the bot app
+Formation setup:
+Formation setup: flag #
+Formation setup: no flag configured, using Equalize
+Formation setup: selecting flag #
+Found
+Found VIP points. Purchasing with gems.
+Found challenge button for mercenary event.
+Found ffmpeg:
+Found resource:
+Found scout button for mercenary event.
+Found scrcpy-server:
+Found the Tundra Trek Supplies button.
+Found unselected
+Found: '
+Frame
+Frames: %d | Elapsed: %dms | FPS: %.2f
+Free marches:
+Free mission button detected at
+Free mission used finished cleanly
+Free refresh available - confirming
+Free rewards claimed
+Frostguard Control Center
+Frostguard-Telegram-Watcher.lnk
+Frostguard_AutoStart
+Full Image with Region
+Fullscreen mode — press ESC or click Exit to return
+Furn
+Furnace
+FurnaceUpgrade injection completed
+FurnaceUpgrade injection error:
+FurnaceUpgrade injection starting
+FurnaceUpgrade: claim button missing, aborting with UI recovery back
+FurnaceUpgrade: pack no longer on screen, aborting
+FurnaceUpgradeInjectionRule
+Future
+Game APK absent from device
+Game already running.
+Game not in foreground
+Game not installed
+Game process is not active
+Garrisoned icon should match the garrisoned row:
+Gather Coal
+Gather Iron
+Gather Marches Deployed
+Gather Meat
+Gather Resources
+Gather Wood
+Gather button not found. Tile may be occupied.
+Gather deploy button is absent because no deployable troops are available.
+Gather march recall for high-priority event. Recall time recorded:
+Gather pool config empty. Resetting to full:
+Gather pool empty. Resetting.
+Gather recall timestamp stored for troop-return tracking.
+GatherLayout
+Gathering skill is Active:
+Gathering skill is already Active. Proceeding with deployment flow.
+Gathering text should match working gather rows:
+Gem list refresh button not found
+Gem refresh popup detected
+Generated new analytics ID
+GeneratedTask
+GiftcodeLayout
+Global
+Global monitor shut down
+GlobalMonitor
+GlobalMonitor-Ticker
+GlobalMonitorService
+Go to Island
+Go to text should match outbound gather rows:
+Grayscale template detected:
+Grayscale template not detected:
+Green pixel count at join button:
+Growth
+Growth title must not confirm Daily Missions:
+GthCl
+GthIr
+GthMt
+GthRes
+GthSpd
+GthWd
+H:mm:ss
+HH:mm:ss
+Hand template or mirror detected! Pressing it with offset.
+Hand template or mirror found! Clicking it with offset.
+Handling City Building
+Handling New Building
+Handling Survivor Building
+Handling monthly VIP purchase check
+Hard
+Headless application triggered.
+Headless bot ready. Waiting for Telegram commands to start automation...
+Help button remained visible. Retrying the tap once.
+Help button still visible after retry. Retrying research shortly.
+Help pattern must not match the completed research tree:
+Help pattern must not match the running Speedup button:
+Help pattern should match the Help frame strongly:
+HelpAllianceInjectionRule
+Hero
+Hero Mission Event
+Hero Recruitment
+HeroEv
+Hold Rally button not detected!
+Hold Rally button not found after pressing Rally
+Hold Rally button was not found after pressing Rally
+Hold Rally opened formation screen
+Hold a Rally
+Home not found after
+Home not found:
+Home screen not found
+Home screen not found after multiple attempts. Restarting emulator.
+Home screen not found. Retrying...
+Home screen not found. Waiting 5 seconds before retrying...
+Home screen verified after character switch.
+Honor chest collection is disabled. Skipping.
+Hour must be 00-23 and minute must be 00-59.
+Hunter's Hut
+I18nService: Error loading dictionary
+I18nService: Registering live auto-translation listener on Scene
+ID configured but OCR failed
+ID: #
+Idle
+Idle Injection
+Idle exceeded - keeping device open per config
+Idle march found, proceeding with deployment
+Idle marches detected via OCR
+Idle pattern should match the idle frame strongly:
+Idle till
+Ignoring disabled Claim button at
+Ignoring preemption:
+Ignoring unknown research category priority:
+Image Files
+Image found! Rescheduling task for 60 minutes from now.
+Image not found. Waiting 5 seconds...
+ImageSearchResultData
+Important: Concurrent Instance Requirement
+Inactive checkbox found
+Incrementing queue counter
+Indifferent
+Individual collecting complete. Claimed
+Infantry
+Infantry Camp
+Infinity
+Init
+Init flow completed.
+Initial attempts available:
+Initial schedule:
+Initial trek counter:
+Initialization successful. Reading initial stamina value.
+Initialization task completed successfully
+Initialization task completed successfully.
+Initialized internal Intel march counter:
+Initializing Frostguard...
+Initializing Headless Bot...
+Initiating Chief Order :
+Initiating beast attacks. Stamina:
+Initiating crystal collecting process
+Initiating monument image recognition loop...
+Initiation tab is already selected. Proceeding with difficulty selection.
+Initiation tab is locked. Skipping to next type.
+Initiation tab is open. Attempting to select difficulty.
+Initiation tab. Tapping to open.
+Initiation.
+Injecting
+Injecting:
+Injection done:
+Injection error:
+Injection rule registered
+Injection:
+Input span is null or blank
+Insane
+Inspecting
+Inspecting Gather Resources task...
+Inspecting autojoin task...
+Inspecting daily Triumph rewards status
+Inspecting for Alliance Monuments button...
+Inspecting for additional shards after redemption.
+Inspecting for completed tasks to collect rewards...
+Inspecting for free mission button...
+Inspecting if task is already running near:
+Inspecting if task type is enabled:
+Inspecting research queue status via OCR...
+Inspecting weekly Triumph rewards status
+Insufficient FC. Need %d more FC to reach target.
+Insufficient coins to trigger Alliance Shop task
+Insufficient resources detected. Replenishing and retrying start.
+Intel & Exploration
+Intel Beast
+Intel Journeys
+Intel Survivor Camps
+Intel button absent, pass
+Intel confirmed, probe
+Intel is pending but no active queue was available to force Intel immediately.
+Intel pending within %d min. Deferring gather until %s.
+Intel reached
+Intel task is scheduled to run soon. Planning next Beast run 5 min later.
+Intel unreachable after
+IntelLayout
+IntelligenceRoutine |
+Internal Intel march counter updated after capacity adjustment:
+Internal Intel march counter updated:
+Interrupted before recovery for
+Interrupted during
+Interrupted waiting for slot
+Interrupting
+Invalid Input
+Invalid Polar Terror level configured: %d. Must be between %d and %d.
+Invalid activation time format:
+Invalid activation time format: '
+Invalid bank duration:
+Invalid configuration. Retrying at
+Invalid dungeon number:
+Invalid emulator file selected. Please select a valid emulator executable.
+Invalid flag number in config for march
+Invalid flag number in config:
+Invalid gathering resource configuration:
+Invalid join flag value:
+Invalid offset configured:
+Invalid queue count configured:
+Invalid region selected for OCR.
+Invalid swipe coordinates
+Invalid trap number:
+Invalid troop type in configuration: '
+Iron Mine
+Iron icon should match the iron outbound row:
+Issue while Bear Trap execution:
+Issue while OCR analysis:
+Issue while OCR time extraction:
+Issue while research status OCR:
+Item
+Item available in both tabs
+Item base price:
+JAR files
+Java Source Files
+JoL
+Join button at
+Joining rally with flag #
+Journey of Light Event
+Journey of Light event has ended. Rescheduling to next reset.
+Keeping production consumer lock because
+LDPlayer
+Laby
+Labyrinth
+Labyrinth menu item not found.
+Lancer
+Lancer Camp
+Lancers
+Launching all queues
+Launching game...
+Launching rally
+Left
+Left menu —
+Left truck is in transit, returns at:
+Legends
+Level not locked, tapping lock button
+Level selector: confirmed level
+Level selector: highest selectable level is
+Level selector: settled at %d instead of %d after %d adjustments
+LfCar
+Life Essence
+Life Essence Caring
+Life Essence caring completed successfully for
+Life Essence items
+Life Essence menu found. Opening.
+Life Essence menu not found after scrolling
+Life Essence menu not visible. Trying second swipe.
+Life Essence task completed. Claimed:
+LifeE
+Liking the island
+Line
+List refreshed after defeat. Rescanning opponents.
+List refreshed. Rescanning opponents.
+Load Profile
+Loaded gather pool config: '
+Loaded screenshot:
+Loading...
+Local
+Locating screen - need
+Locating war button
+Looking for
+Looking for Chief Order menu access button
+MEmu Player
+MEmu status interrupted
+Mail
+Mail Rewards
+Mail Rewards Claimed
+Mail menu did not open successfully.
+Mail menu opened finished cleanly.
+Mail rewards task completed. Next run at:
+MailRewardsRoutine |
+Make sure the file extends DelayedTask and the project
+ManualRallyJoin
+ManualRallyJoinRoutine |
+March
+March Recall
+March deployed successfully.
+March queue for
+March queue full popup at
+March queue is full. Cannot start a new march.
+March queue popup detected after Rally. Waiting for a march slot to return.
+March queue read error:
+March queue:
+Markdown
+MarkdownV2
+Marksman
+Marksman camp shortcut not found.
+Marksman-Camp
+Marksmen
+Match detected! Target at
+Match:
+Match: true
+Max age:
+Max troops is zero. Zero training possible.
+Max troops: %d | Train time for max: %s | Time available: %s
+Maximum available troop level:
+Mbps
+Merc
+Mercenary level has changed since last time. Using flag selection if enabled.
+Mercenary march deployed with unknown return time. Task will retry at
+Mercenary march sent. Task will run again at
+Microsoft
+Ministry appointment protected. %d minutes remaining.
+Ministry appointment protection expired. Inspecting for reappointment.
+Ministry appointment time:
+Missing JavaFX stylesheet resource:
+Missing emulator number
+Missing profile dialog layout:
+Missing test resource:
+Missions are available. Continuing Intel mission processing.
+Missions detected again - resetting consecutive no-mission counter
+Missions still exist but none were processed this cycle. Retrying immediately.
+Mono reference
+Monospaced
+Monthly VIP is already active.
+Monthly VIP is not active. Initiating purchase.
+Monthly VIP purchase completed.
+Moved
+Moving camera to Bear Trap
+Moving from
+Moving to Alliance Championship event...
+Moving to Alliance Mobilization...
+Moving to Alliance Shop...
+Moving to Alliance Tech menu
+Moving to Crystal Laboratory
+Moving to Sunfire Castle tab
+Moving to War Academy.
+Moving to alliance screen
+Moving to daily missions interface
+MuMuManager.exe
+MuMuPlayer
+Multiple random tapping
+My Cool Task
+My Treasures
+My Trucks
+MyTask
+Myriad Bazaar Event
+Myriad Bazaar event probably not active
+Myriad Bazaar is active, claiming free rewards
+Myst
+Mystery Shop Free Claims
+Mystery Shop Purchases
+Mystery Shop button not found inside the shop. Rescheduling for 1 hour.
+Mythic Hero Shards
+Mythic shards found instead of 250 Hero Widget. Skipping purchase.
+NOT FOUND
+NOT RUNNING
+Name configured but OCR failed
+Native extraction failed:
+Native library loaded from:
+Navigate
+Navigate node recorded
+Navigate to shop failed, retrying...
+Navigate: %s
+Navigating back to home
+Navigating camera to Romulus icon via Infirmary
+Navigating to
+Navigating to Hero's Mission event...
+Navigating to Life Essence menu
+Navigating to Mercenary event...
+Navigating to Storehouse
+Navigating to Tundra Trek Supplies...
+Navigating to Tundra Truck event
+Navigating to Tundra menu
+Navigating to bank
+Navigating to expert:
+Navigating to hero recruitment interface
+Navigating to island location
+Navigating to the Labyrinth menu...
+Navigating to the Mystery Shop.
+Navigating to the shop.
+Navigation attempt
+Navigation did not complete. Returning to home screen and retrying...
+Navigation failed
+Navigation failed. Consecutive failures:
+Navigation failed. Retrying at
+Navigation to Mercenary event failed, attempt
+NavigationHelper
+Need
+Neither Register nor Troops button detected
+Neither World nor City image detected.
+Neither scout nor challenge button found for mercenary event.
+Never attack profile alliance
+Never attack profile server
+New survivors detected. Welcoming them in.
+NewSurvivorsRoutine |
+Next check in
+Next check is near or unknown - retrying in 5 minutes at %s.
+Next execution scheduled at:
+Next execution scheduled for game reset at:
+Next execution scheduled for monthly VIP buy at:
+Next execution scheduled for:
+Next hero recruitment check scheduled for:
+Next queue time for queue
+Next run in:
+Next scroll purchase available at:
+Next scroll purchase check scheduled for:
+Next task approaching - re-acquiring slot
+Next task scheduled to run in:
+Next ►
+Nightmare
+No 'Normal Challenge' button found for dungeon
+No ConfigScope registered for code
+No Flag
+No Java compiler available. Make sure you are running on a JDK, not a JRE.
+No Obtain dialog detected
+No TpConfigEnum maps to code
+No TpDailyTaskEnum registered for code
+No active emulator set for task builder
+No active gather marches found to recall.
+No active queue found for profile:
+No arrived trucks found.
+No available tech node in '
+No boost replacement dialog
+No character config, skipping
+No character configuration found
+No character configuration found. Skipping character verification.
+No character name configured
+No claimable essence found on attempt
+No claimable treasure found - already claimed today
+No completed chests found on attempt
+No construction queue is free and queue
+No cooldown parsed for any enabled skill. Rescheduling in
+No daily arena challenges are available and extra attempts are disabled.
+No daily caring attempts remaining. Rescheduling for next game reset.
+No daily refresh available. All Nomadic Merchant operations are complete.
+No deployable troops found on gather formation screen.
+No deployable troops remain
+No deployable troops: Troop Training button at
+No deposit ready for withdrawal. Checking status
+No dungeons were successfully completed today.
+No eligible opponent found in current arena list.
+No emulator selected
+No emulator selected. The application will close.
+No enabled category had an available research. Planning next run in 1 hour.
+No enabled priorities found for expert skill training. Disabling task.
+No experts found, scheduling to check again in 10 minutes.
+No exploration rewards to claim.
+No flag — skipping
+No frame from
+No free rewards, purchases or daily refresh available
+No free watches found, skipping claim.
+No gather types enabled. Disabling task.
+No gift codes available at this time.
+No idle march slot
+No idle physical march slot is available for gather. Rechecking at %s.
+No intel missions detected. Skipping Intel run for now.
+No intel missions found after re-scan. Intel run is complete for now.
+No island found on this screen. Scrolling to see more islands.
+No island needing care found after
+No march slots - retry in 1 min
+No match found. Best Match:
+No matching modules or configs.
+No mercenary level found after OCR attempts.
+No more adventure attempts available. Rescheduling for next game reset
+No more available chests found. Rescheduling for chest completion check
+No more extra attempts available for purchase
+No more resources or VIP points found. Checking for daily refresh.
+No path configured
+No path for
+No pet skills enabled. Rescheduling to retry at reset.
+No profile selected for editing.
+No profiles selected
+No purchase confirmation dialog
+No queue found for
+No reapers available. Rescheduling task for next reset.
+No recognised time-span layout matches:
+No reconnect time configured
+No research categories enabled.
+No rewards found after 3 consecutive attempts, exiting loop
+No safe gap - falling back to screen center.
+No scroll cooldown set. Attempting to buy.
+No serial for dev
+No task mapping for type:
+No tasks enabled.
+No training expert found, ending task.
+No trucks available and none in transit. Rescheduling for next activation time.
+No trucks sent
+No type converter registered for
+No valid OCR for
+No valid Research Center found
+No valid active emulator configured. Automation might fail unless changed.
+Nomad
+Nomadic Merchant Daily Refresh Used
+Nomadic Merchant Free Resources Claimed
+Nomadic Merchant VIP Points Purchased
+Nomadic Merchant stats - free resources claimed:
+None
+Normal
+Normalizing research menu with swipes...
+Not Found
+Not Running
+Not enough stamina to process intel. Current stamina:
+Not on Intel — routing via world view
+Not visible, scrolling
+Number OCR result:
+OCR Error:
+OCR attempt
+OCR attempt did not complete:
+OCR check failed:
+OCR error while checking reaper availability. Retrying in 5 minutes.
+OCR execution failed
+OCR fail. Retry 5m
+OCR failed to read remaining time
+OCR failed, using backup level selection
+OCR finished cleanly. Time detected:
+OCR node missing region coordinates
+OCR result with ocrPreset
+OCR result:
+OCR result: '
+OCR returned empty for
+OCR returned empty time text
+Observer error during energy broadcast
+Obtain
+Obtain dialog OCR: '
+Obtain dialog detected. Purchasing boost item.
+Obtain dialog not present
+Obtain loop iteration:
+Obtain more
+Obtain-more dialog:
+OcrSpec area for points:
+Only detected %d Research Centers, need at least %d.
+Only left truck time extracted. Next check:
+Only march-bound intel missions remain and all Intel marches are occupied.
+Only right truck time extracted. Next check:
+OpenCV native library loaded successfully.
+OpenCvPatternLocator
+Opening
+Opening Adventure Map
+Opening Alliance Treasure Map screen
+Opening Ally Treasure screen
+Opening Beast Cage
+Opening Caring tab
+Opening Exploration screen from world view.
+Opening Gathering Speed section
+Opening Pets menu
+Opening Research Center view
+Opening alliance panel
+Opening auto-join config
+Opening challenge list
+Opening extra attempts purchase dialog
+Opening profile menu
+Opening profile to read stamina
+Opening rally dialog
+Opening resource search menu
+Opening shop tab
+Operator requested halt
+Opponent %d %s OCR result: %s
+Opponent %d challenge button color check failed. Treating button as disabled.
+Opponent %d challenge button colors - saturatedBlue: %d, grey: %d, dark: %d
+Opponent %d server OCR failed after retry: '%s'
+Opponent %d server OCR failed. Retrying once.
+Orange 'idle' text detected - IDLE_TEMP
+Other
+Other Item
+Other Troops are marching toward the same target
+Other tasks will be refreshed to get better options
+Overflow rewards detected. Scrolling to reveal more mail.
+Overlay clear attempt failed or not needed:
+Override is disabled. Skipping deployment.
+Override is enabled. Proceeding to update deployment
+Own rally started finished cleanly, returning in:
+PAUSE REQUESTED
+PC Sleep
+PC sleep scheduling error:
+PREPARATION PHASE:
+Page
+Paid arena list refresh disabled in configuration
+Parse fail. Retry 5m
+Pattern must follow the shifted Daily tab instead of assuming a fixed coordinate
+Pause execution for a duration
+Pausing all queues
+Pausing queue
+Performing
+Performing ADB health check before emulator restart...
+Pet Adventure
+Pet Chest
+Pet Food
+Pet Skill Food
+Pet Skill Gathering
+Pet Skill Stamina
+Pet Skill Treasure
+Pet Skills
+PetAdv
+PetFd
+PetGa
+PetSt
+PetTr
+Pets button found. Opening menu.
+Pets button not detected to enable pets
+Pets button not found on home screen
+Pets button not found on home screen. Will retry in
+PetsLayout
+Planning next research check for:
+Planning next run based on shortest cooldown:
+Planning next run for game reset at
+Planning next run task for
+Planning next run task for:
+Planning next run to earliest completion:
+Please check your profile configs.
+Please correct the following errors:
+Please enter a Bot Token before testing.
+Please enter a valid time in HH:MM:SS format
+Please load a profile first to use as template for bulk update.
+Please report to the devs which menu this was stuck on if you see this message.
+Please select a profile to control its queue.
+Please select which emulator to use. Found emulators are highlighted.
+Please specify its executable location manually in the following dialog.
+PointData
+Polar
+Polar Terror Hunting
+Polar Terror tab not found after swiping search tabs
+PolarTerrorHuntingRoutine |
+PolarTerrorLayout
+Poll iteration error:
+Position:
+Pre-check: Could not read counter. Proceeding with automation.
+Pre-check: Trek counter at
+Pre-loading sprite store...
+Preempted by
+Preempted by:
+Preempting
+Preemption blocked - active task outranks
+Preemption ignored - no mapping for
+Preemption rule registered
+Prefer profile server
+Preferred hero not found for
+Preparation window:
+Preparing for Bear Trap event...
+Preparing to train
+Press the Android back button
+Press-back cleanup error:
+Pressing BACK button
+Pressing Deploy button.
+Pressing Redeem button
+Pressing Research Center
+Pressing alliance button at bottom of screen
+Pressing back button
+Pressing building center to enter
+Pressing confirm at:
+Pressing monument position
+Previous mercenary level:
+PrioritiseFurnaceRoutine |
+Proceeding with new deployment
+Processed
+Processed Region
+Processed: %d frames | Decoded: %d | Null polls: %d
+Processing %d challenge attempts
+Processing advanced recruitment
+Processing epic recruitment
+Processing priority
+Processing queue
+Production blocker
+Productivity Day
+Profile '
+Profile Editor
+Profile deleted successfully.
+Profile error:
+Profile name
+Profile not found:
+Profile refresh failed before execution:
+Profile selection required
+Profile switch detected on emulator
+Profile updated successfully.
+Profile#
+ProfileManagerLayout
+Programs
+Promotion completion time unavailable, falling back to normal timer.
+Promotion confirmed for:
+Promotion executed finished cleanly.
+Promotion not available for:
+Promotion will complete at:
+Proposed time exceeds reset window. Capping at:
+Purchase confirmation OCR: '
+Purchase confirmation dialog detected.
+Purchase confirmation not present
+Purchase confirmed.
+Queue
+Queue count set to
+Queue not available
+Queue position:
+Queued for immediate execution
+RESUMING AFTER PAUSE
+Rally #
+Rally active flag automatically reset after duration
+Rally button not detected!
+Rally button not found. Rescheduling to try again in 5 minutes.
+Rally count dropped:
+Rally count first observed:
+Rally count rose:
+Rally deployed and World anchor verified
+Rally deployed finished cleanly. March time:
+Rally icon should match the waiting rally row:
+Rally indicator detected at
+Rally indicator not detected.
+Rally scheduler shutdown finished cleanly
+Rally set time:
+Rally set time: checkbox scan failed:
+Rallying mercenary.
+Random tapping in area
+Re-queued Alliance Autojoin task
+Re-queued Alliance Autojoin task after Intel completion.
+Re-queued Gather Resources task
+Re-queueing gather tasks after Intel completion...
+Re-queueing tasks after Bear Trap event...
+Reached
+Reached minimum coins threshold during multi-tab processing.
+Reached minimum coins threshold. Stopping purchases.
+Read text from a screen region
+Reading VIP expiration time from screen
+Reading chest timer via OCR
+Reading initial challenge attempts
+Reading points near bonus location:
+Reading refresh cooldown from
+Reading remaining shards count via OCR.
+Reading research time via OCR...
+Reading task availability timers from empty task slots...
+Reanalyzing queues after processing idle queues...
+Reaper rally scheduled to return in
+Reapers rallied until now:
+Recall treated as complete with adjusted Intel march capacity
+Recalled
+Recalled gather march from queue #
+Recalling all gather troops to the city...
+Recommended building remained unresolved after
+Reconnect error:
+Reconnect pause:
+Reconnect required at launch [
+Reconnect screen hit mid-navigation [
+Reconnection time
+Recovery failed for
+Recruit heroes
+Redeeming maximum available shards.
+Reference asset not found:
+Reference exceeds clip region
+Reference trap time not configured, using default: now + 1 hour
+Refilling one missing resource for the upgrade...
+Regression frame should preserve the historical false-positive Claim hit:
+Reinforcement icon should match the reinforced row:
+Remaining trucks OCR: '
+Remove Task
+Remove task from scheduler
+Removed
+Removed active gather types from pool:
+Removed custom task:
+Removed:
+Removing Create Character task...
+Reopening pets menu to read gathering skill cooldown
+Replenish All pattern must not match the confirmation dialog:
+Replenish All pattern must not match the research detail:
+Replenish All pattern should match the Obtain more frame:
+Replenished
+Reports
+Requesting ADB Slot
+Rescheduled
+Rescheduled for %d hours later at: %s
+Rescheduled for chest completion check at
+Rescheduled to next game reset:
+Rescheduling
+Rescheduling Pet Skills task for:
+Rescheduling for %s at: %s
+Rescheduling for game reset time
+Rescheduling for next activation at
+Rescheduling with
+Research Center shortcut not detected.
+Research Center shortcut not found in left menu
+Research Center shortcut not found.
+Research Help button detected. Pressing it.
+Research Started
+Research busy for
+Research button not detected.
+Research queue OCR status: '
+Research queue is Idle. Proceeding...
+Research queue is busy. Attempting to read remaining time...
+Research task completed. Planning next run for:
+Research text template detected.
+Research time is
+Research time is less than 5 minutes. Keeping normal schedule:
+ResearchLayout
+ResearchRoutine |
+Reset all statistics for this profile?
+Resetting level slider to 1
+Resetting purchase counter to zero
+Resetting queue counter to zero
+Resetting troop list to the end.
+Resetting troop list to the start.
+ResilientOcrExecutor
+Restart bot + emulators
+Resume
+Resuming all queues
+Resuming queue
+Retry attempt
+Retrying analysis for queue
+Retrying navigation to the Journey of Light event screen. Attempt
+Retrying queue:
+Returning arrow detected - attempting to tap recall button
+Returning to home screen
+Returning to home screen.
+Reusing cached native library:
+Rewards collected from completed task
+Right
+Right truck is in transit, returns at:
+RomT
+RomTr
+Romulus
+Romulus claim button found - claiming
+Romulus claim button found - claiming loyalty tags
+Romulus claim button not found after
+Roster scan
+Routine pass did not complete:
+Running Skip Tutorial Task...
+Running action:
+Running idle injection:
+Running since
+Rush Job
+SSR truck not found after
+SSR truck not found and required. Skipping
+STATISTICS_JSON_STRING updated to
+SYSTEM -
+Same-target confirmation at
+Saving gather pool config: '
+Sawmill
+Scanning for 200% bonus task...
+Scanning for Chief Order Enact button
+Scanning for Chief Order type:
+Scanning for Deploy button...
+Scanning for beasts using grayscale matching.
+Scanning for claim buttons
+Scanning for completed missions to claim.
+Scanning for completed missions. Attempt
+Scanning for explorations using grayscale matching.
+Scanning for fire beasts.
+Scanning for grayscale template '
+Scanning for max level among
+Scanning for rally indicator...
+Scanning for survivor camps using grayscale matching.
+Scanning for targets and join buttons...
+Scanning for the 'New Survivors' notification.
+Scanning for thumbs-up donation button
+Schedule restored:
+Schedule:
+ScheduleService
+Scheduled rally flag reset in
+Scheduling Tundra Truck task for
+Scheduling final check before reset at:
+Scheduling next gather check at %s.
+Scouting mercenary. Decreasing stamina by 15.
+Scrcpy stream failed:
+Screen capture must not be null.
+Screenrecord stream failed:
+Scroll cooldown expired. Attempting to buy.
+Scrolling to reveal Life Essence menu
+Search Results
+Search for an image on screen
+Searching for
+Searching for %s tile
+Searching for 250 badges Hero Widget to purchase. Attempt
+Searching for Agnes icon with
+Searching for GO image...
+Searching for Marksman Camp shortcut
+Searching for Romulus claim button for
+Searching for Romulus claim button with
+Searching for Storehouse chest reward.
+Searching for arrived trucks
+Searching for claimable Life Essence
+Searching for completed chests to claim
+Searching for completed chests. Attempt
+Searching for free resources to claim.
+Searching for hand template and mirror...
+Searching for island that needs caring
+Searching for:
+Second click on same position
+Seeded default global configuration
+Select
+Select Custom Template Image
+Select Emulator
+Select Emulator Executable for
+Select a delay:
+Select a log file to download:
+Select bot JAR
+Select button not found for
+Selected building name OCR: '
+Selected highest troop level:
+Selected mercenary event difficulty:
+Selecting 'Specific formation' option
+Selecting 'Use all troops' option
+Selecting flag #
+Selecting maximum shards
+Selecting rally tab
+Sending
+Session Started:
+Setting only-full-resources search to
+Settings button not found
+Settings from '
+Shards redeemed finished cleanly.
+Sharing completed chest with alliance
+Shelter 1
+Shelter 2
+Shelter 3
+Shelter 4
+Shelter 5
+Shelter 6
+Shelter 7
+Shelter 8
+Shop Mystery
+Shop button detected at:
+Shop button not found on the main screen. Rescheduling for 1 hour.
+Shop button on the main screen not found. Rescheduling for 1 hour.
+Shop navigation failed after multiple attempts, rescheduling task for 1 hour
+ShopLayout
+Shortest busy queue: Queue
+Show automation status
+Show help message
+Show inactive
+Size:
+SkTrn
+Skill
+Skip button clicked but Auto not verified. Proceeding anyway.
+Skip button found - using as Auto alternative
+Skip button found! Clicking it.
+Skip button not found
+SkipTutorialLayout
+Skipping
+Skipping Initialize - no imminent tasks
+Skipping active gather row with unknown resource type: #
+Skipping already identified mythic shard location.
+Skipping attack to avoid hitting the wrong creature. Retrying in 5 min.
+Skipping character verification.
+Skipping rally joining because joining is disabled.
+Skipping state save during shutdown
+Skipping task execution during shutdown:
+Skipping this rally join iteration, will retry on next cycle
+Skipping this rally startup attempt, will retry on next cycle
+Skipping unknown configuration:
+Sleep interrupted
+Slot flag should match empty march rows:
+Slot handover warning:
+Slot holders:
+Slot released
+Smart Intel beast march return ETA:
+Smart processing found no duplicate gather marches to recall.
+Smart processing recalled
+Smart processing selected duplicate
+Snow Ape
+Something is broken. Either you have not checked your mail in DAYS,
+Speedup pattern must not match the Help button:
+Speedup pattern must not match the completed research tree:
+Speedup pattern should match running research strongly:
+Sprite cached:
+Sprite skipped:
+Sprite store pre-load failed:
+Stamina already claimed. Next claim at:
+Stamina check:
+Stamina gate:
+Stamina gate: pressing Deploy to open the obtain-more dialog
+Stamina gate: waiting %d min for regeneration from %d to %d
+Stamina icon found. Tapping to open popup.
+Stamina icon not found after retries. Will retry in 1 hour as fallback.
+Stamina read timeout: profile open exceeded 1s, aborting
+Stamina read timeout: stamina button click exceeded 1.5s, aborting
+Stamina read:
+Stamina skill level: %d. Added %d stamina.
+Stamina time is in the past, treating as invalid.
+Stamina update error:
+Stamina: %d
+StaminaHelper
+Start Menu
+Start location:
+Start location: Any
+Start the automation routines
+Start the bot app without UI
+Start-Stop-Thread
+Started
+Starting automation sequence
+Starting available adventure chests
+Starting building
+Starting emulator...
+Starting queue for profile:
+Starting queues
+Starting task execution:
+Startup
+Startup Only
+Startup failure:
+StatisticsLayout
+Status: Testing…
+Status: ✅ Connected as
+Status: ✅ Running
+Status: ❌
+Step 4 Loop iteration:
+Still failing — kill-server + restart
+Still insufficient after replenish. Rechecking in
+Stop the automation routines
+Stopped bot and closed emulator
+Stopped individual claims at safety limit
+Stopping all queues
+Store
+Storehouse Chest
+Storehouse chest found
+Stream died
+Stream warmed up - first frame received.
+String OCR result:
+Success
+Success: Saved to temporary file
+Successfully collected
+Successfully completed challenge for dungeon
+Successfully created profile:
+Successfully deleted profile:
+Successfully deployed
+Successfully deployed all %d configured rallies. Planning next run at %s.
+Successfully entered Tundra Trek event
+Successfully navigated to Alliance Tech menu
+Successfully navigated to Crystal Laboratory
+Successfully navigated to Hero's Mission event.
+Successfully navigated to Life Essence area
+Successfully navigated to Tundra Truck event
+Successfully navigated to War Academy.
+Successfully navigated to bank
+Successfully navigated to the Journey of Light event.
+Successfully navigated to the Labyrinth menu.
+Successfully navigated to the Mystery Shop.
+Successfully parsed the next reward time. Rescheduling the task for:
+Successfully purchased
+Successfully purchased item
+Successfully read shards count:
+Successfully started training for skill:
+Successfully updated
+Successfully updated profile:
+Sufficient FC available. Performing %d refinements.
+Sunfire Castle not immediately visible. Swiping to locate.
+Sunfire Castle tab not detected after all swipe attempts
+Surv
+Survivor assignment complete. Planning next run task.
+Swipe between two points
+Swiping from
+Swiping to reveal Research Centers
+Swiping to reveal bank tab
+Switch Character button not found
+Switch OK
+Switching to '
+Switching to Growth tab
+Switching to Skip Tutorial task immediately
+Switching to daily missions tab at
+System
+T%d | DANGER %d zones: %s
+Tab not found:
+Taking screenshot...
+Tap at a specific coordinate
+Tap failed — backing out
+Tap or format region on preview...
+Tapping Infirmary to move camera
+Tapping Intel button
+Tapping Research Center
+Tapping at
+Tapping gather button
+Tapping on Storehouse to navigate
+Target Profile:
+Task
+Task Completed:
+Task at 200% is already running
+Task at 200% is already running - skipping this one
+Task completed finished cleanly. Next execution in
+Task interrupted by user request
+Task interrupted during shutdown:
+Task interrupted during sleep
+Task is currently scheduled
+Task not found:
+Task preempted:
+Task removal failed for
+Task removed from schedule
+Task rescheduled to retry in
+Task rescheduled to retry in 5 minutes
+Task scheduled successfully for:
+Task type detected:
+Task type not detected at
+TaskBuilderLayout
+TaskDispatcher
+TaskExecutor
+TaskManagerLayout
+TaskPreempted[
+TaskQueue stopped
+TaskQueue-
+TaskScheduler
+Telegram Bot
+Telegram Bot Service started in Headless mode.
+Telegram Watcher is already running.
+Telegram Watcher is not running. Attempting to start it...
+Telegram bot commands registered successfully
+TelegramBotBoundary
+TelegramBotService already running – restarting with new credentials
+TelegramBotService stopped
+TelegramBotService: token is blank, not starting
+TelegramLayout
+Template
+Template Search
+Template Search node missing templatePath
+Template directory not found. Please verify location.
+Template loaded: %dx%d
+Template not detected:
+Template search execution failed
+TemplateSearchHelper
+Territory Teleport
+Territory button not detected to go to bear trap
+Test Hook Loop disabled in configs - stopping.
+TestGatherDeployPreemption
+Text: '
+That date or time is outside the valid calendar range.
+The 'Deals' button was not found. Retrying in 5 minutes.
+The formation screen offers Troop Training, so there are no troops to send
+The selected emulator was not found automatically.
+The selected queue is not currently running.
+This action cannot be undone.
+Thread interrupted - stopping loop.
+Thumbs-up donation button detected. Proceeding with donations.
+Thumbs-up donation button not detected after retries
+Thumbs-up donation button not found
+Ticks: %d | Elapsed: %dms | FPS: %.1f
+Time OCR result: '
+Timeout during automation
+Timeout: Counter stagnated for
+Timeout: No valid OCR readings for
+Timer bar detected at
+Today
+Toggle queue
+Total:
+Train button not detected.
+Training & Research
+Training Batches Started
+Training Infantry
+Training Lancer
+Training Marksman
+Training button not detected for
+Training skill:
+Training will complete at:
+TrainingLayout
+TrainingRoutine |
+Transfer Pass
+Trap active -
+Trap already ended for this window
+Trap has been ACTIVATED automatically!
+Trap will auto-activate at:
+Trap will end at:
+Travel estimate:
+Travel time OCR failed
+Travel time:
+Treasure already claimed
+Trek Supplies
+Trek Supplies are available. Claiming now...
+Trek Supplies have already been claimed or are not yet available.
+Trek counter decreased to:
+Trek counter stagnated at
+TrekA
+TrekS
+Triggering Alliance Shop task to execute immediately
+TriumphRoutine |
+TrkEv
+TrnInf
+TrnLnc
+TrnMrk
+Troop level locked:
+Troop type configuration is missing. Please set
+Troops are still marching - waiting for them to return
+Troops deployed finished cleanly
+Troops deployment updated finished cleanly
+Trucks are in transit. Scheduling next check for truck return time.
+Trucks refreshed without confirmation popup
+Trying category '
+Trying unselected mobilization tab
+Tundra Truck event has ended. Rescheduling for next reset.
+Two consecutive empty searches. Stopping claim attempts.
+UTC has already passed today. Running immediately.
+Unable to initialise template asset paths
+Unable to interpret time span:
+Unable to stop adb.exe cleanly
+Unavailable
+Unavailable pattern should match the unavailable frame strongly:
+Unexpected attempt price: %d gems
+Unexpected error
+Unexpected error during TundraTrekAuto task:
+Unexpected error during execution:
+Unexpected error during rally joining:
+Unexpected error during rally startup:
+Unexpected error while attempting to purchase
+Unexpected error:
+Unknown
+Unknown learning time:
+Unknown scaling:
+Unknown task type:
+Unlimited
+Unlock
+Unlock pattern should match the unlock row strongly:
+Unreadable image:
+Unsupported scale:
+Update
+Updated earliest available march:
+Updated earliest cooldown:
+Updating next trap activation time to:
+Upgrade button not detected
+Upgrade search iteration:
+UpgradeBuildingsRoutine |
+Urgent Mobilization
+Use HH:mm, for example 19:30.
+Use button found. Using skill.
+Use dd-MM-yyyy HH:mm, for example 10-06-2026 19:30.
+User Dir:
+Using
+Using rally target template:
+Utility
+VIP Points
+VIP point rewards collected
+VIP points purchased. Re-checking for new resource templates.
+VIP purchase is enabled. Searching for VIP points to buy.
+Valid options: Infantry, Lancer, Marksman.
+Victory! Continue...
+View Enabled Tasks
+VipRoutine |
+Visual check did not complete in confirmExecutionWindow:
+WAcad
+Wait %sms
+Wait Max Age config
+Wait time is
+Wait time is less than 5 minutes. Keeping normal schedule:
+Waiting 10 seconds before checking again
+Waiting 10 seconds before checking again.
+Waiting 10s...
+Waiting briefly before reassigning survivors to buildings.
+Waiting for claim button to appear in popup...
+Waiting for device slot
+Waiting for march return and rescheduling Intel at:
+Waiting for trap auto-activation in
+War Academy Shards
+War Academy UI validation did not complete.
+War button not detected on screen
+WarAcademyRoutine |
+Warning: templates.properties resource is missing!
+WatcherCommandServer stopped.
+Week
+Weekly Triumph collected finished cleanly
+Weekly Triumph rewards are available - collecting now
+Weekly Triumph rewards not available or already collected
+Weekly free scroll found. Opening purchase dialog.
+Weekly free scroll purchased successfully
+Weekly scroll not yet available. Next purchase at:
+Whiteout Survival Bot v%s - %s [Stamina: %d]
+Whiteout Survival is already running
+Whiteout Survival is already running.
+Whiteout Survival is not installed. Stopping the task queue.
+Whiteout Survival is not running
+Whiteout Survival is not running. Launching the game...
+Will run for up to
+Will still try to restart emulator.
+Window restored to the primary display
+WindowResult fields must not be null
+Windows
+Withdraw button not found during withdrawal attempt
+World
+World Map
+Writing text on emulator
+X-API-Key
+Yes
+You must have at least one profile.
+Zero 'Claim All' button for gifts. Inspecting for individual gifts.
+Zero 120% bonus tasks detected
+Zero 200% bonus task detected
+Zero Alliance Monuments button detected
+Zero BUSY queues with time information detected. Planning next run for 1 hour:
+Zero IDLE queues available. Inspecting BUSY queues to reschedule...
+Zero active deployment detected
+Zero additional individual gifts detected.
+Zero additional shards detected. Planning next run for game reset.
+Zero attempts remaining. Planning next run for next UTC reset at
+Zero completed missions detected on attempt
+Zero completed tasks detected
+Zero completion times extracted. Planning next run retry soon.
+Zero crystals available to claim.
+Zero discounted RFC available today.
+Zero flag configured for march
+Zero free mission button detected
+Zero idle marches detected via OCR. Analyzing gather march queues...
+Zero individual gifts to claim.
+Zero intel items detected. Attempting to read the cooldown timer.
+Zero march indicators detected. All gather troops are recalled or none present.
+Zero marches available after %d rallies. Planning next run at %s.
+Zero matching target and join button detected. Ending task.
+Zero missions detected. Consecutive count:
+Zero new intel detected. Planning next run task to run at:
+Zero new survivors detected. Planning next run task.
+Zero promotable troops detected.
+Zero promotable troops detected. Executing normal training.
+Zero queues are ready for training. Planning next run check shortly.
+Zero shards available to redeem.
+Zero task availability timers detected
+Zero task type detected near bonus location
+Zero tasks processed. Inspecting again in
+Zero timer bar detected - task is available
+Zero troop levels detected. Falling back to normal training.
+Zero troop templates detected.
+Zero troop types selected for training. Disabling task.
+acquired slot
+activated finished cleanly
+adb.exe shutdown requested
+after tapping. Stopping because no visual progress was detected
+alliance unreadable
+already connected
+and Join at
+and marked as recurring
+and turns
+arena challenge button
+arena layout probe
+arena power read
+arrived trucks found. Collecting rewards now.
+as the source profile
+at card position
+attack row should not look like gather
+attempts. Assuming already claimed today
+attempts. Event may not be active. Retrying on next Monday at
+attempts. Island may not need care or UI didn't load properly.
+background removed
+base stamina.
+below threshold
+bracket without tag
+bracket-like closing marker
+bracket-like prefix
+building shortcut not found in left menu
+building view
+but too far from expected position
+button detected. Pressing to activate
+button not detected or currently on cooldown
+button not detected. Cannot proceed with deployment.
+capture error
+chest claim
+chests to be claimed.
+chief stamina item count
+claimable essence items
+completed missions. Collecting them now.
+completes at approximately
+current FC
+current refined FC
+current stamina
+d ago
+dd-MM-uuuu HH:mm
+dd-MM-yyyy HH:mm:ss
+deployed finished cleanly. Current stamina:
+deployed finished cleanly. Re-scanning for more available rallies...
+deposit option not available
+does not meet discount threshold in
+donations to Alliance Tech
+dumpsys activity activities
+dumpsys window
+dumpsys window displays
+dumpsys window windows
+echo adb_ok
+enabled purchase priorities:
+enabled — will be scheduled when bot starts
+ffmpeg not found - cannot use screenrecord streaming
+for emulator
+for expert:
+for immediate execution
+for march
+for profile:
+for smart Intel prioritization.
+found with match percentage:
+from queue
+from queue:
+furnace indicators found
+gather march on queue #
+go.png detected. Pressing it.
+handleRebootCommand failed
+has been purchased.
+has no available skill points to learn. Skipping.
+higher-level trucks
+highest available
+in reconnect state
+individual gifts.
+input cleared
+input keyevent KEYCODE_BACK
+input keyevent KEYCODE_DEL
+input keyevent KEYCODE_HOME
+input swipe
+input tap
+int __loopCount_
+into an unparsable
+invalid token
+is BUSY - Time remaining:
+is IDLE - available for use
+is IDLE_TEMP - detected by orange color
+is NOT PURCHASED - needs to be acquired
+is above
+is available.
+is below
+is either maxed or locked. Skipping.
+is in a reconnect state and cannot execute the task:
+is locked on this profile
+is not available today.
+is not available.
+is not available. Related skills will be skipped.
+is out of range [1..
+is requesting queue slot
+is sold out
+is sold out in
+key → label
+locked row should expose orange Unlock text
+m ago
+m, priority:
+marches idle, possibly VIP expired.
+marches. Reached configured limit. Ending task.
+match percentage
+matchFromSuppliedBytes: could not decode template bytes
+matchFromSuppliedBytes: exception during search
+matchFromSuppliedBytesMono: could not decode template bytes
+matchFromSuppliedBytesMono: exception during search
+matches '
+meat gather row should have a green icon
+min from now.
+min wait
+min. Planning next run at half time:
+min. Planning next run at:
+min. Recalling all gather marches.
+minute backoff. Next attempt:
+minutes at:
+minutes from now
+minutes. Must be at least
+minutes. Using normal schedule
+missing closing bracket
+mission area
+mission area, using default 5 minutes
+mission area:
+monkey -p
+multi not found after
+must be a non-negative
+must be a valid
+no alliance
+not checked
+not detected in any card position
+not found after
+not present in queue
+not set
+not shown
+obtain.png detected. Executing obtain sequence.
+of 3.
+on emulator
+one time
+or we are stuck somewhere you shouldn't be.
+padlocked at
+page, skipping navigation.
+pattern must not be null
+pattern required
+percentage set to
+pm list packages | grep
+points deficit →
+power unreadable
+profile alliance
+profile server
+profileId must not be null
+public class
+queue is COMPLETE
+queue is IDLE
+queue is UPGRADING
+queues still have UNKNOWN status.
+queues with UNKNOWN status. Performing retries.
+rally row should not look like gather
+reanalyzed. New state:
+record → execute → capture
+recruitment next availability time
+recruitment next time:
+recruitment reward available. Claiming now.
+recruitment reward not available yet.
+recruitment time after
+recruitment time extraction failed. Using fallback.
+refresh attempts
+remains UNKNOWN
+resolved to:
+return LaunchPoint.
+s ago
+s. Remaining stamina:
+screencap timeout
+screencap too small
+scroll attempts
+seconds remaining
+seconds until trap auto-activates
+server retry
+shows a padlock — not selecting it
+skill is locked. Skipping.
+skill is on cooldown.
+skill not learned yet. Skipping.
+skill used successfully.
+stamina claim
+start bot
+state is UNKNOWN - OCR did not complete to detect state
+stop bot
+stronger power
+tab. Continuing.
+task - skipping
+textExtractor required
+the construction attempt did not make the queue BUSY
+the reserved queue did not provide start evidence
+threw exception:
+timer from screen
+to NOW
+topmost of foundResults
+training ready at:
+truck already departed. Skipping.
+truck available to send
+truck has already departed
+truck is available to send
+truck returns at:
+truck status
+truck time
+truck time OCR: '
+truck time:
+upgrade.png detected. Pressing it.
+upgradetext.png detected again. Pressing it.
+upgradetext.png detected in Step 4. Pressing it.
+upgradetext.png detected. Pressing coordinates
+usable after reserve
+with duration:
+with flag #
+with longest return time for recall.
+with template from:
+with template:
+wood gather row should have a green icon
+yyyy-MM-dd HH:mm:ss
+⏳ Compiling
+⏳ Device not ready — reconnecting ADB…
+⏳ Next task in
+▶ Executing DAG...
+▶ Navigating to
+▶ Start from Any
+▶ Start from City
+▶ Start from World
+▶️  Now
+▶️  Run
+▶️ Bot started.
+▶️ Queued:
+▶️ Running
+▶️ START BOT
+❌  Cancel
+❌ Bad data
+❌ Cannot create task instance
+❌ Capture failed
+❌ Compilation failed — check logs
+❌ Error fetching queue:
+❌ Error retrieving stats.
+❌ Error sending Document:
+❌ Error:
+❌ Execute failed
+❌ Failed
+❌ Failed at node #
+❌ Failed to capture screenshot. Is the emulator running?
+❌ Failed to encode screenshot.
+❌ Log file not found at
+❌ No enabled profiles found.
+❌ No profiles configured.
+❌ Profile not found
+❌ Profile not found.
+❌ Queue not active — start the bot first
+❌ Reboot failed:
+❌ Remove failed
+❌ Schedule failed
+❌ Screenshot error:
+❌ Screenshot failed after ADB restart.
+❌ Start Navigation failed:
+❌ Stop bot before toggling
+❌ Telegram rejected the document.
+❌ Unknown task
+❌ Unknown task ID:
+👆 Swiping from
+👆 Tapped at:
+🔍 Search | ✅
+🔍 Search | ❌
+🔍 [DEBUG]
+🔴 Drag to connect No branch...
+🔴 Inactive
+🔴 OFF
+🗑  Remove
+🗑 Cleared
+🗑 Deleted #
+🗑 Removed:
+🟢 Active
+🟢 ON

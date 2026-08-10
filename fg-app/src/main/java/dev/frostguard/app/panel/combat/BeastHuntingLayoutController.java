@@ -1,0 +1,82 @@
+package dev.frostguard.app.panel.combat;
+
+import dev.frostguard.app.shared.AbstractProfileController;
+import dev.frostguard.api.configs.ConfigurationKeyEnum;
+import javafx.fxml.FXML;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
+
+public class BeastHuntingLayoutController extends AbstractProfileController {
+
+    @FXML
+    private CheckBox checkBoxEnableBeastHunting;
+
+    @FXML
+    private ComboBox<Integer> comboBoxBeastHuntingMarches;
+
+    @FXML
+    private ComboBox<Integer> comboBoxBeastHuntingLevel;
+
+    @FXML
+    private TextField textFieldBeastStaminaReserve;
+
+    @FXML
+    private TextField textFieldBeastMaxAttacks;
+
+    @FXML private ComboBox<String> comboBoxMarchFlag1;
+    @FXML private ComboBox<String> comboBoxMarchFlag2;
+    @FXML private ComboBox<String> comboBoxMarchFlag3;
+    @FXML private ComboBox<String> comboBoxMarchFlag4;
+    @FXML private ComboBox<String> comboBoxMarchFlag5;
+    @FXML private ComboBox<String> comboBoxMarchFlag6;
+
+    private static final java.util.List<String> FLAG_OPTIONS = java.util.List.of(
+            "No Flag", "1", "2", "3", "4", "5", "6", "7", "8");
+
+    @FXML
+    private void initialize() {
+        // Map checkbox
+        checkBoxMappings.put(checkBoxEnableBeastHunting, ConfigurationKeyEnum.BEAST_HUNTING_ENABLED_BOOL);
+
+        // Initialize marches ComboBox (1–6)
+        comboBoxBeastHuntingMarches.getItems().addAll(1, 2, 3, 4, 5, 6);
+        comboBoxMappings.put(comboBoxBeastHuntingMarches, ConfigurationKeyEnum.BEAST_HUNTING_MARCHES_INT);
+
+        // Initialize level ComboBox (1–30)
+        for (int i = 1; i <= 30; i++) {
+            comboBoxBeastHuntingLevel.getItems().add(i);
+        }
+        comboBoxMappings.put(comboBoxBeastHuntingLevel, ConfigurationKeyEnum.BEAST_HUNTING_LEVEL_INT);
+
+        // Shared stamina reserve kept back for Intel/Rally
+        registerTextField(textFieldBeastStaminaReserve, ConfigurationKeyEnum.STAMINA_RESERVE_INT);
+
+        // Max attacks count (0 = Unlimited)
+        registerTextField(textFieldBeastMaxAttacks, ConfigurationKeyEnum.BEAST_HUNTING_MAX_ATTACKS_INT);
+
+        // Map 6 march preset ComboBoxes
+        comboBoxMappings.put(comboBoxMarchFlag1, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_1_FLAG_STRING);
+        comboBoxMappings.put(comboBoxMarchFlag2, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_2_FLAG_STRING);
+        comboBoxMappings.put(comboBoxMarchFlag3, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_3_FLAG_STRING);
+        comboBoxMappings.put(comboBoxMarchFlag4, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_4_FLAG_STRING);
+        comboBoxMappings.put(comboBoxMarchFlag5, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_5_FLAG_STRING);
+        comboBoxMappings.put(comboBoxMarchFlag6, ConfigurationKeyEnum.BEAST_HUNTING_MARCH_6_FLAG_STRING);
+
+        for (ComboBox<String> cb : new ComboBox[]{comboBoxMarchFlag1, comboBoxMarchFlag2, comboBoxMarchFlag3,
+                comboBoxMarchFlag4, comboBoxMarchFlag5, comboBoxMarchFlag6}) {
+            cb.getItems().setAll(FLAG_OPTIONS);
+            cb.setValue("No Flag");
+            cb.disableProperty().bind(checkBoxEnableBeastHunting.selectedProperty().not());
+        }
+
+        // Disable controls when checkbox is not selected
+        comboBoxBeastHuntingMarches.disableProperty().bind(checkBoxEnableBeastHunting.selectedProperty().not());
+        comboBoxBeastHuntingLevel.disableProperty().bind(checkBoxEnableBeastHunting.selectedProperty().not());
+        textFieldBeastStaminaReserve.disableProperty().bind(checkBoxEnableBeastHunting.selectedProperty().not());
+        textFieldBeastMaxAttacks.disableProperty().bind(checkBoxEnableBeastHunting.selectedProperty().not());
+
+        // Initialize change events (inherited from AbstractProfileController)
+        initializeChangeEvents();
+    }
+}

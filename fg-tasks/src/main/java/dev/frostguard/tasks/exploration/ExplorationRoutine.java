@@ -1,0 +1,170 @@
+package dev.frostguard.tasks.exploration;
+
+import java.time.LocalDateTime;
+
+import dev.frostguard.api.configs.ConfigurationKeyEnum;
+import dev.frostguard.api.configs.TemplatesEnum;
+import dev.frostguard.api.configs.TpDailyTaskEnum;
+import dev.frostguard.api.domain.ImageSearchResultData;
+import dev.frostguard.api.domain.PointData;
+import dev.frostguard.api.domain.AccountDescriptor;
+import dev.frostguard.engine.nav.SearchConfigConstants;
+import dev.frostguard.engine.schedule.DelayedTask;
+import dev.frostguard.engine.schedule.LaunchPoint;
+
+public class ExplorationRoutine extends DelayedTask {
+
+	private static final PointData EXPLORATION_ENTRY_TOP_LEFT = new PointData(40, 1190);
+	private static final PointData EXPLORATION_ENTRY_BOTTOM_RIGHT = new PointData(100, 1250);
+	private static final PointData REWARD_POPUP_TOP_LEFT = new PointData(230, 890);
+	private static final PointData REWARD_POPUP_BOTTOM_RIGHT = new PointData(490, 960);
+	private static final int MAX_OPEN_ATTEMPTS = 2;
+	private static final int MAX_CLAIM_TAP_ATTEMPTS = 3;
+
+	public ExplorationRoutine(AccountDescriptor profile, TpDailyTaskEnum tpDailyTask) {
+		super(profile, tpDailyTask);
+	}
+
+	@Override
+	protected boolean acceptsInjections() {
+		return false;
+	}
+
+	@Override
+	protected void execute() {
+		logInfo(routineLogExplorationLine("Opening Exploration screen from main view."));
+		tapRandomPoint(EXPLORATION_ENTRY_TOP_LEFT, EXPLORATION_ENTRY_BOTTOM_RIGHT);
+		sleepTask(2500);
+
+		logInfo(routineLogExplorationLine("Tapping AFK Exploration Chest icon at (630, 880)."));
+		tapRandomPoint(new PointData(580, 850), new PointData(680, 910));
+		sleepTask(1500);
+
+		logInfo(routineLogExplorationLine("Tapping Claim button inside Exploration Chest popup at (360, 920)."));
+		tapRandomPoint(new PointData(300, 900), new PointData(420, 940));
+		sleepTask(1500);
+
+		ImageSearchResultData claimResult = locateEnabledClaimButton();
+		if (claimResult != null && claimResult.isFound()) {
+			logInfo(routineLogExplorationLine("Template claim button detected at " + claimResult.getPoint() + ", tapping."));
+			tapPoint(claimResult.getPoint());
+			sleepTask(1500);
+		}
+
+		logInfo(routineLogExplorationLine("Dismissing reward collection popups."));
+		tapRandomPoint(new PointData(300, 900), new PointData(420, 940));
+		sleepTask(800);
+		dismissRewardPopup();
+
+		rescheduleFromConfiguredOffset();
+		pressBack();
+		sleepTask(800);
+	}
+
+	private String routineLogExplorationLine(String note) {
+		return "ExplorationRoutine | " + note;
+	}
+
+	private boolean openExplorationScreen() {
+		for (int attempt = 1; attempt <= MAX_OPEN_ATTEMPTS; attempt++) {
+			tapRandomPoint(EXPLORATION_ENTRY_TOP_LEFT, EXPLORATION_ENTRY_BOTTOM_RIGHT);
+			sleepTask(1000);
+
+			if (isExplorationScreenVisible()) {
+				logDebug(routineLogExplorationLine("Exploration screen confirmed on attempt " + attempt + "."));
+				return true;
+			}
+
+			logDebug(routineLogExplorationLine("Exploration screen not confirmed on attempt " + attempt + "."));
+		}
+		return false;
+	}
+
+	private boolean isExplorationScreenVisible() {
+		if (locateEnabledClaimButton().isFound()) {
+			return true;
+		}
+
+		if (locateDisabledClaimButton().isFound()) {
+			return true;
+		}
+
+		ImageSearchResultData explorationButton = templateSearchHelper.locatePattern(
+				TemplatesEnum.EXPLORATION_BUTTON, SearchConfigConstants.SINGLE_WITH_2_RETRIES);
+		return explorationButton.isFound();
+	}
+
+	private boolean claimAvailableRewards() {
+		for (int attempt = 1; attempt <= MAX_CLAIM_TAP_ATTEMPTS; attempt++) {
+			ImageSearchResultData claimResult = locateEnabledClaimButton();
+
+			if (!claimResult.isFound()) {
+				logDebug(routineLogExplorationLine("Enabled claim button not detected on attempt " + attempt + "."));
+				return attempt > 1;
+			}
+
+			logInfo(routineLogExplorationLine(String.format(
+					"Enabled claim button detected at %s with score %.2f. Pressing attempt %d/%d.",
+					claimResult.getPoint(), claimResult.getMatchPercentage(), attempt, MAX_CLAIM_TAP_ATTEMPTS)));
+			tapPoint(claimResult.getPoint());
+			sleepTask(800);
+			dismissRewardPopup();
+
+			ImageSearchResultData disabledClaim = locateDisabledClaimButton();
+			if (disabledClaim.isFound()) {
+				logInfo(routineLogExplorationLine(String.format(
+						"Disabled claim button detected at %s with score %.2f; reward claim succeeded.",
+						disabledClaim.getPoint(), disabledClaim.getMatchPercentage())));
+				return true;
+			}
+
+			ImageSearchResultData remainingEnabledClaim = locateEnabledClaimButton();
+			if (!remainingEnabledClaim.isFound()) {
+				logInfo(routineLogExplorationLine(String.format(
+						"Claim button no longer visible after attempt %d; reward claim succeeded.",
+						attempt)));
+				return true;
+			}
+
+			logWarning(routineLogExplorationLine(String.format(
+					"Enabled claim button still detected after attempt %d; retrying claim tap.",
+					attempt)));
+		}
+
+		logWarning(routineLogExplorationLine(
+				"Enabled claim button remained after all claim attempts. Rescheduling normally."));
+		return false;
+	}
+
+	private ImageSearchResultData locateEnabledClaimButton() {
+		return templateSearchHelper.locatePattern(
+				TemplatesEnum.EXPLORATION_CLAIM,
+				dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig.builder()
+						.withThreshold(65)
+						.withMaxAttempts(2)
+						.build());
+	}
+
+	private ImageSearchResultData locateDisabledClaimButton() {
+		return templateSearchHelper.locatePattern(
+				TemplatesEnum.EXPLORATION_CLAIM_DISABLED,
+				dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig.builder()
+						.withThreshold(65)
+						.withMaxAttempts(2)
+						.build());
+	}
+
+	private void dismissRewardPopup() {
+		tapRandomPoint(REWARD_POPUP_TOP_LEFT, REWARD_POPUP_BOTTOM_RIGHT);
+		sleepTask(500);
+	}
+
+	private void rescheduleFromConfiguredOffset() {
+		Integer minutes = profile.getConfig(ConfigurationKeyEnum.INT_EXPLORATION_CHEST_OFFSET, Integer.class);
+		LocalDateTime nextSchedule = LocalDateTime.now().plusMinutes(minutes);
+		reschedule(nextSchedule);
+		logInfo(routineLogExplorationLine("Next execution scheduled at: "
+				+ nextSchedule.format(DATETIME_FORMATTER) + " (" + minutes + " minutes)."));
+	}
+
+}

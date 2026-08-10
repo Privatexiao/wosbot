@@ -1,0 +1,67 @@
+# ── Maven build output ──
+target/
+**/target/
+dependency-reduced-pom.xml
+
+# ── Binaries / compiled artifacts ──
+*.jar
+*.war
+*.ear
+*.class
+
+# Runtime-extracted native libraries (regenerated on launch from the classpath)
+**/lib/opencv/
+
+# ── Logs ──
+*.log
+/log/
+**/log/
+
+# ── Databases (SQLite runtime files) ──
+*.db*
+database.db-shm
+database.db-wal
+
+# ── Environment configs ──
+.env*
+
+# Local agent workflow
+AGENTS.local.md
+TODO.md
+.claude/settings.local.json
+
+# ── IDEs ──
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.vscode/
+.nb-gradle/
+.metadata/
+nbproject/private/
+fg-*/bin
+fg-*/.settings
+
+# ── Analysis / misc caches ──
+.scannerwork/
+.cache/
+__pycache__/
+*.py[cod]
+
+# ── OS generated files ──
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+*.swp
+*~
+
+# Python bytecode from the CI helper scripts
+ci/__pycache__/

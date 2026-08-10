@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.controlsfx.control.*?>
+<?import dev.frostguard.app.shared.UtcDateTimeEditor?>
+
+<BorderPane maxHeight="Infinity" maxWidth="Infinity"
+            HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                    styleClass="task-page-scroll">
+            <VBox spacing="16" styleClass="task-page-root" maxWidth="Infinity">
+
+                <VBox styleClass="content-card">
+                    <HBox maxWidth="Infinity" styleClass="header-yellow">
+                        <Label text="熊陷阱定时器与保护设置" />
+                    </HBox>
+                    <VBox spacing="10" styleClass="task-section-inner">
+                        <Label styleClass="task-card-description"
+                               text="设置陷阱 UTC 开启时间，机器人将每 48 小时自动重复。提前时间将同时触发准备与任务保护。"
+                               wrapText="true" />
+                        <Label fx:id="labelTimerRecommendation" maxWidth="Infinity" wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <VBox spacing="4">
+                                <Label styleClass="task-field-label" text="准备与保护提前时间 (分钟)" />
+                                <TextField fx:id="textFieldPreparationTime" prefWidth="100.0" promptText="10" />
+                            </VBox>
+                            <Label maxWidth="420" styleClass="task-card-description"
+                                   text="打熊准备与所选保护模式提前生效的分钟数。"
+                                   wrapText="true" />
+                        </HBox>
+
+                        <GridPane hgap="14">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS" />
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS" />
+                            </columnConstraints>
+                            <VBox maxWidth="Infinity" spacing="8" styleClass="content-card"
+                                  GridPane.columnIndex="0">
+                                <Label style="-fx-font-size: 13px; -fx-font-weight: bold;" text="熊陷阱 1" />
+                                <Label styleClass="task-field-label" text="活动开启时间 (UTC, 每48小时重复)" />
+                                <UtcDateTimeEditor fx:id="timer1DateTimeEditor" />
+                                <Label styleClass="task-field-label"
+                                       text="保护模式 (开启前10分钟至活动结束)" />
+                                <ComboBox fx:id="comboBoxProtectionTimer1" maxWidth="Infinity" />
+                                <Label fx:id="labelProtectionHelperTimer1" maxWidth="Infinity"
+                                       styleClass="task-card-description" wrapText="true" />
+                            </VBox>
+
+                            <VBox maxWidth="Infinity" spacing="8" styleClass="content-card"
+                                  GridPane.columnIndex="1">
+                                <Label style="-fx-font-size: 13px; -fx-font-weight: bold;" text="熊陷阱 2" />
+                                <Label styleClass="task-field-label" text="活动开启时间 (UTC, 每48小时重复)" />
+                                <UtcDateTimeEditor fx:id="timer2DateTimeEditor" />
+                                <Label styleClass="task-field-label"
+                                       text="保护模式 (开启前10分钟至活动结束)" />
+                                <ComboBox fx:id="comboBoxProtectionTimer2" maxWidth="Infinity" />
+                                <Label fx:id="labelProtectionHelperTimer2" maxWidth="Infinity"
+                                       styleClass="task-card-description" wrapText="true" />
+                            </VBox>
+                        </GridPane>
+                    </VBox>
+                </VBox>
+
+                <VBox styleClass="content-card">
+                    <HBox maxWidth="Infinity" styleClass="header-yellow">
+                        <CheckBox fx:id="checkBoxEnableBearTrap" mnemonicParsing="false"
+                                  style="-fx-font-size: 15px; -fx-font-weight: bold;"
+                                  text="开启打熊自动执行" />
+                    </HBox>
+                    <VBox spacing="10" styleClass="task-section-inner">
+                        <HBox alignment="CENTER_LEFT" spacing="18">
+                            <VBox spacing="6">
+                                <Label styleClass="task-field-label" text="参与定时器" />
+                                <ComboBox fx:id="comboBoxTrapNumber" prefWidth="205.0" />
+                                <Label fx:id="labelTrapSelectionHelper" maxWidth="220"
+                                       styleClass="task-card-description" wrapText="true" />
+                            </VBox>
+                            <VBox maxWidth="320" spacing="4">
+                                <HBox alignment="CENTER_LEFT" spacing="5">
+                                    <Label styleClass="task-field-label" text="参与触发条件" />
+                                    <Label fx:id="labelParticipationTriggerInfo" pickOnBounds="true"
+                                           style="-fx-cursor: hand; -fx-padding: 0 4; -fx-text-fill: #8b949e;"
+                                           text="ⓘ" />
+                                </HBox>
+                                <ComboBox fx:id="comboBoxParticipationTrigger" maxWidth="280" prefWidth="220" />
+                                <Label fx:id="labelParticipationHelper" styleClass="task-card-description"
+                                       wrapText="true" />
+                                <Label fx:id="labelParticipationWarning"
+                                       maxWidth="300" managed="false"
+                                       style="-fx-background-color: rgba(245, 158, 11, 0.14); -fx-background-radius: 4; -fx-padding: 4 6; -fx-text-fill: #fbbf24; -fx-font-size: 11px;"
+                                       text="熊图标无法区分陷阱 1 与陷阱 2。"
+                                       visible="false" wrapText="true" />
+                                <Label fx:id="labelSelectedTimerWarning"
+                                       maxWidth="320" managed="false"
+                                       style="-fx-background-color: rgba(245, 158, 11, 0.14); -fx-background-radius: 4; -fx-padding: 4 6; -fx-text-fill: #fbbf24; -fx-font-size: 11px;"
+                                       visible="false" wrapText="true" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                </VBox>
+
+                <HBox alignment="TOP_LEFT" spacing="14">
+                    <VBox styleClass="content-card" HBox.hgrow="ALWAYS">
+                        <HBox maxWidth="Infinity" styleClass="header-blue">
+                            <Label text="准备就绪" />
+                        </HBox>
+                        <VBox spacing="10" styleClass="task-section-inner">
+                            <CheckBox fx:id="checkBoxActivePets" maxWidth="Infinity"
+                                      mnemonicParsing="false"
+                                      text="打熊前开启宠物技能" />
+                            <CheckBox fx:id="checkBoxRecallTroops" maxWidth="Infinity"
+                                      mnemonicParsing="false"
+                                      text="打熊前召回采集部队" />
+                        </VBox>
+                    </VBox>
+
+                    <VBox styleClass="content-card" HBox.hgrow="ALWAYS">
+                        <HBox maxWidth="Infinity" styleClass="header-red">
+                            <Label text="集结设置" />
+                        </HBox>
+                        <VBox spacing="10" styleClass="task-section-inner">
+                            <CheckBox fx:id="checkBoxCallRally" mnemonicParsing="false"
+                                      text="开启自己发起集结" />
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label minWidth="90.0" styleClass="task-field-label"
+                                       text="发起集结编队" />
+                                <ComboBox fx:id="comboBoxRallyFlag" prefWidth="100.0" />
+                            </HBox>
+                            <CheckBox fx:id="checkBoxEnableJoin" mnemonicParsing="false"
+                                      text="开启自动加入集结" />
+                            <GridPane hgap="8" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50" />
+                                    <ColumnConstraints percentWidth="50" />
+                                </columnConstraints>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 1" />
+                                    <ComboBox fx:id="comboBoxJoinFlag1" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 2" />
+                                    <ComboBox fx:id="comboBoxJoinFlag2" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 3" />
+                                    <ComboBox fx:id="comboBoxJoinFlag3" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 4" />
+                                    <ComboBox fx:id="comboBoxJoinFlag4" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 5" />
+                                    <ComboBox fx:id="comboBoxJoinFlag5" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 6" />
+                                    <ComboBox fx:id="comboBoxJoinFlag6" prefWidth="90.0" />
+                                </HBox>
+                            </GridPane>
+                        </VBox>
+                    </VBox>
+                </HBox>
+
+                <TitledPane text="快捷说明" expanded="false" collapsible="true"
+                            styleClass="content-card">
+                    <VBox spacing="6" style="-fx-padding: 10;">
+                        <Label styleClass="task-info-panel-bullet"
+                               text="设置各活动 48 小时 UTC 时间并独立开启保护。"
+                               wrapText="true" />
+                        <Label styleClass="task-info-panel-bullet"
+                               text="活动开启前 10 分钟至结束期间将阻止发起集结类任务。"
+                               wrapText="true" />
+                        <Label styleClass="task-info-panel-bullet"
+                               text="暂停所有计划任务亦将在保护时间内阻止非集结任务。"
+                               wrapText="true" />
+                        <Label styleClass="task-info-panel-bullet"
+                               text="参与活动将使用所选的 UTC 定时器，保护模式保持独立。"
+                               wrapText="true" />
+                    </VBox>
+                </TitledPane>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>

@@ -1,0 +1,434 @@
+Total missing: 432
+
+/help
+/kill
+/launch
+/queue
+/screenshot
+/startbot
+/status
+/stopbot
+/wstatus
+0 nodes
+2 Hours
+ABC
+ADB & Profile
+Accept new survivors
+Account
+Account Details
+Activate Gathering
+Activation time (UTC)
+Active Marches
+Active Pets
+Active queues
+Activity Counters
+Add Profile
+Additional daily operations and tasks
+All Troops
+Alliance Shop Automation
+Alliance Treasure
+Alliance Workbench
+Alliance filter
+Allow paid list refreshes
+Allowed Chat ID
+Always use the highest available level
+Analytics
+Any alliance
+Any server
+Apply settings
+Appoint Minister of Education
+Arena
+Arena target filters use the selected profile's Character Information: Alliance and Server.
+Attempts:
+Auto Accept
+Auto schedule daily mission claim
+Auto-detected from running JAR. Use browse (...) only if the path is wrong.
+Auto-detected – or browse to override
+Auto-start watcher at Windows login
+Auto-start: ❌ Not registered
+Automates expert skill management and hero class assignments
+Automates hunting of polar terror creatures with selected settings
+Automates joining of rallies with selected settings
+Automates research technology in your city
+Automates the fishing tournament minigame. Threads through gaps to reach the bottom while avoiding fish.
+Automates training of troops for your city
+Automates truck refreshes and selections • Set activation time to run at specific hour
+Automatically Replenishes
+Automatically collect daily free rewards from Myriad Bazaar
+Automatically create and manage new characters
+Automatically hunt mercenaries
+Automatically hunts beasts on the world map using available stamina and march queues.
+Automatically participate in Journey of Light event
+Automatically participate in alliance mobilization events
+Avg Img Fail
+Avg OCR Fail
+Avg Time (s)
+BR (X,Y):
+Back
+Beast
+Beast Level
+Beast Slaying
+Boosts
+Bot JAR Path
+Bot Token
+Bottom-Right (X,Y):
+Bottom-Right:
+Build Speedups
+Buy 50% discounted hero gear (250 badges)
+Buy Package
+Buy VIP points
+Buy monthly vip (10k gems)
+Buy resources
+Buy weekly scroll
+Call Own Rally
+Call rallies on reapers to get season hero shards
+Capture
+Capture & send emulator screen
+Captures every frame from the emulator and searches for the fishing hook template. Logs hook coordinates and per-frame ADB vs OpenCV timing to the Logs UI.
+Character Creation
+Character Information
+Chief Gear Charm
+Chief Gear Score
+Chief Orders
+Choose Action
+Choose Profile...
+Choose the destination profiles that should receive this configuration set.
+Choose the intel types to process and optional rally flag behavior.
+City Events & Missions
+Claim Intel (Agnes)
+Claim Loyalty Tag (Romulus)
+Claim Trek Supplies
+Claim Triumph
+Claim Troops (Romulus)
+Claim allies essence
+Claim chests
+Claim crystal lab FC
+Claim daily 50% RFC
+Claim daily missions
+Claim daily vip rewards
+Claim exploration chest
+Claim honor chest
+Claim life essence
+Claim mail rewards
+Claim storehouse chests + stamina
+Claim war academy crystal shards
+Clear
+Clear All
+Click 'Fetch Codes' to load gift codes.
+Click Capture to load
+Commands Reference
+Complete daily labyrinth
+Configuration
+Configure Alliance Championship deployment position and troop composition.
+Configure automated building upgrades safely
+Configure automated tasks for internal city events
+Configure automatic bank transactions
+Configure automatic pet skill activation and management
+Configure automatic purchases from Mystery Shop
+Configure automatic purchasing from the alliance shop
+Configure minimum coin thresholds and purchase percentage
+Configure purchases from the Nomadic Merchant shop
+Configure which chief orders to automatically complete
+Control the bot remotely via Telegram commands. Requires a bot token from @BotFather.
+Copy All
+Copy Settings to Profiles
+Daily Claims
+Do Exploration
+Downgrade level if no node is found
+Drag & Drop Screenshot
+Drag items to reorder purchase priority. Higher items are bought first.
+Drag to reorder skill training priorities
+ENABLED
+Enable Alliance Championship
+Enable Alliance Mobilization
+Enable Alliance Shop
+Enable Autojoin
+Enable Bank
+Enable Bear Trap
+Enable Beast Hunting
+Enable Character Creation
+Enable Dummy Task
+Enable Expert Skill Training
+Enable Fishing Minigame Task
+Enable Intel Runs
+Enable Join Rally
+Enable Mystery Shop
+Enable Pet Management
+Enable Polar Terror Hunting
+Enable Research
+Enable Skip Tutorial:
+Enable Telegram Remote Control
+Enable Test Hook Loop
+Enable Training
+Enable arena
+End (X,Y):
+Execute All
+Execute immediately
+Execution
+Execution:
+Expert Automation
+Expert Skill Training Priorities
+Export
+Extra attempts
+FURNACE LEVEL
+Fail offset
+Fetch Codes
+Fetch the latest available gift codes from the server. Click the copy button next to any code to copy it to your clipboard.
+Find Image
+Fire Beast
+Fire Crystal
+Fire Crystal Era
+Fishing Minigame Control
+Flag
+Flag Selection
+Flow
+Food Skill
+Fullscreen
+Game Version
+Gather Speed Boost
+Gathering
+Gathering Resource
+Gathering Skill
+Gift Codes
+Go only for SSR trucks
+Grayscale
+HH:MM:SS
+HH:mm
+Help alliance requests
+Hero Gear Stone
+Hero's Mission Event
+Hide analytics and statistics logs from console output
+Hide inactive
+ID
+If result:
+Image Recognition
+Import .java
+Import a .java file from the Task Builder to get started
+Inactive
+Infantry %
+Intel Categories
+Is automation running?
+Is the bot app open right now?
+Item Reserve
+John Doe
+Join Flag
+Journey
+Journey of Light
+Keeps this many 10-stamina items in reserve before using any for Polar Terror.
+Lancers %
+Last Run
+Level
+List refresh
+Logs will appear here...
+Manage daily alliance collection, autojoin behavior, and help requests.
+Manual Rally Join
+Manual Rally Join (Preemptive)
+March 1 Flag
+March 2 Flag
+March 3 Flag
+March 4 Flag
+March 5 Flag
+March 6 Flag
+March Settings
+Marksmen %
+Max Age (minutes)
+Max Iterations:
+Mercenary Event
+Min Coins
+Min Coins to Activate
+Min Percentage
+Min Points (120)
+Min Points (200)
+Mission Types
+Monday refinement:
+Myriad Bazaar
+Mystery Shop
+Mythic Shard
+NAME
+Name
+New
+Next Bear Trap (UTC)
+No Custom Tasks
+No additional configuration required
+No gift codes loaded yet.
+No personal data, game accounts, or file paths are collected.
+No statistics recorded yet...
+Nomadic Merchant
+Not set
+Note: When using a flag or when limited mode is active, rallies will be called one by one.
+Number of Marches
+OCR Read
+Offset
+Offset Time:
+Offset X:
+Offset:
+On Exhausted:
+Only search for full resources
+Open recruitment hero chests
+Opens the bot app remotely
+Operation Mode
+Other Tasks
+Override Current Deployment
+PRIORITY
+Paste your token from @BotFather
+Pause the automation
+Period:
+Personal Treasure
+Pet Automation
+Polar Terror
+Position
+Prep minutes
+Preparation
+Preview
+Prioritise Furnace
+Prioritize Troop Promotion
+Priority:
+Processing
+Productivity Day (every 12h)
+Profile
+Profile alliance
+Profile server
+Purchase Priorities
+Queues
+Quick Guide
+Rally Autojoin
+Rally Flag
+Ready
+Ready — add nodes from the toolbox
+Recall Gather Troops
+Reconnect (min)
+Recurrence
+Recurrence:
+Recurring execution
+Refresh
+Remove 2nd and 3rd hero from march
+Research Priorities
+Reserve training/research for required upgrades
+Reset Statistics
+Rewards %
+Run
+Running
+Runs
+Rush Job (every 24h)
+STAMINA
+STATUS
+Save Configuration
+Schedule
+Schedule Task
+Schedule exactly when to execute this task.
+Schedule preparation, choose the trap, and control rally behavior for the event.
+Schedule time:
+Scheduled
+Search Area TL (X,Y):
+Search profiles...
+Search tasks...
+Search template...
+Select Profile...
+Select all
+Select period
+Select which mission types to automatically complete
+Select which pet skills to activate automatically
+Send  /launch  →  wait a few seconds  →  /startbot
+Send /start to @userinfobot to get your Chat ID
+Send marches for selected resources, level targets, and gathering options.
+Server policy
+Share anonymous usage data (helps improve Frostguard)
+Show all commands in Telegram
+Show token
+Shuts the bot app down
+Skill Configuration
+Skip Tutorial Settings
+Sort by:
+Stamina Items
+Stamina Reserve
+Stamina Skill
+Stamina kept back for Intel/Rally. A rally never pushes stamina below this value; with stamina items enabled the shortfall is topped up instead of waited out.
+Stamina kept back for Intel/Rally. Beast Hunting only spends stamina above this value.
+Start (X,Y):
+Start the automation
+Status: 🔴 Stopped
+Survivors
+Swipe
+System Logs
+TEST: Trigger Preemption on Gather Deploy
+Tap Point
+Target
+Target filters use the selected profile's Character Information: Alliance and Server.
+Task Name
+Task Timeline
+Task queue with schedule/remove/run
+Tech contribution
+Template:
+Test Connection
+Test Hook Loop
+The bot drives the level selector to its ceiling, so a newly unlocked polar level needs no config change.
+This task will attempt to skip the initial tutorial. Use with caution on new accounts.
+This task will run infinitely until it finds 'go.png' image. Checks every 5 seconds. Reschedules for 60 mins if found.
+Threshold (0-100):
+Time
+Timeline View
+Top-Left (X,Y):
+Total Time (s)
+Train Lancers
+Train Marksmen
+Training Speedups
+Trap
+Trap Target
+Treasure Skill
+Troop Mix Percentages
+Troop Selection
+Troop Source
+Troop Type
+Tundra Trek Automation
+Tundra Truck Event
+Untitled Task
+Upgrade Furnace
+Uptime: 00:00:00
+Urgent Mobilisation (every 8h)
+Use Beast Flag
+Use Formation
+Use Gems
+Use Gems for Accept
+Use Smart Intel Processing
+Use Speedups
+Use activation time
+Use gems for refresh
+Use stamina items when needed
+Using profile as the source
+Wait
+Wait Duration:
+When a required camp or Research Center is busy, pause only that production queue until construction can start. The reservation remains active after resource or build failures.
+When the bot app is closed
+When the bot app is open
+Window
+X
+X: 0, Y: 0
+Y:
+dd-MM-yyyy HH:mm
+e.g. 123456789
+expected text…
+ms
+opt
+—
+• Configure troop mix percentages (should total 100%).
+• Gathering and autojoin are restored after the event.
+• Override deployment will replace your current setup.
+• Prep time starts before trap activation.
+• Rally options can call your own rally or join others.
+• Select your preferred lane position (LEFT, CENTER, or RIGHT).
+• Use UTC time in dd-MM-yyyy HH:mm format.
+↔
+⏳
+⏳ Pending
+▶ Execute
+☐
+✕
+👆
+👆 Tap if Found
+💡 Quick start:
+📂 Browse…
+📝
+🔁 Loop Guard:
+🔍
+🔙
+🗑 Delete
