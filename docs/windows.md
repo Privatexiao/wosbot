@@ -17,6 +17,28 @@ building from source.
 WiX Toolset 3.14.1 is required only when producing the native EXE installer.
 Running an installed native build does not require a separately installed JDK.
 
+## Native application updates
+
+Installed Frostguard builds provide **Config > Updates** when their product
+identity has a configured release manifest. The update flow:
+
+1. selects only a newer artifact for the running channel, Windows, and x64;
+2. shows the version, release notes, channel, and size before confirmation;
+3. downloads below the selected workspace's `cache\updates` directory;
+4. verifies the declared size, SHA-256, and exact Authenticode signer;
+5. stops scheduling and workspace services, closes SQLite, and releases the
+   workspace lock;
+6. exits before an external waiter launches the installer.
+
+Development and PR-test packages cannot use automatic release updates. An
+unsigned installer is never handed off. Public automatic updates remain
+disabled until the release workflow can provide signed Frostguard 3.0
+installers and atomically promoted manifests.
+
+Interrupted downloads remain `.part` files and resume when the server supports
+byte ranges. A failed size, hash, or signature check prevents installer handoff
+and leaves the current installation untouched.
+
 Recommended installs:
 
 ```powershell

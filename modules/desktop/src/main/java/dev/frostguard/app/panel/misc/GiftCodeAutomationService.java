@@ -82,6 +82,13 @@ public final class GiftCodeAutomationService {
         }
     }
 
+    public synchronized void shutdown() {
+        manualStopRequested.set(true);
+        executor.shutdownNow();
+        started = false;
+        LOG.info("Gift code automation stopped");
+    }
+
     public GiftCodeState snapshot() {
         List<AccountDescriptor> accounts = profiles();
         List<GiftCodeProfile> giftProfiles = accounts.stream().map(this::toGiftCodeProfile).toList();

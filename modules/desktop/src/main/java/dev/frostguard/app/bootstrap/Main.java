@@ -7,7 +7,6 @@ import dev.frostguard.api.runtime.WorkspacePaths;
 import dev.frostguard.api.runtime.WorkspaceSession;
 import dev.frostguard.engine.service.AnalyticsService;
 import dev.frostguard.tasks.TaskRegistrations;
-import dev.frostguard.vision.logging.ProfileContextLogger;
 
 public class Main {
 	private static final WorkspaceSession WORKSPACE = WorkspaceSession.open(WorkspacePaths.current());
@@ -20,6 +19,8 @@ public class Main {
 				System.out.println("channel=" + WORKSPACE.paths().channel().directoryName());
 				System.out.println("workspace=" + WORKSPACE.paths().root());
 				System.out.println("applicationDir=" + System.getProperty("user.dir"));
+				System.out.println("pullRequestBuild="
+						+ System.getProperty("frostguard.update.pullRequestBuild", "false"));
 				WORKSPACE.close();
 				return;
 			}
@@ -43,9 +44,7 @@ public class Main {
 			// 2. Setup Shutdown Hook
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 				logger.info("Closing down subsystems.");
-				try { AnalyticsService.getInstance().trackAppShutdown(); } catch (Exception ignored) {}
-				ProfileContextLogger.shutdown();
-				WORKSPACE.close();
+				ApplicationLifecycle.runShutdownHook();
 			}, "frostguard-shutdown"));
 
 			// 3. Initialize Services
@@ -64,8 +63,11 @@ public class Main {
 
 		} catch (Exception e) {
 			logger.error("Startup failure: ", e);
-			ProfileContextLogger.shutdown();
-			System.exit(1);
+			ApplicationLifecycle.exitNormally(1);
 		}
+	}
+
+	static void closeWorkspace() {
+		WORKSPACE.close();
 	}
 }

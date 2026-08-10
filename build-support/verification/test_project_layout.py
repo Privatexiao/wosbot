@@ -18,6 +18,7 @@ MODULES = {
     "modules/automation": "frostguard-automation",
     "modules/tasks": "frostguard-tasks",
     "modules/watcher": "frostguard-watcher",
+    "modules/update": "frostguard-update",
     "modules/desktop": "frostguard-desktop",
     "packaging/desktop": "frostguard-desktop-package",
 }

@@ -86,3 +86,84 @@ public download.
 3. Store both maintained webhook message IDs as repository variables.
 4. Move `/build-pr` results to `#request-a-build`.
 5. Archive redundant legacy release channels after their links are replaced.
+
+## Native installer update contract
+
+The Frostguard 3.0 updater uses one immutable HTTPS manifest per channel. Do
+not publish a manifest until its installer has been built, Authenticode-signed,
+uploaded, and smoke-tested. Signing credentials remain outside the repository.
+
+### Manifest schema 1
+
+```json
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": "3.0.1",
+  "publishedAt": "2026-08-10T04:00:00Z",
+  "minimumUpdaterVersion": "3.0.0",
+  "releaseNotesUrl": "https://example.invalid/releases/3.0.1",
+  "artifacts": {
+    "windows-x64": {
+      "operatingSystem": "windows",
+      "architecture": "x64",
+      "fileName": "Frostguard-3.0.1-windows-x64.exe",
+      "url": "https://example.invalid/releases/3.0.1/Frostguard-3.0.1-windows-x64.exe",
+      "sha256": "<64 lowercase hexadecimal characters>",
+      "size": 123456789,
+      "signature": {
+        "type": "authenticode",
+        "publisher": "<exact certificate subject>"
+      }
+    }
+  }
+}
+```
+
+Unknown fields, unsupported schemas, mutable filenames, insecure URLs, and
+Windows artifacts without an Authenticode publisher are rejected. Calculate
+the hash and size after signing because Authenticode changes the file.
+
+### Build inputs
+
+Embed the Stable endpoint and exact trusted certificate subject at packaging
+time:
+
+```powershell
+.\mvnw.cmd -Dfrostguard.update.manifest.stable=https://updates.example.invalid/stable.json `
+  "-Dfrostguard.update.authenticode-publisher=CN=Frostguard Project, O=Frostguard" `
+  "-Pwindows-app-image,windows-installer" package
+```
+
+The checked-in endpoint and publisher defaults are empty, so ordinary local
+builds cannot contact or trust a release feed accidentally. PR packaging also
+embeds `frostguard.update.pullRequestBuild=true`. Development builds, PR builds,
+and builds without a pinned publisher cannot update even if someone supplies a
+manifest URL manually. The manifest publisher must match the value embedded in
+the application JAR before its installer can be downloaded or executed.
+
+### Publication order
+
+1. Build and smoke-test the native application image.
+2. Build the channel-specific installer with its stable upgrade identity.
+3. Authenticode-sign the final installer outside the repository.
+4. Verify the signature and exact certificate subject on Windows.
+5. Calculate the final byte size and SHA-256.
+6. Upload the installer to an immutable versioned HTTPS URL.
+7. Publish the manifest atomically as the final step.
+
+Never publish a PR artifact, unsigned installer, mutable rolling filename, or
+manifest whose artifact has not completed the same verification sequence.
+
+### Runtime and recovery
+
+Downloads belong to the selected workspace under
+`cache/updates/<channel>/<version>`. Incomplete data uses a `.part` suffix and
+is never exposed as a completed installer. Completion requires an atomic rename
+after size and hash verification.
+
+The external Windows handoff receives the Frostguard PID plus a one-time token.
+Frostguard authorizes the staged waiter immediately before coordinated
+shutdown. The waiter cannot start the installer while the Frostguard PID is
+alive, and a failed shutdown deletes the token so a later unrelated application
+exit cannot launch the staged installer.

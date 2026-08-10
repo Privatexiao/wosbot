@@ -143,6 +143,13 @@ per-user installer and defaults to
 Normal `mvn package` remains platform-neutral and does not invoke `jpackage` or
 install Frostguard.
 
+Native Stable and Nightly builds can expose a channel-specific update feed in
+**Config > Updates**. Development and pull-request builds cannot install from
+release feeds. Frostguard accepts an update only after the manifest identity,
+download size, SHA-256, and Windows Authenticode signer all match. The current
+public ZIP feeds are not used by this updater; automatic installer updates stay
+disabled until signed Frostguard 3.0 release manifests are published.
+
 ### Run a source build
 
 Run the application from the repository root through the same Maven Wrapper:
