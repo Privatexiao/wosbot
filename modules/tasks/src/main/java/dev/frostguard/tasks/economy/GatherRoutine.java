@@ -306,6 +306,7 @@ public class GatherRoutine extends DelayedTask {
         int noNode = 0;
         int blocked = 0;
         int sameTargetBlocked = 0;
+        Set<GatherType> unavailableThisRun = new HashSet<>();
         logInfo(String.format("Gather fill: active=%d/%d idleSlots=%d freeSlots=%d pool=%s",
                 currentActive, activeQueues, idleSlotCount, freeSlots, rotationPool));
 
@@ -313,13 +314,6 @@ public class GatherRoutine extends DelayedTask {
         if (rotationPool.removeAll(activeMarches)) {
             logDebug("Removed active gather types from pool: " + activeMarches);
             saveRotationPool();
-        }
-
-        // If pool is empty after removing active marches but there are free slots,
-        // allow duplicate types so we can fill all available march queues
-        if (rotationPool.isEmpty() && freeSlots > 0) {
-            logDebug("Gather pool empty after removing active types; allowing duplicates for remaining slots.");
-            rotationPool = new ArrayList<>(enabledTypes);
         }
 
         if (freeSlots <= 0) {
@@ -332,17 +326,14 @@ public class GatherRoutine extends DelayedTask {
 
         int remaining = freeSlots;
         int safetyLoop = 0;
-        Set<GatherType> unavailableThisRun = new HashSet<>();
 
         while (remaining > 0 && safetyLoop++ < 10) {
 
             // Refill if empty
             if (rotationPool.isEmpty()) {
-                logDebug("Gather pool empty. Resetting.");
-                rotationPool = new ArrayList<>(enabledTypes);
-                rotationPool.removeAll(unavailableThisRun);
-                // Don't remove active marches on refill â€” duplicates are needed
-                // to fill remaining slots when activeQueues > enabledTypes.size()
+                if (!refillRotationPool(activeMarches, unavailableThisRun)) {
+                    break;
+                }
                 Collections.shuffle(rotationPool);
             }
 
@@ -368,7 +359,7 @@ public class GatherRoutine extends DelayedTask {
                     rotationPool.remove(type);
                     progress = true;
                     StatisticsService.obtain().addToCounter(profile, "Gather Marches Deployed", 1);
-                    activeMarches.add(type); // Add to avoid re-picking if we loop
+                    activeMarches.add(type);
                 } else {
                     if (deployResult == GatherDeployResult.NO_TROOPS_AVAILABLE) {
                         remaining = 0;
@@ -397,6 +388,22 @@ public class GatherRoutine extends DelayedTask {
 
         saveRotationPool();
         return new GatherFillResult(deployed, noNode, blocked, sameTargetBlocked, false, remaining);
+    }
+
+    private boolean refillRotationPool(List<GatherType> activeMarches, Set<GatherType> unavailableThisRun) {
+        GatherRotationSelectionPolicy.Refill refill = GatherRotationSelectionPolicy.refill(
+                enabledTypes, activeMarches, unavailableThisRun);
+        rotationPool = new ArrayList<>(refill.candidates());
+
+        switch (refill.mode()) {
+            case MISSING_TYPES -> logDebug("Gather pool exhausted; prioritizing missing types: " + rotationPool);
+            case DUPLICATES -> logDebug(
+                    "All enabled gather types are active; allowing duplicate types for additional slots: "
+                            + rotationPool);
+            case UNAVAILABLE_MISSING_TYPES -> logInfo(
+                    "Gather pool cannot refill because a missing resource type is unavailable in this run.");
+        }
+        return !rotationPool.isEmpty();
     }
 
     private void loadRotationPool() {
