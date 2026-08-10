@@ -1173,35 +1173,36 @@ private void manageRescheduling(boolean anyIntelProcessed, boolean nonBeastIntel
 				SearchConfig.builder()
 						.withThreshold(45)
 						.withMaxAttempts(2)
-						.withArea(new AreaData(new PointData(200, 650), new PointData(520, 920)))
+						.withArea(new AreaData(new PointData(200, 850), new PointData(520, 1000)))
 						.build());
 		if (view != null && view.isFound()) {
 			logInfo(routineLogIntelligenceLine("Found 'View' button for " + missionType + " via template at " + view.getPoint()));
 			tapPoint(view.getPoint());
 		} else {
-			int targetY = 730;
-			logInfo(routineLogIntelligenceLine("Template 'INTEL_VIEW' not matched for " + missionType + ". Tapping 'View' button fallback at (360, " + targetY + ")."));
-			tapRandomPoint(new PointData(330, targetY - 10), new PointData(390, targetY + 10));
+			int targetY = 930;
+			logInfo(routineLogIntelligenceLine("Template 'INTEL_VIEW' not matched for " + missionType + " (English UI). Tapping blue 'View' button at (360, " + targetY + ")."));
+			tapRandomPoint(new PointData(320, targetY - 15), new PointData(400, targetY + 15));
 		}
-		sleepTask(1800);
+		sleepTask(2500);
 
 		ImageSearchResultData remainingView = templateSearchHelper.locatePattern(
 				TemplatesEnum.INTEL_VIEW,
 				SearchConfig.builder()
 						.withThreshold(45)
 						.withMaxAttempts(1)
-						.withArea(new AreaData(new PointData(200, 650), new PointData(520, 920)))
+						.withArea(new AreaData(new PointData(200, 850), new PointData(520, 1000)))
 						.build());
 		if (remainingView != null && remainingView.isFound()) {
-			logWarning(routineLogIntelligenceLine("Intel card still open after View click (tooltip overlay likely opened). Dismissing overlay via pressBack and re-tapping View."));
+			logWarning(routineLogIntelligenceLine("Intel card still open after View click. Dismissing item tooltip overlay via pressBack and re-tapping View at (360, 930)."));
 			pressBack();
 			sleepTask(600);
-			tapPoint(new PointData(360, 730));
-			sleepTask(1500);
+			tapPoint(new PointData(360, 930));
+			sleepTask(2200);
 		}
 	}
 
 	private void clickMapActionOrView(String missionType, TemplatesEnum actionTemplate, String actionName) {
+		sleepTask(1200);
 		ImageSearchResultData action = templateSearchHelper.locatePattern(
 				actionTemplate,
 				SearchConfig.builder().withThreshold(55).withMaxAttempts(2).build());
@@ -1212,11 +1213,11 @@ private void manageRescheduling(boolean anyIntelProcessed, boolean nonBeastIntel
 			logInfo(routineLogIntelligenceLine("Using fallback tap for " + missionType + " " + actionName + " button at (430, 780)."));
 			tapRandomPoint(new PointData(410, 770), new PointData(450, 790));
 		}
-		sleepTask(800);
+		sleepTask(1500);
 	}
 
 	private void deployIntelMarch(String missionType) {
-		sleepTask(800);
+		sleepTask(1000);
 
 		if (useFlag && "beast".equalsIgnoreCase(missionType)) {
 			marchHelper.selectFlag(flagNumber);
@@ -1237,7 +1238,7 @@ private void manageRescheduling(boolean anyIntelProcessed, boolean nonBeastIntel
 			logInfo(routineLogIntelligenceLine("Deploy button template not matched for " + missionType + ", using fallback tap at (520, 1200)."));
 			tapPoint(new PointData(520, 1200));
 		}
-		sleepTask(1000);
+		sleepTask(1200);
 
 		ImageSearchResultData confirmDialog = templateSearchHelper.locatePattern(TemplatesEnum.DEPLOY_CONFIRMATION_DIALOG, SearchConfigConstants.SINGLE_WITH_RETRIES);
 		if (confirmDialog.isFound()) {
