@@ -113,8 +113,7 @@ public class FXApp extends Application {
 
     private void shutdownFromUi(Stage stage) {
         rememberWindowBounds(stage);
-        terminateAdbProcess();
-        System.exit(0);
+        ApplicationLifecycle.exitNormally(0);
     }
 
     private void rememberWindowBounds(Stage stage) {
@@ -149,12 +148,4 @@ public class FXApp extends Application {
         logger.info("Window restored to the primary display");
     }
 
-    private void terminateAdbProcess() {
-        try {
-            new ProcessBuilder("taskkill", "/F", "/IM", "adb.exe").start();
-            logger.info("adb.exe shutdown requested");
-        } catch (IOException e) {
-            logger.warn("Unable to stop adb.exe cleanly", e);
-        }
-    }
 }

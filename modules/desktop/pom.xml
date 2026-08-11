@@ -93,6 +93,10 @@
 			<groupId>dev.frostguard</groupId>
 			<artifactId>frostguard-vision</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>dev.frostguard</groupId>
+			<artifactId>frostguard-update</artifactId>
+		</dependency>
 
 		<!-- Logging -->
 		<dependency>
@@ -120,6 +124,22 @@
 
 	<!-- ─── Build configuration ─── -->
 	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>dev/frostguard/app/frostguard-build.properties</exclude>
+				</excludes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>dev/frostguard/app/frostguard-build.properties</include>
+				</includes>
+			</resource>
+		</resources>
 		<plugins>
 			<!-- Root-level javafx:run skips every reactor module except this one. -->
 			<plugin>

@@ -10,7 +10,7 @@ flowchart TD
     App --> Engine[modules/automation<br/>services, scheduler, helpers]
     App --> Tasks[modules/tasks<br/>built-in routines]
     App --> Watcher[modules/watcher<br/>Telegram watcher jar]
-    App -. future update module .-> Update[platform-neutral update contracts and policy]
+    App --> Update[modules/update<br/>manifest, policy, verified download, handoff]
 
     Engine --> Data[modules/persistence<br/>SQLite and repositories]
     Engine --> Vision[modules/vision<br/>OCR and template matching]
@@ -36,6 +36,7 @@ flowchart LR
     fg_app --> fg_tasks[modules/tasks]
     fg_app --> fg_vision[modules/vision]
     fg_app --> fg_api[modules/api]
+    fg_app --> fg_update[modules/update]
 
     fg_tasks --> fg_engine
     fg_tasks --> fg_api
@@ -46,6 +47,7 @@ flowchart LR
 
     fg_data --> fg_api
     fg_vision --> fg_api
+    fg_update --> fg_api
     fg_watcher[modules/watcher] -. standalone .-> watcher_runtime[Telegram runtime]
 ```
 
@@ -60,10 +62,22 @@ Do not put game task business logic in `modules/desktop`; do not put UI concepts
 | `modules/tasks` | `frostguard-tasks` | Game-specific automation routines |
 | `modules/desktop` | `frostguard-desktop` | JavaFX UI and desktop entry points |
 | `modules/watcher` | `frostguard-watcher` | Companion watcher process |
+| `modules/update` | `frostguard-update` | Release manifest, version/channel policy, verified download, and installer handoff |
 | `packaging/desktop` | `frostguard-desktop-package` | Platform packaging inputs and output verification |
 
-The platform-neutral update module is introduced with its implementation rather
-than as an empty project-layout placeholder.
+### Update Layer
+
+`modules/update` owns the platform-neutral update trust boundary:
+
+- strict schema-versioned manifest parsing;
+- semantic-version, channel, operating-system, and architecture selection;
+- restart-safe downloads below the selected workspace cache;
+- byte-size and SHA-256 verification;
+- a build-pinned Windows Authenticode identity and token-authorized external handoff.
+
+The desktop module owns presentation and runtime shutdown. Update code does not
+depend on JavaFX, persistence, scheduling, or GitHub APIs. Development and
+PR-test identities are rejected before manifest discovery.
 
 ## Logical Decomposition
 
@@ -217,6 +231,7 @@ flowchart TD
     RootPom --> EngineJar[modules/automation jar]
     RootPom --> TasksJar[modules/tasks jar]
     RootPom --> WatcherJar[modules/watcher shaded jar]
+    RootPom --> UpdateJar[modules/update jar]
     RootPom --> AppJar[modules/desktop executable jar]
 
     ApiJar --> AppBundle[desktop bundle zip]
@@ -225,6 +240,7 @@ flowchart TD
     EngineJar --> AppBundle
     TasksJar --> AppBundle
     WatcherJar --> AppBundle
+    UpdateJar --> AppBundle
     AppJar --> AppBundle
 
     Tools[tools/adb and tools/tesseract] --> AppBundle
@@ -253,6 +269,16 @@ the Java/JAR paths retained only as the source and transitional-ZIP fallback.
 Native packaging is opt-in through Maven profiles so the normal reactor build
 stays platform-neutral.
 
+The installed desktop exposes update controls only for eligible Stable or
+Nightly builds. A selected installer is downloaded to
+`<workspace>/cache/updates/<channel>/<version>`, verified, and passed to a
+hidden PowerShell waiter. The waiter requires a one-time authorization token
+and waits for the Frostguard PID to disappear before starting the installer.
+Frostguard authorizes the staged waiter, stops queues and workspace-owned
+services, closes SQLite and the workspace lock, and exits. A failed shutdown
+cancels the authorization, and the waiter cannot start the installer while the
+Frostguard PID is alive. Frostguard never replaces its own running files.
+
 `modules/watcher` builds a separate shaded watcher jar.
 
 ## Where To Change Things
@@ -265,3 +291,4 @@ stays platform-neutral.
 - Change persisted config/profile/task state: `modules/persistence` entities/repositories and engine services.
 - Change UI controls or panels: `modules/desktop/src/main/java/dev/frostguard/app/panel/*` plus matching FXML/CSS.
 - Change runtime packaging: `packaging/desktop/pom.xml` or its platform sources.
+- Change update manifests, selection, download, or trust policy: `modules/update`.

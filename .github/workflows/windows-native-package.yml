@@ -64,7 +64,8 @@ jobs:
         shell: pwsh
         run: |
           $mavenArgs = $env:MAVEN_ARGS -split " "
-          & .\mvnw.cmd @mavenArgs "-Pwindows-app-image,windows-installer" package
+          & .\mvnw.cmd @mavenArgs "-Dfrostguard.pull-request-build=true" `
+              "-Pwindows-app-image,windows-installer" package
 
       - name: Test the application-image verifier
         run: python build-support/verification/test_verify_app_image.py

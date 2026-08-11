@@ -15,6 +15,9 @@
 	     ────────────────────────────────────────────── -->
 	<properties>
 		<revision>2.1.0</revision>
+		<frostguard.pull-request-build>false</frostguard.pull-request-build>
+		<frostguard.update.manifest.stable></frostguard.update.manifest.stable>
+		<frostguard.update.authenticode-publisher></frostguard.update.authenticode-publisher>
 
 		<!-- JDK baseline -->
 		<java.version>21</java.version>
@@ -88,6 +91,7 @@
 		<module>modules/automation</module>
 		<module>modules/tasks</module>
 		<module>modules/watcher</module>
+		<module>modules/update</module>
 		<module>modules/desktop</module>
 		<module>packaging/desktop</module>
 	</modules>
@@ -112,6 +116,11 @@
 			<dependency>
 				<groupId>dev.frostguard</groupId>
 				<artifactId>frostguard-api</artifactId>
+				<version>${revision}</version>
+			</dependency>
+			<dependency>
+				<groupId>dev.frostguard</groupId>
+				<artifactId>frostguard-update</artifactId>
 				<version>${revision}</version>
 			</dependency>
 			<dependency>

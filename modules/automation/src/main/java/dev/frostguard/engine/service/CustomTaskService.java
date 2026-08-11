@@ -171,6 +171,20 @@ public class CustomTaskService {
         return INSTANCE;
     }
 
+    public synchronized void shutdown() {
+        if (taskClassLoader != null) {
+            try {
+                taskClassLoader.close();
+            } catch (IOException exception) {
+                logger.warn("Could not close custom task class loader: {}", exception.getMessage());
+            }
+            taskClassLoader = null;
+        }
+        loadedClasses.clear();
+        sourceFiles.clear();
+        logger.info("Custom task service stopped");
+    }
+
     // ========================================================================
     // Compile & Load
     // ========================================================================

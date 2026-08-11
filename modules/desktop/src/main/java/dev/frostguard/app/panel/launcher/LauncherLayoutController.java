@@ -82,6 +82,8 @@ import javafx.animation.*;
 import javafx.util.Duration;
 import dev.frostguard.app.panel.alliance.AllianceShopController;
 import dev.frostguard.app.panel.misc.TelegramLayoutController;
+import dev.frostguard.app.bootstrap.ApplicationLifecycle;
+import dev.frostguard.app.panel.update.UpdateLayoutController;
 import dev.frostguard.engine.service.TelegramBotService;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignT;
@@ -479,7 +481,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
-        System.exit(0);
+        ApplicationLifecycle.exitNormally(0);
     }
 
     private void initializeDiscordBot() { /* internal */
@@ -526,18 +528,22 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
 
         addPinnedButton("Control", MaterialDesignC.CONTROLLER_CLASSIC, controlTabs);
 
-        // Config pinned button — TabPane with Emulators + Telegram
+        // Config pinned button with application-wide settings tabs.
         EmuConfigLayoutController configCtrl = new EmuConfigLayoutController();
         Parent configPane = loadNode("EmuConfigLayout", configCtrl);
 
         TelegramLayoutController telegramCtrl = new TelegramLayoutController();
         Parent telegramPane = loadNode("TelegramLayout", telegramCtrl);
 
+        UpdateLayoutController updateCtrl = new UpdateLayoutController();
+        Parent updatePane = loadNode("UpdateLayout", updateCtrl);
+
         TabPane configTabs = new TabPane();
         configTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         configTabs.getTabs().addAll(
                 makeTab("Emulators", configPane),
-                makeTab("Telegram", telegramPane)
+                makeTab("Telegram", telegramPane),
+                makeTab("Updates", updatePane)
         );
         configTabs.setMaxWidth(Double.MAX_VALUE);
         configTabs.setMaxHeight(Double.MAX_VALUE);

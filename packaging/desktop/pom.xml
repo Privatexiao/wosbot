@@ -70,7 +70,7 @@
                             <outputDirectory>${project.build.directory}/input/lib</outputDirectory>
                             <includeScope>runtime</includeScope>
                             <excludeArtifactIds>frostguard-desktop,frostguard-watcher</excludeArtifactIds>
-                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteReleases>true</overWriteReleases>
                             <overWriteSnapshots>false</overWriteSnapshots>
                             <overWriteIfNewer>true</overWriteIfNewer>
                         </configuration>
@@ -258,6 +258,10 @@
                                             <arg value="--enable-native-access=ALL-UNNAMED" />
                                             <arg value="--java-options" />
                                             <arg value="-Dfrostguard.channel=stable" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.update.pullRequestBuild=${frostguard.pull-request-build}" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.update.manifest.stable=${frostguard.update.manifest.stable}" />
                                             <arg value="--java-options" />
                                             <arg value="-Duser.dir=$APPDIR" />
                                             <arg value="--java-options" />

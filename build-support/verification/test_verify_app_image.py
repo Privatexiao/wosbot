@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -20,6 +21,7 @@ class VerifyAppImageTest(unittest.TestCase):
         files = list(verify_app_image.REQUIRED_FILES) + [
             "app/frostguard-desktop-3.0.0.jar",
             "app/frostguard-watcher-3.0.0.jar",
+            "app/lib/frostguard-update-3.0.0.jar",
             "app/lib/opencv-4.9.0.jar",
             "app/lib/tess4j-5.14.0.jar",
             "app/lib/javafx-graphics-23.0.1-win.jar",
@@ -30,9 +32,17 @@ class VerifyAppImageTest(unittest.TestCase):
             path = self.image / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"payload")
-        common_options = "\n".join(verify_app_image.COMMON_JAVA_OPTIONS) + "\n"
+        with zipfile.ZipFile(self.image / "app/frostguard-desktop-3.0.0.jar", "w") as desktop_jar:
+            desktop_jar.writestr(
+                verify_app_image.BUILD_METADATA,
+                "pullRequestBuild=false\nauthenticodePublisher=CN=Frostguard Project, O=Frostguard\n",
+            )
+        common_options = "\n".join(verify_app_image.COMMON_JAVA_OPTIONS) + (
+            "\njava-options=-Dfrostguard.update.pullRequestBuild=false\n"
+        )
         (self.image / "app/Frostguard.cfg").write_text(
-            "app.mainclass=dev.frostguard.app.bootstrap.Main\n" + common_options,
+            "app.mainclass=dev.frostguard.app.bootstrap.Main\n"
+            "java-options=-Dfrostguard.update.manifest.stable=\n" + common_options,
             encoding="utf-8")
         (self.image / "app/FrostguardWatcher.cfg").write_text(
             "app.mainclass=dev.frostguard.watcher.TelegramWatcher\n" + common_options,
@@ -57,6 +67,26 @@ class VerifyAppImageTest(unittest.TestCase):
         config = self.image / "app/FrostguardWatcher.cfg"
         config.write_text(config.read_text().replace("channel=stable", "channel=development"))
         self.assertTrue(any("FrostguardWatcher.cfg" in item for item in verify_app_image.inspect_image(self.image)))
+
+    def test_rejects_launcher_without_pr_build_identity(self):
+        config = self.image / "app/Frostguard.cfg"
+        config.write_text(config.read_text().replace(
+            "java-options=-Dfrostguard.update.pullRequestBuild=false\n", ""))
+        self.assertTrue(any("PR-build update identity" in item
+                            for item in verify_app_image.inspect_image(self.image)))
+
+    def test_rejects_launcher_identity_that_disagrees_with_desktop_jar(self):
+        config = self.image / "app/Frostguard.cfg"
+        config.write_text(config.read_text().replace(
+            "frostguard.update.pullRequestBuild=false",
+            "frostguard.update.pullRequestBuild=true"))
+        self.assertTrue(any("does not match the desktop JAR" in item
+                            for item in verify_app_image.inspect_image(self.image)))
+
+    def test_rejects_desktop_jar_without_embedded_identity(self):
+        (self.image / "app/frostguard-desktop-3.0.0.jar").write_bytes(b"not a jar")
+        self.assertTrue(any("no valid embedded PR-build" in item
+                            for item in verify_app_image.inspect_image(self.image)))
 
     def test_rejects_runtime_data(self):
         leaked = self.image / "app/logs/frostguard.log"
