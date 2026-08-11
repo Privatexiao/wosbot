@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       daily_run_id:
-        description: "Successful Daily Windows Bundle run ID from main"
+        description: "Successful Nightly Windows Bundle run ID from main"
         required: true
         type: string
 
@@ -55,7 +55,7 @@ jobs:
             exit 1
           fi
           if [[ "${workflow}" != ".github/workflows/daily-windows-bundle.yml" ]]; then
-            echo "::error::Selected run does not belong to Daily Windows Bundle."
+            echo "::error::Selected run does not belong to Nightly Windows Bundle."
             exit 1
           fi
           echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
@@ -81,6 +81,10 @@ jobs:
           set -euo pipefail
           if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::version must use X.Y.Z format."
+            exit 1
+          fi
+          if (( ${VERSION%%.*} >= 3 )); then
+            echo "::error::Frostguard 3.x must use Signed Windows Channel Release; the legacy ZIP workflow cannot publish an installed Stable identity."
             exit 1
           fi
           project_version="$(./mvnw -B --no-transfer-progress -q help:evaluate -Dexpression=project.version -DforceStdout)"

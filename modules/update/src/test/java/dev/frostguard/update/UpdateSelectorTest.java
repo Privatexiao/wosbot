@@ -61,6 +61,22 @@ class UpdateSelectorTest {
         assertThrows(UpdateException.class, () -> selector.select(manifest(), build));
     }
 
+    @Test
+    void nightlyPrereleaseCanUpdateFromNightlyMinimum() throws Exception {
+        String json = ManifestCodecTest.validManifest()
+                .replace("\"channel\": \"stable\"", "\"channel\": \"nightly\"")
+                .replace("\"version\": \"3.0.1\"", "\"version\": \"3.0.0-nightly.20260811.2\"")
+                .replace("\"minimumUpdaterVersion\": \"3.0.0\"",
+                        "\"minimumUpdaterVersion\": \"3.0.0-nightly.0\"")
+                .replace("Frostguard-3.0.1", "Frostguard-3.0.0-nightly.20260811.2");
+        UpdateManifest nightly = codec.read(json.getBytes(StandardCharsets.UTF_8));
+
+        UpdateCandidate candidate = selector.select(nightly,
+                running(RuntimeChannel.NIGHTLY, "3.0.0-nightly.20260811.1", false)).orElseThrow();
+
+        assertEquals(SemanticVersion.parse("3.0.0-nightly.20260811.2"), candidate.version());
+    }
+
     private UpdateManifest manifest() throws Exception {
         return codec.read(ManifestCodecTest.validManifest().getBytes(StandardCharsets.UTF_8));
     }

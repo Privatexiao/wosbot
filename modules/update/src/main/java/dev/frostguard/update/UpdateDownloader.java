@@ -46,7 +46,16 @@ public final class UpdateDownloader {
                     }
                 }
                 long offset = Files.isRegularFile(partial) ? Files.size(partial) : 0L;
-                if (offset > artifact.size()) {
+                if (offset == artifact.size()) {
+                    try {
+                        verifier.verify(partial, artifact);
+                        promote(partial, completed);
+                        return completed;
+                    } catch (UpdateException invalidPartialArtifact) {
+                        Files.delete(partial);
+                        offset = 0L;
+                    }
+                } else if (offset > artifact.size()) {
                     Files.delete(partial);
                     offset = 0L;
                 }

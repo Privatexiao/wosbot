@@ -1,0 +1,325 @@
+name: Signed Windows Channel Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release identity to publish"
+        required: true
+        type: choice
+        options:
+          - stable
+          - nightly
+      version:
+        description: "Stable X.Y.Z or Nightly X.Y.Z-nightly.YYYYMMDD.N"
+        required: true
+        type: string
+      minimum_updater_version:
+        description: "Oldest Frostguard SemVer allowed to install this release"
+        required: true
+        default: "3.0.0-nightly.0"
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: signed-windows-${{ inputs.channel }}-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sign and publish ${{ inputs.channel }} Windows release
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 75
+    permissions:
+      contents: write
+    env:
+      MAVEN_ARGS: "-B --no-transfer-progress -Dstyle.color=never"
+      CHANNEL: ${{ inputs.channel }}
+      VERSION: ${{ inputs.version }}
+      MINIMUM_UPDATER_VERSION: ${{ inputs.minimum_updater_version }}
+      AUTHENTICODE_PUBLISHER: ${{ secrets.FROSTGUARD_AUTHENTICODE_PUBLISHER }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out main with release assets
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Verify Git LFS assets are real binaries
+        shell: bash
+        run: build-support/verification/check_lfs_assets.sh
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install WiX Toolset 3
+        shell: pwsh
+        run: |
+          choco install wixtoolset --version=3.14.1.20250415 --no-progress -y
+          $wixBin = "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin"
+          if (-not (Test-Path -LiteralPath (Join-Path $wixBin "candle.exe"))) {
+              throw "WiX candle.exe was not installed below $wixBin"
+          }
+          $wixBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Validate immutable release identity
+        id: identity
+        shell: pwsh
+        run: |
+          if ($env:VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
+              throw "Version must use semantic versioning without build metadata"
+          }
+          if ($env:MINIMUM_UPDATER_VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
+              throw "minimum_updater_version must use semantic versioning without build metadata"
+          }
+          if ($env:CHANNEL -eq 'stable' -and $env:VERSION.Contains('-')) {
+              throw "Stable releases must not use a prerelease version"
+          }
+          if ([string]::IsNullOrWhiteSpace($env:AUTHENTICODE_PUBLISHER)) {
+              throw "FROSTGUARD_AUTHENTICODE_PUBLISHER is not configured"
+          }
+          $manifestName = "frostguard-$($env:CHANNEL)-manifest.json"
+          $feedTag = if ($env:CHANNEL -eq 'nightly') {
+              if (gh release view updates-nightly --repo $env:GITHUB_REPOSITORY 2>$null) {
+                  'updates-nightly'
+              }
+          } else {
+              gh release view --repo $env:GITHUB_REPOSITORY --json tagName --jq .tagName 2>$null
+          }
+          $previousVersion = $null
+          if (-not [string]::IsNullOrWhiteSpace($feedTag)) {
+              $assetId = gh api "repos/$($env:GITHUB_REPOSITORY)/releases/tags/$feedTag" `
+                  --jq ".assets[] | select(.name == \"$manifestName\") | .id"
+              if (-not [string]::IsNullOrWhiteSpace($assetId)) {
+                  $previousManifest = Join-Path $env:RUNNER_TEMP "previous-$manifestName"
+                  gh api "repos/$($env:GITHUB_REPOSITORY)/releases/assets/$assetId" `
+                      -H "Accept: application/octet-stream" > $previousManifest
+                  $previousVersion = (Get-Content -Raw -LiteralPath $previousManifest |
+                      ConvertFrom-Json).version
+              }
+          }
+          $versionArgs = @('--channel', $env:CHANNEL, '--version', $env:VERSION)
+          if (-not [string]::IsNullOrWhiteSpace($previousVersion)) {
+              $versionArgs += @('--previous-version', $previousVersion)
+          }
+          $windowsVersion = python build-support/release/windows_installer_version.py @versionArgs
+          if ($LASTEXITCODE -ne 0) {
+              throw "Could not derive a monotonic Windows installer version"
+          }
+          $windowsVersion = $windowsVersion.Trim()
+          $productName = if ($env:CHANNEL -eq 'nightly') { 'Frostguard Nightly' } else { 'Frostguard' }
+          $profile = if ($env:CHANNEL -eq 'nightly') { ',windows-nightly' } else { '' }
+          $tag = if ($env:CHANNEL -eq 'nightly') { "nightly-$($env:VERSION)" } else { "v$($env:VERSION)" }
+          $assetPrefix = if ($env:CHANNEL -eq 'nightly') { 'Frostguard-Nightly' } else { 'Frostguard' }
+          @{
+              windows_version = $windowsVersion
+              product_name = $productName
+              profile = $profile
+              tag = $tag
+              installer_name = "$assetPrefix-$($env:VERSION)-windows-x64.exe"
+              manifest_name = $manifestName
+          }.GetEnumerator() | ForEach-Object {
+              "$($_.Key)=$($_.Value)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+          if (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null) {
+              throw "Immutable release $tag already exists"
+          }
+
+      - name: Import release-signing certificate
+        id: certificate
+        env:
+          SIGNING_CERTIFICATE_BASE64: ${{ secrets.FROSTGUARD_WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.FROSTGUARD_WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_BASE64) -or
+              [string]::IsNullOrWhiteSpace($env:SIGNING_CERTIFICATE_PASSWORD)) {
+              throw "Windows signing certificate secrets are not configured"
+          }
+          $certificatePath = Join-Path $env:RUNNER_TEMP "frostguard-release-signing.pfx"
+          [IO.File]::WriteAllBytes($certificatePath,
+              [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:SIGNING_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Get-PfxCertificate -FilePath $certificatePath -Password $password
+          if ($certificate.Subject -cne $env:AUTHENTICODE_PUBLISHER) {
+              throw "Signing certificate subject does not match the pinned publisher"
+          }
+          Import-PfxCertificate -FilePath $certificatePath -Password $password `
+              -CertStoreLocation Cert:\CurrentUser\My | Out-Null
+          "thumbprint=$($certificate.Thumbprint)" | Out-File `
+              -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "path=$certificatePath" | Out-File `
+              -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Build channel application image and installer
+        shell: pwsh
+        env:
+          WINDOWS_VERSION: ${{ steps.identity.outputs.windows_version }}
+          EXTRA_PROFILE: ${{ steps.identity.outputs.profile }}
+        run: |
+          $mavenArgs = $env:MAVEN_ARGS -split " "
+          $profiles = "windows-app-image,windows-installer$($env:EXTRA_PROFILE)"
+          $stableManifest = "https://github.com/$($env:GITHUB_REPOSITORY)/releases/latest/download/frostguard-stable-manifest.json"
+          $nightlyManifest = "https://github.com/$($env:GITHUB_REPOSITORY)/releases/download/updates-nightly/frostguard-nightly-manifest.json"
+          & .\mvnw.cmd @mavenArgs "-Drevision=$($env:VERSION)" `
+              "-Dfrostguard.windows.app-version=$($env:WINDOWS_VERSION)" `
+              "-Dfrostguard.update.authenticode-publisher=$($env:AUTHENTICODE_PUBLISHER)" `
+              "-Dfrostguard.update.manifest.stable=$stableManifest" `
+              "-Dfrostguard.update.manifest.nightly=$nightlyManifest" `
+              "-P$profiles" package
+
+      - name: Verify and smoke-test channel application image
+        shell: pwsh
+        env:
+          PRODUCT_NAME: ${{ steps.identity.outputs.product_name }}
+        run: |
+          $image = "packaging/desktop/target/app-image/$($env:PRODUCT_NAME)"
+          python build-support/verification/verify_app_image.py $image `
+              --channel $env:CHANNEL --product-name $env:PRODUCT_NAME
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+              -File build-support/verification/smoke_test_app_image.ps1 `
+              -ImagePath $image -Channel $env:CHANNEL -ProductName $env:PRODUCT_NAME
+
+      - name: Sign and verify immutable installer
+        id: installer
+        shell: pwsh
+        env:
+          IMMUTABLE_NAME: ${{ steps.identity.outputs.installer_name }}
+          CERTIFICATE_THUMBPRINT: ${{ steps.certificate.outputs.thumbprint }}
+        run: |
+          $source = @(Get-ChildItem "packaging/desktop/target/installers/$($env:CHANNEL)" `
+              -Filter '*.exe' -File)
+          if ($source.Count -ne 1) {
+              throw "Expected exactly one unsigned installer, found $($source.Count)"
+          }
+          $installer = Join-Path $env:RUNNER_TEMP $env:IMMUTABLE_NAME
+          Copy-Item -LiteralPath $source[0].FullName -Destination $installer
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" `
+              -Recurse -Filter signtool.exe | Where-Object FullName -Match '\\x64\\' `
+              | Sort-Object FullName -Descending | Select-Object -First 1
+          if ($null -eq $signtool) {
+              throw "Windows SDK signtool.exe was not found"
+          }
+          & $signtool.FullName sign /sha1 $env:CERTIFICATE_THUMBPRINT /fd SHA256 `
+              /td SHA256 /tr http://timestamp.digicert.com $installer
+          & $signtool.FullName verify /pa /v $installer
+          if ($LASTEXITCODE -ne 0) {
+              throw "Authenticode verification failed"
+          }
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          if ($signature.Status -ne 'Valid' -or
+              $signature.SignerCertificate.Subject -cne $env:AUTHENTICODE_PUBLISHER) {
+              throw "Signed installer does not match the pinned publisher"
+          }
+          "path=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Create draft release and verify uploaded installer
+        id: draft
+        shell: pwsh
+        env:
+          TAG: ${{ steps.identity.outputs.tag }}
+          INSTALLER: ${{ steps.installer.outputs.path }}
+        run: |
+          $title = if ($env:CHANNEL -eq 'nightly') {
+              "Frostguard Nightly $($env:VERSION)"
+          } else {
+              "Frostguard $($env:VERSION)"
+          }
+          gh release create $env:TAG $env:INSTALLER --repo $env:GITHUB_REPOSITORY `
+              --target $env:GITHUB_SHA --title $title --generate-notes --draft
+          $asset = gh api "repos/$($env:GITHUB_REPOSITORY)/releases/tags/$($env:TAG)" `
+              --jq ".assets[] | select(.name == \"$([IO.Path]::GetFileName($env:INSTALLER))\") | [.id,.browser_download_url] | @tsv"
+          $parts = $asset -split "`t"
+          if ($parts.Count -ne 2) {
+              throw "Uploaded installer could not be resolved"
+          }
+          $downloaded = Join-Path $env:RUNNER_TEMP "uploaded-installer.exe"
+          gh api "repos/$($env:GITHUB_REPOSITORY)/releases/assets/$($parts[0])" `
+              -H "Accept: application/octet-stream" > $downloaded
+          if ((Get-FileHash $downloaded -Algorithm SHA256).Hash -ne
+              (Get-FileHash $env:INSTALLER -Algorithm SHA256).Hash) {
+              throw "Uploaded installer hash does not match the signed source"
+          }
+          "download_url=$($parts[1])" | Out-File `
+              -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Generate update manifest from the signed installer
+        id: manifest
+        shell: pwsh
+        env:
+          INSTALLER: ${{ steps.installer.outputs.path }}
+          INSTALLER_URL: ${{ steps.draft.outputs.download_url }}
+          MANIFEST_NAME: ${{ steps.identity.outputs.manifest_name }}
+          TAG: ${{ steps.identity.outputs.tag }}
+        run: |
+          $manifest = Join-Path $env:RUNNER_TEMP $env:MANIFEST_NAME
+          $publishedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $releaseNotes = "https://github.com/$($env:GITHUB_REPOSITORY)/releases/tag/$($env:TAG)"
+          python build-support/release/write_update_manifest.py `
+              --channel $env:CHANNEL --version $env:VERSION `
+              --minimum-updater-version $env:MINIMUM_UPDATER_VERSION `
+              --published-at $publishedAt --release-notes-url $releaseNotes `
+              --installer-url $env:INSTALLER_URL --installer $env:INSTALLER `
+              --publisher $env:AUTHENTICODE_PUBLISHER --output $manifest
+          "path=$manifest" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Publish immutable release and channel manifest last
+        id: publish
+        shell: pwsh
+        env:
+          TAG: ${{ steps.identity.outputs.tag }}
+          MANIFEST: ${{ steps.manifest.outputs.path }}
+        run: |
+          gh release upload $env:TAG $env:MANIFEST --repo $env:GITHUB_REPOSITORY
+          if ($env:CHANNEL -eq 'stable') {
+              gh release edit $env:TAG --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          } else {
+              gh release edit $env:TAG --repo $env:GITHUB_REPOSITORY --draft=false --prerelease
+              if (-not (gh release view updates-nightly --repo $env:GITHUB_REPOSITORY 2>$null)) {
+                  gh release create updates-nightly --repo $env:GITHUB_REPOSITORY `
+                      --target $env:GITHUB_SHA --title "Frostguard Nightly update feed" `
+                      --notes "The manifest asset is replaced only after a signed immutable Nightly release is verified." `
+                      --prerelease
+              }
+              gh release upload updates-nightly $env:MANIFEST --repo $env:GITHUB_REPOSITORY --clobber
+          }
+
+      - name: Remove an abandoned draft release
+        if: failure() && steps.draft.outcome != 'skipped'
+        shell: pwsh
+        env:
+          TAG: ${{ steps.identity.outputs.tag }}
+        run: |
+          $release = gh release view $env:TAG --repo $env:GITHUB_REPOSITORY `
+              --json isDraft 2>$null | ConvertFrom-Json
+          if ($null -ne $release -and $release.isDraft) {
+              gh release delete $env:TAG --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
+          }
+
+      - name: Upload signed release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: frostguard-${{ inputs.channel }}-${{ inputs.version }}-signed-release
+          path: |
+            ${{ steps.installer.outputs.path }}
+            ${{ steps.manifest.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Remove the temporary certificate file
+        if: always()
+        shell: pwsh
+        env:
+          CERTIFICATE_PATH: ${{ steps.certificate.outputs.path }}
+        run: |
+          if (-not [string]::IsNullOrWhiteSpace($env:CERTIFICATE_PATH)) {
+              Remove-Item -LiteralPath $env:CERTIFICATE_PATH -Force -ErrorAction SilentlyContinue
+          }

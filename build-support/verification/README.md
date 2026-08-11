@@ -1,20 +1,22 @@
 # Continuous Integration
 
-Frostguard builds on GitHub Actions from
-[`.github/workflows/daily-windows-bundle.yml`](../../.github/workflows/daily-windows-bundle.yml).
-No manual activation step is needed — the workflow is live as soon as it lands on
-`main`, and the first scheduled run happens at the next 03:17 UTC.
+Pull requests and `main` are built and tested by
+[`ci.yml`](../../.github/workflows/ci.yml) with read-only repository access.
+The separate [`daily-windows-bundle.yml`](../../.github/workflows/daily-windows-bundle.yml)
+builds and publishes the rolling Nightly ZIP. No manual activation is needed;
+the first scheduled Nightly run happens at the next 03:17 UTC after the workflow
+lands on `main`.
 
 ## When it runs
 
-| Trigger | Purpose |
+| Workflow trigger | Purpose |
 |---|---|
-| `schedule` (03:17 UTC daily) | Publishes a nightly Windows bundle for testers, updates the `nightly` release and posts it to Discord |
-| `pull_request` | Guards Maven modules, packaging, tools, examples, build support, and workflow changes |
-| `push` to `build-support/**` | Lets build-support changes be iterated on a branch |
-| `workflow_dispatch` | On-demand build from the Actions tab |
+| CI: `pull_request` | Builds and tests the proposed tree without release permissions |
+| CI: `push` to `main` | Rechecks the integrated tree |
+| Nightly: `schedule` (03:17 UTC daily) | Publishes the rolling Windows ZIP and updates its Discord message |
+| Nightly: `workflow_dispatch` | On-demand Nightly build; publication is limited to `main` |
 
-## What the pipeline does
+## What the Nightly pipeline does
 
 1. Checks out the repository **with Git LFS**, then asserts that every LFS asset
    was really materialised. The check fails if `git lfs ls-files` returns nothing
@@ -28,9 +30,10 @@ No manual activation step is needed — the workflow is live as soon as it lands
 4. Runs the verifier's own unit tests (`build-support/verification/test_verify_bundle.py`), so a
    verification script that can no longer fail cannot silently green-light a
    broken artifact.
-5. Runs `./mvnw clean install -Djavafx.platform=win`. This **cross-builds the
-   Windows desktop bundle from Linux** while still executing the full JUnit 5
-   suite, including the vision and OCR saved-frame tests.
+5. Runs the full JUnit 5 suite against Linux JavaFX under Xvfb, including the
+   vision and OCR saved-frame tests, then **cross-builds the Windows desktop
+   bundle from Linux** with `-Djavafx.platform=win` and tests skipped in that
+   second Maven invocation.
 6. **Structurally verifies** the ZIP with [`verify_bundle.py`](verify_bundle.py):
    Windows JavaFX runtime present and no other platform's runtime leaking, the
    launcher and watcher JARs, bundled `adb`/OCR assets, template sprites,
@@ -165,7 +168,7 @@ substitution really took effect in both directions.
 ## Stable Windows releases
 
 [`stable-windows-release.yml`](../.github/workflows/stable-windows-release.yml)
-promotes a successful Daily Windows Bundle run from `main` instead of rebuilding
+promotes a successful Nightly Windows Bundle run from `main` instead of rebuilding
 a potentially different tree. A maintainer supplies the `X.Y.Z` version and
 daily run ID. The workflow validates the source run and Maven version, pins its
 commit, downloads and re-verifies its bundle, creates an immutable `vX.Y.Z`

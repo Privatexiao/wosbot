@@ -1,24 +1,28 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$ImagePath
+    [string]$ImagePath,
+    [ValidateSet("stable", "nightly")]
+    [string]$Channel = "stable",
+    [string]$ProductName = "Frostguard"
 )
 
 $ErrorActionPreference = "Stop"
 $image = (Resolve-Path -LiteralPath $ImagePath).Path
-$appLauncher = Join-Path $image "Frostguard.exe"
-$watcherLauncher = Join-Path $image "FrostguardWatcher.exe"
+$appLauncher = Join-Path $image "$ProductName.exe"
+$watcherName = if ($Channel -eq "nightly") { "FrostguardNightlyWatcher" } else { "FrostguardWatcher" }
+$watcherLauncher = Join-Path $image "$watcherName.exe"
 if (-not (Test-Path -LiteralPath $appLauncher -PathType Leaf)) {
-    throw "Frostguard.exe is missing from $image"
+    throw "$ProductName.exe is missing from $image"
 }
 if (-not (Test-Path -LiteralPath $watcherLauncher -PathType Leaf)) {
-    throw "FrostguardWatcher.exe is missing from $image"
+    throw "$watcherName.exe is missing from $image"
 }
 
 $versionInfo = (Get-Item -LiteralPath $appLauncher).VersionInfo
-if ($versionInfo.ProductName -ne "Frostguard" -or
+if ($versionInfo.ProductName -ne $ProductName -or
         $versionInfo.CompanyName -ne "Frostguard" -or
-        $versionInfo.FileDescription -ne "Frostguard automation desktop application") {
-    throw "Frostguard.exe has incomplete Windows application metadata"
+        $versionInfo.FileDescription -ne "$ProductName automation desktop application") {
+    throw "$ProductName.exe has incomplete Windows application metadata"
 }
 Add-Type -AssemblyName System.Drawing
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($appLauncher)
@@ -48,8 +52,30 @@ try {
         throw "Native launcher did not create its isolated workspace marker"
     }
     $workspaceMetadata = Get-Content -Raw -LiteralPath $marker | ConvertFrom-Json
-    if ($workspaceMetadata.channel -ne "stable") {
-        throw "Native launcher selected '$($workspaceMetadata.channel)' instead of Stable"
+    if ($workspaceMetadata.channel -ne $Channel) {
+        throw "Native launcher selected '$($workspaceMetadata.channel)' instead of $Channel"
+    }
+    $appEvidencePath = Join-Path $appWorkspace "cache/native-app-smoke.properties"
+    if (-not (Test-Path -LiteralPath $appEvidencePath)) {
+        throw "Native app launcher did not write smoke-test evidence"
+    }
+    $appEvidence = @{}
+    Get-Content -LiteralPath $appEvidencePath | ForEach-Object {
+        if ($_ -match '^([^=]+)=(.*)$') {
+            $appEvidence[$matches[1]] = $matches[2]
+        }
+    }
+    $expectedApplicationId = if ($Channel -eq "nightly") {
+        "dev.frostguard.desktop.nightly"
+    } else {
+        "dev.frostguard.desktop"
+    }
+    if ($appEvidence["channel"] -ne $Channel -or
+            $appEvidence["applicationId"] -ne $expectedApplicationId -or
+            [System.IO.Path]::GetFullPath($appEvidence["workspace"]) -ne $appWorkspace -or
+            [System.IO.Path]::GetFullPath($appEvidence["applicationDir"]) -ne (Join-Path $image "app") -or
+            [System.IO.Path]::GetFullPath($appEvidence["appLauncher"]) -ne $appLauncher) {
+        throw "Native app launcher did not receive its packaged product identity"
     }
 
     $env:FROSTGUARD_WORKSPACE = $watcherWorkspace
@@ -67,8 +93,8 @@ try {
         throw "Native watcher launcher did not create its workspace marker"
     }
     $watcherMetadata = Get-Content -Raw -LiteralPath $watcherMarker | ConvertFrom-Json
-    if ($watcherMetadata.channel -ne "stable") {
-        throw "Native watcher launcher selected '$($watcherMetadata.channel)' instead of Stable"
+    if ($watcherMetadata.channel -ne $Channel) {
+        throw "Native watcher launcher selected '$($watcherMetadata.channel)' instead of $Channel"
     }
     $watcherEvidencePath = Join-Path $watcherWorkspace "cache/native-watcher-smoke.properties"
     if (-not (Test-Path -LiteralPath $watcherEvidencePath)) {
@@ -80,7 +106,8 @@ try {
             $watcherEvidence[$matches[1]] = $matches[2]
         }
     }
-    if ($watcherEvidence["channel"] -ne "stable" -or
+    if ($watcherEvidence["channel"] -ne $Channel -or
+            $watcherEvidence["applicationId"] -ne $expectedApplicationId -or
             [System.IO.Path]::GetFullPath($watcherEvidence["workspace"]) -ne $watcherWorkspace -or
             [System.IO.Path]::GetFullPath($watcherEvidence["applicationDir"]) -ne (Join-Path $image "app") -or
             [System.IO.Path]::GetFullPath($watcherEvidence["appLauncher"]) -ne $appLauncher -or

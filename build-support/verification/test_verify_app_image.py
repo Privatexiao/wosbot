@@ -18,7 +18,11 @@ class VerifyAppImageTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.image = Path(self.temp.name) / "Frostguard"
-        files = list(verify_app_image.REQUIRED_FILES) + [
+        files = list(verify_app_image.STATIC_REQUIRED_FILES) + [
+            "Frostguard.exe",
+            "FrostguardWatcher.exe",
+            "app/Frostguard.cfg",
+            "app/FrostguardWatcher.cfg",
             "app/frostguard-desktop-3.0.0.jar",
             "app/frostguard-watcher-3.0.0.jar",
             "app/lib/frostguard-update-3.0.0.jar",
@@ -37,15 +41,22 @@ class VerifyAppImageTest(unittest.TestCase):
                 verify_app_image.BUILD_METADATA,
                 "pullRequestBuild=false\nauthenticodePublisher=CN=Frostguard Project, O=Frostguard\n",
             )
-        common_options = "\n".join(verify_app_image.COMMON_JAVA_OPTIONS) + (
+        common_options = "\n".join((
+            "java-options=-Dfrostguard.channel=stable",
+            "java-options=-Dfrostguard.application.id=dev.frostguard.desktop",
+            "java-options=-Duser.dir=$APPDIR",
+            "java-options=-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe",
+        )) + (
             "\njava-options=-Dfrostguard.update.pullRequestBuild=false\n"
         )
         (self.image / "app/Frostguard.cfg").write_text(
             "app.mainclass=dev.frostguard.app.bootstrap.Main\n"
-            "java-options=-Dfrostguard.update.manifest.stable=\n" + common_options,
+            "java-options=-Dfrostguard.update.manifest.stable=\n"
+            "java-options=-Dfrostguard.update.manifest.nightly=\n" + common_options,
             encoding="utf-8")
         (self.image / "app/FrostguardWatcher.cfg").write_text(
-            "app.mainclass=dev.frostguard.watcher.TelegramWatcher\n" + common_options,
+            "app.mainclass=dev.frostguard.watcher.TelegramWatcher\n"
+            "java-options=-Dfrostguard.launcher=$APPDIR/../Frostguard.exe\n" + common_options,
             encoding="utf-8")
 
     def tearDown(self):
@@ -66,7 +77,8 @@ class VerifyAppImageTest(unittest.TestCase):
     def test_rejects_watcher_without_stable_channel(self):
         config = self.image / "app/FrostguardWatcher.cfg"
         config.write_text(config.read_text().replace("channel=stable", "channel=development"))
-        self.assertTrue(any("FrostguardWatcher.cfg" in item for item in verify_app_image.inspect_image(self.image)))
+        self.assertTrue(any("FrostguardWatcher.cfg" in item
+                            for item in verify_app_image.inspect_image(self.image)))
 
     def test_rejects_launcher_without_pr_build_identity(self):
         config = self.image / "app/Frostguard.cfg"
@@ -93,6 +105,27 @@ class VerifyAppImageTest(unittest.TestCase):
         leaked.parent.mkdir(parents=True)
         leaked.write_text("private runtime log")
         self.assertTrue(any("leaked" in item for item in verify_app_image.inspect_image(self.image)))
+
+    def test_accepts_nightly_identity_and_rejects_stable_expectations(self):
+        (self.image / "Frostguard.exe").rename(self.image / "Frostguard Nightly.exe")
+        (self.image / "FrostguardWatcher.exe").rename(
+            self.image / "FrostguardNightlyWatcher.exe")
+        stable_config = self.image / "app/Frostguard.cfg"
+        nightly_config = self.image / "app/Frostguard Nightly.cfg"
+        stable_config.rename(nightly_config)
+        stable_watcher_config = self.image / "app/FrostguardWatcher.cfg"
+        nightly_watcher_config = self.image / "app/FrostguardNightlyWatcher.cfg"
+        stable_watcher_config.rename(nightly_watcher_config)
+        for config in (nightly_config, nightly_watcher_config):
+            config.write_text(config.read_text().replace(
+                "channel=stable", "channel=nightly").replace(
+                "application.id=dev.frostguard.desktop", "application.id=dev.frostguard.desktop.nightly").replace(
+                "../Frostguard.exe", "../Frostguard Nightly.exe").replace(
+                "../FrostguardWatcher.exe", "../FrostguardNightlyWatcher.exe"), encoding="utf-8")
+
+        self.assertEqual([], verify_app_image.inspect_image(
+            self.image, "nightly", "Frostguard Nightly"))
+        self.assertTrue(verify_app_image.inspect_image(self.image))
 
 
 if __name__ == "__main__":

@@ -77,6 +77,7 @@ public class TelegramWatcher {
             loadConfig();
             Files.writeString(workspace.cache().resolve("native-watcher-smoke.properties"),
                     "channel=" + workspace.channel().directoryName() + "\n"
+                            + "applicationId=" + System.getProperty(WorkspacePaths.APPLICATION_ID_PROPERTY, "") + "\n"
                             + "workspace=" + workspace.root() + "\n"
                             + "applicationDir=" + System.getProperty("user.dir") + "\n"
                             + "appLauncher=" + System.getProperty(APP_LAUNCHER_PROPERTY, "") + "\n"

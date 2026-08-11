@@ -19,6 +19,7 @@ import dev.frostguard.api.configs.TpMessageSeverityEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ProfileStatusData;
 import dev.frostguard.api.domain.ProfileTagData;
+import dev.frostguard.app.bootstrap.WorkspacePreferences;
 import dev.frostguard.engine.service.LoggingService;
 import dev.frostguard.engine.service.ProfileService;
 import dev.frostguard.engine.service.ScheduleService;
@@ -92,8 +93,7 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	private final List<String> structuredFilters = new ArrayList<>();
 	private final ContextMenu searchSuggestions = new ContextMenu();
 	private Map<String, String> tagColors = Map.of();
-	private final Preferences savedViewPreferences = Preferences.userNodeForPackage(
-			ProfileManagerLayoutController.class).node("profile-search-views");
+	private final Preferences savedViewPreferences = WorkspacePreferences.currentNode("profile-search-views");
 
 	@FXML
 	private TableView<ProfileAux> tableviewLogMessages;

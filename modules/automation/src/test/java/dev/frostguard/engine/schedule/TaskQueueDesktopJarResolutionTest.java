@@ -55,4 +55,28 @@ class TaskQueueDesktopJarResolutionTest {
         assertTrue(script.contains("set \"FROSTGUARD_CHANNEL=stable\""));
         assertTrue(script.contains("start \"\" \"" + launcher + "\" --autostart"));
     }
+
+    @Test
+    void usesTheJpackageLauncherPathWhenNoExplicitOverrideExists() {
+        String oldConfigured = System.getProperty("frostguard.launcher");
+        String oldJpackage = System.getProperty("jpackage.app-path");
+        try {
+            System.clearProperty("frostguard.launcher");
+            System.setProperty("jpackage.app-path", tempDir.resolve("Frostguard Nightly.exe").toString());
+
+            assertEquals(tempDir.resolve("Frostguard Nightly.exe").toString(),
+                    TaskQueue.packagedApplicationLauncher());
+        } finally {
+            restore("frostguard.launcher", oldConfigured);
+            restore("jpackage.app-path", oldJpackage);
+        }
+    }
+
+    private static void restore(String property, String value) {
+        if (value == null) {
+            System.clearProperty(property);
+        } else {
+            System.setProperty(property, value);
+        }
+    }
 }

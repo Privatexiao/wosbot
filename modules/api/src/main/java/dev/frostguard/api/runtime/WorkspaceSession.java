@@ -32,7 +32,7 @@ public final class WorkspaceSession implements AutoCloseable {
             }
             if (lock == null) {
                 channel.close();
-                throw new IllegalStateException("Frostguard workspace is already in use: " + paths.root());
+                throw new WorkspaceInUseException(paths);
             }
             System.setProperty(WorkspacePaths.WORKSPACE_PROPERTY, paths.root().toString());
             System.setProperty("frostguard.log.dir", paths.logs().toString());
@@ -88,6 +88,19 @@ public final class WorkspaceSession implements AutoCloseable {
         try {
             lockChannel.close();
         } catch (IOException ignored) {
+        }
+    }
+
+    public static final class WorkspaceInUseException extends IllegalStateException {
+        private final WorkspacePaths paths;
+
+        private WorkspaceInUseException(WorkspacePaths paths) {
+            super("Frostguard workspace is already in use: " + paths.root());
+            this.paths = paths;
+        }
+
+        public WorkspacePaths paths() {
+            return paths;
         }
     }
 }

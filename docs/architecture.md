@@ -255,19 +255,34 @@ with `./mvnw javafx:run`; its versioned JAR is not a standalone distribution.
 - executable jar: `modules/desktop/target/frostguard-desktop-<version>.jar`
 - transitional desktop zip: `packaging/desktop/target/frostguard-<version>-desktop-bundle.zip`
 - packaging inputs staged under `packaging/desktop/target/input`
-- Windows application image: `packaging/desktop/target/app-image/Frostguard`
-- Windows installer: versioned EXE under `packaging/desktop/target/installers`
+- Windows application images: `packaging/desktop/target/app-image/Frostguard`
+  and `app-image/Frostguard Nightly`
+- Windows installers: versioned EXEs under
+  `packaging/desktop/target/installers/<channel>`
 - ADB/Tesseract files staged from `tools/`
 - custom task examples staged from root `examples/custom-tasks/`
 - template PNGs staged from `modules/vision/src/main/resources/templates`
 
 The native Windows image contains the desktop and watcher launchers plus a
-`jlink` runtime. Both launchers receive the Stable channel and workspace
-contract through packaged JVM options. The watcher and Task Scheduler launch
+`jlink` runtime. Each launcher receives its Stable or Nightly channel and
+workspace contract through packaged JVM options. The watcher and Task Scheduler launch
 the native executables when those packaged launcher paths are present, with
 the Java/JAR paths retained only as the source and transitional-ZIP fallback.
 Native packaging is opt-in through Maven profiles so the normal reactor build
 stays platform-neutral.
+
+The watcher launcher is channel-specific internal infrastructure and does not
+receive Start-menu or desktop shortcuts. The installer exposes only the desktop
+launcher, optionally creates its desktop shortcut, and can launch it from the
+completion page. Installer maintenance refuses to proceed while that channel's
+desktop process is running; its background watcher can be stopped independently
+without affecting the other channel.
+
+Stable and Nightly use distinct application IDs, upgrade UUIDs, install
+directories, shortcuts, update feeds, workspace paths, and workspace-scoped
+Java preferences. A first Nightly launch may copy a closed Stable workspace as
+a one-time snapshot before persistence opens. Live sharing, continuous sync,
+and automatic Nightly-to-Stable migration are not supported.
 
 The installed desktop exposes update controls only for eligible Stable or
 Nightly builds. A selected installer is downloaded to
