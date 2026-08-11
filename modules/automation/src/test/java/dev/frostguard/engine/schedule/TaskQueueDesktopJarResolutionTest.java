@@ -2,6 +2,7 @@ package dev.frostguard.engine.schedule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,6 +10,9 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import dev.frostguard.api.runtime.RuntimeChannel;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 class TaskQueueDesktopJarResolutionTest {
 
@@ -38,5 +42,17 @@ class TaskQueueDesktopJarResolutionTest {
     void rejectsWorkingDirectoryWithoutDesktopArtifact() {
         assertThrows(IOException.class,
                 () -> TaskQueue.resolveDesktopJarForAutostart(tempDir));
+    }
+
+    @Test
+    void nativeAutostartWrapperPreservesTheWorkspace() {
+        Path launcher = tempDir.resolve("Frostguard.exe").toAbsolutePath();
+        WorkspacePaths workspace = new WorkspacePaths(tempDir.resolve("Bot 1"), RuntimeChannel.STABLE);
+
+        String script = TaskQueue.nativeAutostartLauncherContent(launcher, workspace);
+
+        assertTrue(script.contains("set \"FROSTGUARD_WORKSPACE=" + workspace.root() + "\""));
+        assertTrue(script.contains("set \"FROSTGUARD_CHANNEL=stable\""));
+        assertTrue(script.contains("start \"\" \"" + launcher + "\" --autostart"));
     }
 }

@@ -239,9 +239,19 @@ with `./mvnw javafx:run`; its versioned JAR is not a standalone distribution.
 - executable jar: `modules/desktop/target/frostguard-desktop-<version>.jar`
 - transitional desktop zip: `packaging/desktop/target/frostguard-<version>-desktop-bundle.zip`
 - packaging inputs staged under `packaging/desktop/target/input`
+- Windows application image: `packaging/desktop/target/app-image/Frostguard`
+- Windows installer: versioned EXE under `packaging/desktop/target/installers`
 - ADB/Tesseract files staged from `tools/`
 - custom task examples staged from root `examples/custom-tasks/`
 - template PNGs staged from `modules/vision/src/main/resources/templates`
+
+The native Windows image contains the desktop and watcher launchers plus a
+`jlink` runtime. Both launchers receive the Stable channel and workspace
+contract through packaged JVM options. The watcher and Task Scheduler launch
+the native executables when those packaged launcher paths are present, with
+the Java/JAR paths retained only as the source and transitional-ZIP fallback.
+Native packaging is opt-in through Maven profiles so the normal reactor build
+stays platform-neutral.
 
 `modules/watcher` builds a separate shaded watcher jar.
 

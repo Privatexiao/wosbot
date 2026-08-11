@@ -20,8 +20,8 @@ public final class WorkspaceSession implements AutoCloseable {
     }
 
     public static WorkspaceSession open(WorkspacePaths paths) {
+        initializeLayout(paths);
         try {
-            createLayout(paths);
             FileChannel channel = FileChannel.open(paths.applicationLock(),
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             FileLock lock;
@@ -37,6 +37,14 @@ public final class WorkspaceSession implements AutoCloseable {
             System.setProperty(WorkspacePaths.WORKSPACE_PROPERTY, paths.root().toString());
             System.setProperty("frostguard.log.dir", paths.logs().toString());
             return new WorkspaceSession(paths, channel, lock);
+        } catch (IOException cause) {
+            throw new IllegalStateException("Could not initialize Frostguard workspace: " + paths.root(), cause);
+        }
+    }
+
+    public static void initializeLayout(WorkspacePaths paths) {
+        try {
+            createLayout(paths);
         } catch (IOException cause) {
             throw new IllegalStateException("Could not initialize Frostguard workspace: " + paths.root(), cause);
         }

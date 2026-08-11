@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 public class TelegramWatcherLauncher {
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramWatcherLauncher.class);
+    private static final String WATCHER_LAUNCHER_PROPERTY = "frostguard.watcher.launcher";
 
     public static void startWatcherIfNotRunning() {
         if (isWatcherRunning()) {
@@ -26,19 +27,21 @@ public class TelegramWatcherLauncher {
         }
 
         logger.info("Telegram Watcher is not running. Attempting to start it...");
-        File batFile = resolveBatFile();
+        File launcher = resolveLauncher();
 
-        if (batFile != null && batFile.exists()) {
+        if (launcher != null && launcher.exists()) {
             try {
-                ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "start", "\"FG-TG-Watcher\"", "/b", batFile.getName());
-                pb.directory(batFile.getParentFile());
+                ProcessBuilder pb = isNativeLauncher(launcher)
+                        ? new ProcessBuilder(launcher.getAbsolutePath())
+                        : new ProcessBuilder("cmd", "/c", "start", "\"FG-TG-Watcher\"", "/b", launcher.getName());
+                pb.directory(launcher.getParentFile());
                 pb.environment().put("FROSTGUARD_WORKSPACE", WorkspacePaths.current().root().toString());
                 pb.environment().put("FROSTGUARD_CHANNEL",
                         WorkspacePaths.current().channel().directoryName());
                 pb.start();
-                logger.info("Executed {}", batFile.getAbsolutePath());
+                logger.info("Executed {}", launcher.getAbsolutePath());
             } catch (IOException e) {
-                logger.error("Failed to start Telegram Watcher bat file", e);
+                logger.error("Failed to start Telegram Watcher launcher", e);
             }
         } else {
             logger.warn("Could not locate the Telegram Watcher launcher.");
@@ -63,7 +66,14 @@ public class TelegramWatcherLauncher {
         }
     }
 
-    private static File resolveBatFile() {
+    private static File resolveLauncher() {
+        String packagedLauncher = System.getProperty(WATCHER_LAUNCHER_PROPERTY, "").trim();
+        if (!packagedLauncher.isBlank()) {
+            File launcher = new File(packagedLauncher);
+            if (launcher.isFile()) {
+                return launcher;
+            }
+        }
         // Try to load the jar path from the active workspace.
         try {
             Path cfg = WorkspacePaths.current().watcherConfig();
@@ -99,5 +109,9 @@ public class TelegramWatcherLauncher {
         }
 
         return null;
+    }
+
+    private static boolean isNativeLauncher(File launcher) {
+        return launcher.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".exe");
     }
 }

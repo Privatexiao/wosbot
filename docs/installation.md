@@ -15,6 +15,10 @@ Stable and Nightly are public Windows desktop bundles. They require Java 21,
 but not Git, Git LFS, or Maven. Nightly may contain unfinished changes; PR
 builds additionally contain unmerged code.
 
+The self-contained Windows installer is being introduced for Frostguard 3.0.
+Until it is published through the release workflows, the download links above
+continue to provide the existing ZIP distribution.
+
 ## Install a downloaded build
 
 1. Install a Java 21 JDK, such as [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21).
@@ -109,6 +113,35 @@ The build writes module artifacts below their respective `target` directories
 and the transitional desktop bundle ZIP below `packaging/desktop/target`. End
 users should extract the ZIP and launch `Start Frostguard.bat`; individual
 module JARs are not standalone distributions.
+
+### Build the native Windows package
+
+Native packages must be built on Windows. Build and smoke-test the
+self-contained application image with the JDK 21 `jpackage` tool:
+
+```powershell
+.\mvnw.cmd -Pwindows-app-image package
+python build-support/verification/verify_app_image.py packaging/desktop/target/app-image/Frostguard
+powershell -ExecutionPolicy Bypass -File build-support/verification/smoke_test_app_image.ps1 -ImagePath packaging/desktop/target/app-image/Frostguard
+```
+
+This produces
+`packaging/desktop/target/app-image/Frostguard/Frostguard.exe`. The image
+contains its Java runtime, so a machine running it does not need a separate
+JDK.
+
+Building the versioned installer additionally requires WiX Toolset 3.14.1 with
+`candle.exe` and `light.exe` on `PATH`:
+
+```powershell
+.\mvnw.cmd "-Pwindows-app-image,windows-installer" package
+```
+
+The installer is written below `packaging/desktop/target/installers`. It is a
+per-user installer and defaults to
+`%LOCALAPPDATA%\Frostguard`; the installer can offer another location.
+Normal `mvn package` remains platform-neutral and does not invoke `jpackage` or
+install Frostguard.
 
 ### Run a source build
 

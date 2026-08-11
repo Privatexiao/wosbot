@@ -27,4 +27,16 @@ class TelegramLayoutControllerTest {
         assertTrue(script.contains("set \"FROSTGUARD_CHANNEL=stable\""));
         assertTrue(script.contains("call \"" + watcherLauncher.toAbsolutePath().normalize() + "\""));
     }
+
+    @Test
+    void startupWrapperStartsThePackagedNativeWatcher() {
+        WorkspacePaths workspace = new WorkspacePaths(tempDir.resolve("Bot 1"), RuntimeChannel.STABLE);
+        Path watcherLauncher = tempDir.resolve("install/FrostguardWatcher.exe");
+
+        String script = TelegramLayoutController.workspaceWatcherLauncherContent(
+                watcherLauncher, workspace);
+
+        assertTrue(script.contains("start \"\" \""
+                + watcherLauncher.toAbsolutePath().normalize() + "\""));
+    }
 }
