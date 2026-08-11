@@ -64,5 +64,12 @@
 			<groupId>dev.frostguard</groupId>
 			<artifactId>frostguard-api</artifactId>
 		</dependency>
+
+		<!-- Tests -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 </project>

@@ -185,6 +185,7 @@ public final class TesseractOcrProvider {
         Tesseract t = new Tesseract();
         t.setDatapath(locateTessdata());
         t.setLanguage("eng");
+        t.setConfigs(Collections.singletonList("quiet"));
         if (cfg.hasPageSegMode())   t.setPageSegMode(cfg.getPageSegMode());
         if (cfg.hasOcrEngineMode()) t.setOcrEngineMode(cfg.getOcrEngineMode());
         if (cfg.hasAllowedChars())  t.setVariable("tessedit_char_whitelist", cfg.getAllowedChars());
