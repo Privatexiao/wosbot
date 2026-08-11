@@ -14,9 +14,9 @@ final class UpdateExitCoordinator {
     }
 
     void execute(InstallerHandoff.HandoffSession session) throws Exception {
-        session.authorize();
         try {
             shutdown.run();
+            session.authorize();
         } catch (Exception exception) {
             session.cancel();
             failedExit.run();

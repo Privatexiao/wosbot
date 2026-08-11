@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -45,6 +46,41 @@ class UpdateDownloaderTest {
         assertEquals(7L, requestedOffset.get());
         assertArrayEquals(INSTALLER, Files.readAllBytes(result));
         assertFalse(Files.exists(partial));
+    }
+
+    @Test
+    void promotesAlreadyCompletePartialDownloadWithoutAnotherRequest() throws Exception {
+        UpdateCandidate candidate = candidate(INSTALLER, sha256(INSTALLER));
+        Path partial = updateDirectory(candidate).resolve(candidate.artifact().fileName() + ".part");
+        Files.createDirectories(partial.getParent());
+        Files.write(partial, INSTALLER);
+        AtomicBoolean requestAttempted = new AtomicBoolean();
+
+        Path result = new UpdateDownloader((uri, offset) -> {
+            requestAttempted.set(true);
+            return response(416, new byte[0]);
+        }, new ArtifactVerifier()).download(candidate, temp);
+
+        assertFalse(requestAttempted.get());
+        assertArrayEquals(INSTALLER, Files.readAllBytes(result));
+        assertFalse(Files.exists(partial));
+    }
+
+    @Test
+    void restartsACompleteButCorruptPartialDownload() throws Exception {
+        UpdateCandidate candidate = candidate(INSTALLER, sha256(INSTALLER));
+        Path partial = updateDirectory(candidate).resolve(candidate.artifact().fileName() + ".part");
+        Files.createDirectories(partial.getParent());
+        Files.write(partial, "x".repeat(INSTALLER.length).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        AtomicLong requestedOffset = new AtomicLong(-1L);
+
+        Path result = new UpdateDownloader((uri, offset) -> {
+            requestedOffset.set(offset);
+            return response(200, INSTALLER);
+        }, new ArtifactVerifier()).download(candidate, temp);
+
+        assertEquals(0L, requestedOffset.get());
+        assertArrayEquals(INSTALLER, Files.readAllBytes(result));
     }
 
     @Test
