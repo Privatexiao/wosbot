@@ -20,7 +20,9 @@ class VerifyAppImageTest(unittest.TestCase):
         self.image = Path(self.temp.name) / "Frostguard"
         files = list(verify_app_image.STATIC_REQUIRED_FILES) + [
             "Frostguard.exe",
+            "FrostguardWatcher.exe",
             "app/Frostguard.cfg",
+            "app/FrostguardWatcher.cfg",
             "app/frostguard-desktop-3.0.0.jar",
             "app/frostguard-watcher-3.0.0.jar",
             "app/lib/frostguard-update-3.0.0.jar",
@@ -75,7 +77,8 @@ class VerifyAppImageTest(unittest.TestCase):
     def test_rejects_watcher_without_stable_channel(self):
         config = self.image / "app/FrostguardWatcher.cfg"
         config.write_text(config.read_text().replace("channel=stable", "channel=development"))
-        self.assertTrue(any("FrostguardWatcher.cfg" in item for item in verify_app_image.inspect_image(self.image)))
+        self.assertTrue(any("FrostguardWatcher.cfg" in item
+                            for item in verify_app_image.inspect_image(self.image)))
 
     def test_rejects_launcher_without_pr_build_identity(self):
         config = self.image / "app/Frostguard.cfg"
@@ -105,14 +108,20 @@ class VerifyAppImageTest(unittest.TestCase):
 
     def test_accepts_nightly_identity_and_rejects_stable_expectations(self):
         (self.image / "Frostguard.exe").rename(self.image / "Frostguard Nightly.exe")
+        (self.image / "FrostguardWatcher.exe").rename(
+            self.image / "FrostguardNightlyWatcher.exe")
         stable_config = self.image / "app/Frostguard.cfg"
         nightly_config = self.image / "app/Frostguard Nightly.cfg"
         stable_config.rename(nightly_config)
-        for config in (nightly_config, self.image / "app/FrostguardWatcher.cfg"):
+        stable_watcher_config = self.image / "app/FrostguardWatcher.cfg"
+        nightly_watcher_config = self.image / "app/FrostguardNightlyWatcher.cfg"
+        stable_watcher_config.rename(nightly_watcher_config)
+        for config in (nightly_config, nightly_watcher_config):
             config.write_text(config.read_text().replace(
                 "channel=stable", "channel=nightly").replace(
                 "application.id=dev.frostguard.desktop", "application.id=dev.frostguard.desktop.nightly").replace(
-                "../Frostguard.exe", "../Frostguard Nightly.exe"), encoding="utf-8")
+                "../Frostguard.exe", "../Frostguard Nightly.exe").replace(
+                "../FrostguardWatcher.exe", "../FrostguardNightlyWatcher.exe"), encoding="utf-8")
 
         self.assertEqual([], verify_app_image.inspect_image(
             self.image, "nightly", "Frostguard Nightly"))

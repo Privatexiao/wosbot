@@ -33,12 +33,14 @@ class ChannelPackagingTest(unittest.TestCase):
             "frostguard.product.name": "Frostguard",
             "frostguard.product.identifier": "dev.frostguard.desktop",
             "frostguard.product.install-dir": "Frostguard",
+            "frostguard.watcher.name": "FrostguardWatcher",
         }
         expected_nightly = {
             "frostguard.release.channel": "nightly",
             "frostguard.product.name": "Frostguard Nightly",
             "frostguard.product.identifier": "dev.frostguard.desktop.nightly",
             "frostguard.product.install-dir": "Frostguard Nightly",
+            "frostguard.watcher.name": "FrostguardNightlyWatcher",
         }
         for key, value in expected_stable.items():
             self.assertEqual(value, stable[key])
@@ -54,8 +56,41 @@ class ChannelPackagingTest(unittest.TestCase):
             "-Dfrostguard.update.manifest.stable=${frostguard.update.manifest.stable}",
             "-Dfrostguard.update.manifest.nightly=${frostguard.update.manifest.nightly}",
             "${project.build.directory}/installers/${frostguard.release.channel}",
+            "${frostguard.watcher.name}=",
+            "--win-shortcut-prompt",
+            "--resource-dir",
         ):
             self.assertIn(contract, pom)
+
+        installer_arguments = [
+            argument.attrib["value"]
+            for argument in root.findall(
+                ".//m:profile[m:id='windows-installer']//m:arg[@value]", NS)
+        ]
+        self.assertIn("--win-shortcut", installer_arguments)
+
+    def test_installer_exposes_only_product_shortcuts_and_guards_running_apps(self):
+        watcher = (REPO_ROOT / "packaging/desktop/src/main/windows/"
+                   "Frostguard-Watcher.properties").read_text(encoding="utf-8")
+        self.assertIn("win-menu=false", watcher)
+        self.assertIn("win-shortcut=false", watcher)
+
+        installer = (REPO_ROOT / "packaging/desktop/src/main/windows/main.wxs").read_text(
+            encoding="utf-8")
+        for contract in (
+            'WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"',
+            "Launch $(var.JpAppName)",
+            "JpSetLaunchTarget",
+            "JpLaunchApplication",
+            "JpDetectRunningApplication",
+            "JP_FROSTGUARD_RUNNING",
+            "NOT JP_FROSTGUARD_RUNNING",
+            "JpStopWatcher",
+            'Before="InstallValidate"',
+            "Installed OR JP_UPGRADABLE_FOUND OR JP_DOWNGRADABLE_FOUND",
+            '<Custom Action="WixCloseApplications" Before="LaunchConditions">1</Custom>',
+        ):
+            self.assertIn(contract, installer)
 
     def test_signed_release_publishes_manifest_after_signed_installer_verification(self):
         workflow = (REPO_ROOT / ".github/workflows/signed-windows-channel-release.yml").read_text(

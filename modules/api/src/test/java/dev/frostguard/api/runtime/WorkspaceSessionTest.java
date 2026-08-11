@@ -42,7 +42,10 @@ class WorkspaceSessionTest {
             assertTrue(paths.customTasks().toFile().isDirectory());
             assertTrue(paths.cache().toFile().isDirectory());
             assertTrue(paths.watcher().toFile().isDirectory());
-            assertThrows(IllegalStateException.class, () -> WorkspaceSession.open(paths));
+            WorkspaceSession.WorkspaceInUseException exception = assertThrows(
+                    WorkspaceSession.WorkspaceInUseException.class,
+                    () -> WorkspaceSession.open(paths));
+            assertEquals(paths, exception.paths());
         }
     }
 

@@ -23,6 +23,7 @@
         <frostguard.product.identifier>dev.frostguard.desktop</frostguard.product.identifier>
         <frostguard.product.description>Frostguard automation desktop application</frostguard.product.description>
         <frostguard.product.install-dir>Frostguard</frostguard.product.install-dir>
+        <frostguard.watcher.name>FrostguardWatcher</frostguard.watcher.name>
         <frostguard.product.upgrade-uuid>fa0d66f6-1f7d-4da8-9701-88f7b4570797</frostguard.product.upgrade-uuid>
         <frostguard.channel.page.stable>https://github.com/Shederator/wosbot/releases/latest</frostguard.channel.page.stable>
         <frostguard.channel.page.nightly>https://github.com/Shederator/wosbot/releases</frostguard.channel.page.nightly>
@@ -174,6 +175,7 @@
                                     <filtering>true</filtering>
                                     <includes>
                                         <include>Frostguard-Watcher.properties</include>
+                                        <include>main.wxs</include>
                                     </includes>
                                 </resource>
                             </resources>
@@ -285,9 +287,9 @@
                                             <arg value="--java-options" />
                                             <arg value="-Duser.dir=$APPDIR" />
                                             <arg value="--java-options" />
-                                            <arg value="-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe" />
+                                            <arg value="-Dfrostguard.watcher.launcher=$APPDIR/../${frostguard.watcher.name}.exe" />
                                             <arg value="--add-launcher" />
-                                            <arg value="FrostguardWatcher=${project.build.directory}/jpackage/Frostguard-Watcher.properties" />
+                                            <arg value="${frostguard.watcher.name}=${project.build.directory}/jpackage/Frostguard-Watcher.properties" />
                                         </exec>
                                     </target>
                                 </configuration>
@@ -342,6 +344,8 @@
                                             <arg value="${frostguard.product.description}" />
                                             <arg value="--app-image" />
                                             <arg path="${project.build.directory}/app-image/${frostguard.product.name}" />
+                                            <arg value="--resource-dir" />
+                                            <arg path="${project.build.directory}/jpackage" />
                                             <!-- Nested per-user install paths can trigger inconsistent WiX
                                                  directory validation (JDK-8226534). -->
                                             <arg value="--install-dir" />
@@ -351,6 +355,7 @@
                                             <arg value="--win-menu" />
                                             <arg value="--win-menu-group" />
                                             <arg value="Frostguard" />
+                                            <arg value="--win-shortcut" />
                                             <arg value="--win-shortcut-prompt" />
                                             <arg value="--win-upgrade-uuid" />
                                             <arg value="${frostguard.product.upgrade-uuid}" />
@@ -372,6 +377,7 @@
                 <frostguard.product.identifier>dev.frostguard.desktop.nightly</frostguard.product.identifier>
                 <frostguard.product.description>Frostguard Nightly automation desktop application</frostguard.product.description>
                 <frostguard.product.install-dir>Frostguard Nightly</frostguard.product.install-dir>
+                <frostguard.watcher.name>FrostguardNightlyWatcher</frostguard.watcher.name>
                 <frostguard.product.upgrade-uuid>51ac745d-78e4-4d89-a36d-1c38b87598b3</frostguard.product.upgrade-uuid>
             </properties>
         </profile>

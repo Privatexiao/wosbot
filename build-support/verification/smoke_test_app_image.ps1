@@ -9,12 +9,13 @@ param(
 $ErrorActionPreference = "Stop"
 $image = (Resolve-Path -LiteralPath $ImagePath).Path
 $appLauncher = Join-Path $image "$ProductName.exe"
-$watcherLauncher = Join-Path $image "FrostguardWatcher.exe"
+$watcherName = if ($Channel -eq "nightly") { "FrostguardNightlyWatcher" } else { "FrostguardWatcher" }
+$watcherLauncher = Join-Path $image "$watcherName.exe"
 if (-not (Test-Path -LiteralPath $appLauncher -PathType Leaf)) {
     throw "$ProductName.exe is missing from $image"
 }
 if (-not (Test-Path -LiteralPath $watcherLauncher -PathType Leaf)) {
-    throw "FrostguardWatcher.exe is missing from $image"
+    throw "$watcherName.exe is missing from $image"
 }
 
 $versionInfo = (Get-Item -LiteralPath $appLauncher).VersionInfo

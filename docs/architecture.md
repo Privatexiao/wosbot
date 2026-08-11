@@ -271,6 +271,13 @@ the Java/JAR paths retained only as the source and transitional-ZIP fallback.
 Native packaging is opt-in through Maven profiles so the normal reactor build
 stays platform-neutral.
 
+The watcher launcher is channel-specific internal infrastructure and does not
+receive Start-menu or desktop shortcuts. The installer exposes only the desktop
+launcher, optionally creates its desktop shortcut, and can launch it from the
+completion page. Installer maintenance refuses to proceed while that channel's
+desktop process is running; its background watcher can be stopped independently
+without affecting the other channel.
+
 Stable and Nightly use distinct application IDs, upgrade UUIDs, install
 directories, shortcuts, update feeds, workspace paths, and workspace-scoped
 Java preferences. A first Nightly launch may copy a closed Stable workspace as

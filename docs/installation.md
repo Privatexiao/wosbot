@@ -20,7 +20,9 @@ temporary ZIP format.
 
 1. Open the desired release and download its Windows x64 EXE installer.
 2. Confirm that Windows reports the expected Frostguard publisher before running it.
-3. Complete the per-user installation and start `Frostguard` or `Frostguard Nightly` from its shortcut.
+3. Choose whether to create a desktop shortcut and complete the per-user
+   installation. The final page starts `Frostguard` or `Frostguard Nightly` by
+   default; clear the checkbox if you do not want to launch it yet.
 4. Open **Configuration** and select the emulator command-line controller.
 
 Stable and Nightly install as separate applications. They can run side by side
@@ -183,7 +185,15 @@ Installed runs use named workspaces below
 `%USERPROFILE%\.frostguard\workspaces\<channel>\<name>\`. Each workspace owns
 its database, configuration, logs, custom tasks, cache, Telegram watcher state,
 and process lock. A workspace can be opened by only one Frostguard process at a
-time; use a different workspace for another bot instance.
+time. A second normal launch reports the already-running instance instead of a
+generic JVM error. Advanced users can run another isolated instance with
+`Frostguard.exe --workspace <name>` or
+`Frostguard Nightly.exe --workspace <name>`.
+
+Close Frostguard before updating or uninstalling it. The installer refuses to
+continue while the matching desktop process is running, so Windows cannot leave
+an unregistered but partially installed application behind. The channel-specific
+background watcher is stopped automatically during maintenance.
 
 ## Migrating an older installation
 

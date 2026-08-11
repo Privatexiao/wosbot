@@ -121,6 +121,13 @@ all mutable databases, configuration, logs, watcher state, and custom tasks
 remain in the selected workspace below `%USERPROFILE%\.frostguard`. The
 installation directory is treated as read-only application content.
 
+The installer offers a checked desktop-shortcut option and a checked launch
+option on its final page. Only the desktop application is exposed in the Start
+menu and on the desktop; the channel-specific Telegram watcher is an internal
+background launcher. Close the desktop application before update or uninstall.
+Maintenance is blocked while it is running rather than leaving locked files and
+a partially removed installation.
+
 Stable and Nightly never share live settings. The first Nightly start can copy
 a one-time Stable snapshot only while Stable and its watcher are closed and
 before Nightly persistence opens. Choosing a fresh start or completing the copy
@@ -137,6 +144,11 @@ This automatically creates and uses `<worktree>\.frostguard-dev\`. Each
 worktree therefore has isolated database, logs, custom tasks, cache, and
 Telegram watcher state. `git clean -xdf` intentionally removes this disposable
 development workspace.
+
+For an additional installed instance of the same channel, select another named
+workspace explicitly, for example `Frostguard.exe --workspace bot-2`. The
+default launch continues to use the `default` workspace and refuses a second
+owner, while each named workspace keeps its own data, ports, locks, and watcher.
 
 For automatic startup through scripts or Task Scheduler:
 

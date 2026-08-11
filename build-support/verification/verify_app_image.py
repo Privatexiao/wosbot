@@ -10,9 +10,7 @@ from pathlib import Path
 
 MINIMUM_RUNTIME_JARS = 50
 STATIC_REQUIRED_FILES = (
-    "FrostguardWatcher.exe",
     "runtime/bin/server/jvm.dll",
-    "app/FrostguardWatcher.cfg",
     "app/lib/adb/adb.exe",
     "app/lib/adb/AdbWinApi.dll",
     "app/lib/adb/AdbWinUsbApi.dll",
@@ -40,7 +38,14 @@ def inspect_image(
         for path in image.rglob("*")
         if path.is_file()
     }
-    required_files = (*STATIC_REQUIRED_FILES, f"{product_name}.exe", f"app/{product_name}.cfg")
+    watcher_name = "FrostguardNightlyWatcher" if channel == "nightly" else "FrostguardWatcher"
+    required_files = (
+        *STATIC_REQUIRED_FILES,
+        f"{product_name}.exe",
+        f"{watcher_name}.exe",
+        f"app/{product_name}.cfg",
+        f"app/{watcher_name}.cfg",
+    )
     for required in required_files:
         if required not in files:
             problems.append(f"Application image is missing {required}")
@@ -68,7 +73,7 @@ def inspect_image(
         f"java-options=-Dfrostguard.channel={channel}",
         f"java-options=-Dfrostguard.application.id=dev.frostguard.desktop{'.nightly' if channel == 'nightly' else ''}",
         "java-options=-Duser.dir=$APPDIR",
-        "java-options=-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe",
+        f"java-options=-Dfrostguard.watcher.launcher=$APPDIR/../{watcher_name}.exe",
     )
     config_settings = {
         f"app/{product_name}.cfg": (
@@ -77,7 +82,7 @@ def inspect_image(
             "java-options=-Dfrostguard.update.manifest.nightly=",
             *common_java_options,
         ),
-        "app/FrostguardWatcher.cfg": (
+        f"app/{watcher_name}.cfg": (
             "app.mainclass=dev.frostguard.watcher.TelegramWatcher",
             f"java-options=-Dfrostguard.launcher=$APPDIR/../{product_name}.exe",
             *common_java_options,
