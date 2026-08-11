@@ -3,11 +3,14 @@ package dev.frostguard.app.bootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+import dev.frostguard.api.runtime.WorkspaceSession;
 import dev.frostguard.engine.service.AnalyticsService;
 import dev.frostguard.tasks.TaskRegistrations;
 import dev.frostguard.vision.logging.ProfileContextLogger;
 
 public class Main {
+	private static final WorkspaceSession WORKSPACE = WorkspaceSession.open(WorkspacePaths.current());
 	private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
 	public static void main(String[] args) {
@@ -27,13 +30,14 @@ public class Main {
 			java.util.logging.Logger.getLogger("com.sun.javafx").setLevel(java.util.logging.Level.SEVERE);
 			java.util.logging.Logger.getLogger("javax.swing").setLevel(java.util.logging.Level.SEVERE);
 
-			logger.info("Initializing Frostguard...");
+			logger.info("Initializing Frostguard with workspace {}", WORKSPACE.paths().root());
 
 			// 2. Setup Shutdown Hook
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 				logger.info("Closing down subsystems.");
 				try { AnalyticsService.getInstance().trackAppShutdown(); } catch (Exception ignored) {}
 				ProfileContextLogger.shutdown();
+				WORKSPACE.close();
 			}, "frostguard-shutdown"));
 
 			// 3. Initialize Services

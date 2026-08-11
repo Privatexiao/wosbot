@@ -45,6 +45,5 @@ exit /b 1
 :found
 echo Starting Frostguard Telegram Watcher (background)...
 echo JAR: %JAR%
-echo Log: %USERPROFILE%\.frostguard\tg-watcher.log
 start "FG-TG-Watcher" /b javaw -jar "%JAR%"
 exit /b 0

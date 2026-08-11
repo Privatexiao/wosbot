@@ -21,6 +21,7 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 /**
  * Provides text recognition from captured device screens or local image
@@ -364,14 +365,14 @@ public final class TesseractOcrProvider {
     // =====================================================================
 
     /**
-     * Writes a side-by-side diagnostic PNG to {@code <cwd>/temp/}.
+     * Writes a side-by-side diagnostic PNG to the active workspace cache.
      */
     private static void exportDiagnosticImage(RawImageData capture, BufferedImage processed,
             int cx, int cy, int cw, int ch,
             TesseractSettingsData cfg, String text) {
         long t0 = System.currentTimeMillis();
         try {
-            Path tempDir = Paths.get(System.getProperty("user.dir")).resolve("temp");
+            Path tempDir = WorkspacePaths.current().cache().resolve("ocr");
             Files.createDirectories(tempDir);
 
             String summary = formatSettingsSummary(cfg, text);

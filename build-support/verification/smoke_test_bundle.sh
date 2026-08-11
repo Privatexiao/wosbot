@@ -120,12 +120,14 @@ echo "  no classpath resolution errors from java -jar"
 echo "Booting the Telegram watcher from the bundle..."
 watcher_log="${workdir}/watcher.log"
 watcher_home="${workdir}/watcher-home"
+watcher_workspace="${workdir}/.frostguard-dev"
 mkdir -p "${watcher_home}"
 set +e
-# -Duser.home: the watcher derives its config path from user.home, which the JVM
-# reads from the OS account rather than $HOME. Redirect it so the smoke test
-# never touches a real developer profile.
-timeout 90s java -Duser.home="${watcher_home}" -jar "${watcher_jar}" \
+# Keep both user.home and the explicit workspace inside the disposable smoke
+# directory. The override makes the test deterministic even when a host Java
+# process does not inherit the shell's changed working directory.
+timeout 90s java -Duser.home="${watcher_home}" \
+  -Dfrostguard.workspace="${watcher_workspace}" -jar "${watcher_jar}" \
   > "${watcher_log}" 2>&1
 watcher_status=$?
 set -e
@@ -154,8 +156,8 @@ if ! grep -q "telegram-watcher.properties" "${watcher_log}" \
   exit 1
 fi
 
-if [[ ! -f "${watcher_home}/.frostguard/telegram-watcher.properties" ]]; then
-  echo "::error::The watcher did not create its config template under user.home."
+if [[ ! -f "${watcher_workspace}/watcher/telegram-watcher.properties" ]]; then
+  echo "::error::The watcher did not create its config template in the development workspace."
   sed 's/^/    /' "${watcher_log}" | head -n 30
   exit 1
 fi

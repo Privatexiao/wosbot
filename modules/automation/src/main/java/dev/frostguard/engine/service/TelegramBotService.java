@@ -1,5 +1,7 @@
 package dev.frostguard.engine.service;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
@@ -14,7 +16,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
@@ -54,8 +55,6 @@ import java.util.ArrayList;
  * /status → reply with current running state
  */
 public class TelegramBotService implements BotStateListener {
-
-    static final String CURRENT_LOG_PATH = "log/frostguard.log";
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramBotService.class);
     private static final String API_BASE = "https://api.telegram.org/bot";
@@ -147,17 +146,18 @@ public class TelegramBotService implements BotStateListener {
     /** Read localPort from the shared watcher properties file (default 8765). */
     private static int readLocalPort() {
         try {
-            Path cfg = Paths.get(System.getProperty("user.home"), ".frostguard", "telegram-watcher.properties");
+            Path cfg = WorkspacePaths.current().watcherConfig();
             if (Files.exists(cfg)) {
                 Properties props = new Properties();
                 try (FileInputStream fis = new FileInputStream(cfg.toFile())) { props.load(fis); }
-                return Integer.parseInt(props.getProperty("localPort", "8765").trim());
+                return Integer.parseInt(props.getProperty("localPort",
+                        String.valueOf(WorkspacePaths.current().defaultLocalPort())).trim());
             }
         } catch (Exception e) {
             LoggerFactory.getLogger(TelegramBotService.class)
                     .warn("Could not read localPort from config, defaulting to 8765: {}", e.getMessage());
         }
-        return 8765;
+        return WorkspacePaths.current().defaultLocalPort();
     }
 
     // ── public command dispatch (called by WatcherCommandServer) ─────────────
@@ -852,7 +852,7 @@ public class TelegramBotService implements BotStateListener {
                 }
                 case "log_dl" -> {
                     answerCallbackQuery(callbackId, "📥 Downloading...");
-                    sendDocument(chatId, CURRENT_LOG_PATH);
+                    sendDocument(chatId, currentLogPath().toString());
                 }
                 default -> answerCallbackQuery(callbackId, "");
             }
@@ -1208,6 +1208,10 @@ public class TelegramBotService implements BotStateListener {
         markup.set("inline_keyboard", kb);
 
         sendOrEditMessage(chatId, -1L, text, markup, "MarkdownV2");
+    }
+
+    static Path currentLogPath() {
+        return WorkspacePaths.current().logs().resolve("frostguard.log");
     }
 
     private void sendDocument(long chatId, String filePath) {

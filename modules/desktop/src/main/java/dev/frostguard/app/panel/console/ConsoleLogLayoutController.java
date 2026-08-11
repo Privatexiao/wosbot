@@ -1,5 +1,7 @@
 package dev.frostguard.app.panel.console;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.awt.Desktop;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -111,7 +113,7 @@ public class ConsoleLogLayoutController implements ProfileDataChangeListener {
 	@FXML
 	void handleButtonOpenLogFolder(ActionEvent event) {
 		try {
-			Path logsDir = Path.of("log");
+			Path logsDir = WorkspacePaths.current().logs();
 			Files.createDirectories(logsDir);
 			Desktop.getDesktop().open(logsDir.toFile());
 		} catch (IOException e) {

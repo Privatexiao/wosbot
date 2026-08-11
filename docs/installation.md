@@ -121,11 +121,19 @@ Run the application from the repository root through the same Maven Wrapper:
 On Windows Command Prompt, use `mvnw.cmd javafx:run`; in PowerShell, use
 `.\mvnw.cmd javafx:run`. The JavaFX goal compiles the required reactor modules
 and starts only the desktop module; developers do not need to locate a
-versioned JAR or assemble its classpath.
+versioned JAR or assemble its classpath. It automatically uses the ignored
+`.frostguard-dev/` workspace in that clone or worktree. No runtime argument is
+required, and simultaneous production and worktree runs do not share data.
+
+Installed runs use named workspaces below
+`%USERPROFILE%\.frostguard\workspaces\<channel>\<name>\`. Each workspace owns
+its database, configuration, logs, custom tasks, cache, Telegram watcher state,
+and process lock. A workspace can be opened by only one Frostguard process at a
+time; use a different workspace for another bot instance.
 
 ## Migrating an older installation
 
-Do not overwrite a new installation with an entire old Frostguard folder.
-Migration of legacy configuration and database files is not yet automated; keep
-a backup and copy individual `database.*` files only when intentionally carrying
-existing settings forward.
+Do not overwrite a new workspace with an entire old Frostguard folder. Frostguard
+3.0 does not migrate the legacy flat `.frostguard` watcher files or a 2.x
+database. Keep a backup and recreate settings; copy only reviewed custom-task
+source files into the new workspace.

@@ -304,6 +304,12 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>${maven.surefire.plugin.version}</version>
+					<configuration>
+						<systemPropertyVariables>
+							<frostguard.channel>development</frostguard.channel>
+							<frostguard.workspace>${project.build.directory}/test-workspace</frostguard.workspace>
+						</systemPropertyVariables>
+					</configuration>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>

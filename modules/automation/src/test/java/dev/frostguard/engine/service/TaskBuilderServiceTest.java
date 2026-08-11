@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import dev.frostguard.api.configs.FlowStepKind;
 import dev.frostguard.api.domain.AutomationBlueprint;
 import dev.frostguard.api.domain.AutomationStep;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 class TaskBuilderServiceTest {
 
@@ -20,8 +21,8 @@ class TaskBuilderServiceTest {
 
     @Test
     void savesBuilderJsonAndGeneratedJavaBesideIt() throws Exception {
-        String originalUserDir = System.getProperty("user.dir");
-        System.setProperty("user.dir", tempDir.toString());
+        String originalWorkspace = System.getProperty(WorkspacePaths.WORKSPACE_PROPERTY);
+        System.setProperty(WorkspacePaths.WORKSPACE_PROPERTY, tempDir.toString());
         try {
             TaskBuilderService service = new TaskBuilderService();
             service.startSession("Expert Idle Exploration", "0");
@@ -31,7 +32,7 @@ class TaskBuilderServiceTest {
             step.setParam("durationMs", "200");
             service.addNode(step);
 
-            Path builderFile = tempDir.resolve("custom_tasks").resolve("expert_idle_exploration.json");
+            Path builderFile = tempDir.resolve("custom-tasks").resolve("expert_idle_exploration.json");
             TaskBuilderService.CustomTaskSaveResult saved =
                     service.saveCurrentTaskToCustomTasks("Expert Idle Exploration", builderFile);
 
@@ -47,7 +48,11 @@ class TaskBuilderServiceTest {
             assertEquals("Pause before bag", loaded.getNodes().get(0).getNodeName());
             assertEquals("1", service.getActiveEmulatorNumber());
         } finally {
-            System.setProperty("user.dir", originalUserDir);
+            if (originalWorkspace == null) {
+                System.clearProperty(WorkspacePaths.WORKSPACE_PROPERTY);
+            } else {
+                System.setProperty(WorkspacePaths.WORKSPACE_PROPERTY, originalWorkspace);
+            }
         }
     }
 }

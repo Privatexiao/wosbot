@@ -10,6 +10,7 @@ import dev.frostguard.api.domain.RawImageData;
 import dev.frostguard.api.domain.AreaData;
 import dev.frostguard.api.domain.AutomationBlueprint;
 import dev.frostguard.api.domain.AutomationStep;
+import dev.frostguard.api.runtime.WorkspacePaths;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -23,7 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * Service that manages a Task Builder recording session.
@@ -52,7 +52,7 @@ public class TaskBuilderService {
 
     public TaskBuilderService() {
         this.emuManager = EmulatorController.getInstance();
-        this.customTasksDir = Paths.get(System.getProperty("user.dir"), "custom_tasks");
+        this.customTasksDir = WorkspacePaths.current().customTasks();
         this.mapper = new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

@@ -1,10 +1,15 @@
 package dev.frostguard.engine.service;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.StandardOpenOption;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -27,6 +32,9 @@ public class TelegramWatcherLauncher {
             try {
                 ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "start", "\"FG-TG-Watcher\"", "/b", batFile.getName());
                 pb.directory(batFile.getParentFile());
+                pb.environment().put("FROSTGUARD_WORKSPACE", WorkspacePaths.current().root().toString());
+                pb.environment().put("FROSTGUARD_CHANNEL",
+                        WorkspacePaths.current().channel().directoryName());
                 pb.start();
                 logger.info("Executed {}", batFile.getAbsolutePath());
             } catch (IOException e) {
@@ -38,29 +46,27 @@ public class TelegramWatcherLauncher {
     }
 
     private static boolean isWatcherRunning() {
+        Path lockPath = WorkspacePaths.current().watcherLock();
         try {
-            return ProcessHandle.allProcesses()
-                    .filter(ph -> ph.info().command().map(c -> c.toLowerCase().contains("java")).orElse(false))
-                    .filter(ph -> ph.info().arguments().map(args -> {
-                        for (String a : args) {
-                            if (a.toLowerCase().contains("frostguard-watcher")) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }).orElse(false))
-                    .findFirst()
-                    .isPresent();
+            Files.createDirectories(lockPath.getParent());
+            try (FileChannel channel = FileChannel.open(lockPath,
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                try (FileLock lock = channel.tryLock()) {
+                    return lock == null;
+                } catch (OverlappingFileLockException lockedInThisProcess) {
+                    return true;
+                }
+            }
         } catch (Exception e) {
-            logger.error("Error checking if watcher is running", e);
+            logger.warn("Could not inspect watcher lock {}: {}", lockPath, e.getMessage());
             return false;
         }
     }
 
     private static File resolveBatFile() {
-        // Try to load the jar path from ~/.frostguard/telegram-watcher.properties
+        // Try to load the jar path from the active workspace.
         try {
-            Path cfg = Paths.get(System.getProperty("user.home"), ".frostguard", "telegram-watcher.properties");
+            Path cfg = WorkspacePaths.current().watcherConfig();
             if (Files.exists(cfg)) {
                 Properties props = new Properties();
                 try (java.io.FileInputStream fis = new java.io.FileInputStream(cfg.toFile())) {

@@ -1,5 +1,7 @@
 package dev.frostguard.app.panel.misc;
 
+import dev.frostguard.api.runtime.WorkspacePaths;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -189,7 +191,7 @@ public class TelegramLayoutController {
             
             // Ensure localPort exists
             if (!props.containsKey("localPort")) {
-                props.setProperty("localPort", "8765");
+                props.setProperty("localPort", String.valueOf(WorkspacePaths.current().defaultLocalPort()));
             }
             
             try (FileOutputStream fos = new FileOutputStream(cfg.toFile())) {
@@ -266,7 +268,7 @@ public class TelegramLayoutController {
 
     /** Mirrors TelegramWatcher.configFilePath() – path convention kept in sync manually. */
     private static Path watcherConfigPath() {
-        return Paths.get(System.getProperty("user.home"), ".frostguard", "telegram-watcher.properties");
+        return WorkspacePaths.current().watcherConfig();
     }
 
     // ── Startup registration ──────────────────────────────────────────────────
@@ -289,11 +291,12 @@ public class TelegramLayoutController {
         }
         Path shortcut = startupFolder().resolve(SHORTCUT_NAME);
         try {
+            Path workspaceLauncher = writeWorkspaceWatcherLauncher(batFile);
             String vbs =
                 "Set oWS = WScript.CreateObject(\"WScript.Shell\")\n" +
-                "Set oLink = oWS.CreateShortcut(\"" + shortcut.toString().replace("\\", "\\\\") + "\")\n" +
-                "oLink.TargetPath = \"" + batFile.getAbsolutePath().replace("\\", "\\\\") + "\"\n" +
-                "oLink.WorkingDirectory = \"" + batFile.getParent().replace("\\", "\\\\") + "\"\n" +
+                "Set oLink = oWS.CreateShortcut(\"" + escapeVbsString(shortcut.toString()) + "\")\n" +
+                "oLink.TargetPath = \"" + escapeVbsString(workspaceLauncher.toString()) + "\"\n" +
+                "oLink.WorkingDirectory = \"" + escapeVbsString(workspaceLauncher.getParent().toString()) + "\"\n" +
                 "oLink.Description = \"Frostguard Telegram Watcher (auto-start)\"\n" +
                 "oLink.WindowStyle = 0\n" +
                 "oLink.Save\n";
@@ -315,6 +318,30 @@ public class TelegramLayoutController {
             showError("Failed to register startup shortcut: " + e.getMessage());
             checkBoxAutoStart.setSelected(false);
         }
+    }
+
+    private static Path writeWorkspaceWatcherLauncher(File batFile) throws IOException {
+        WorkspacePaths workspace = WorkspacePaths.current();
+        Path launcher = workspace.watcher().resolve("Start-Frostguard-Watcher.cmd");
+        Files.createDirectories(launcher.getParent());
+        Files.writeString(launcher, workspaceWatcherLauncherContent(batFile.toPath(), workspace));
+        return launcher;
+    }
+
+    static String workspaceWatcherLauncherContent(Path batFile, WorkspacePaths workspace) {
+        return "@echo off\r\n"
+                + "setlocal DisableDelayedExpansion\r\n"
+                + "set \"FROSTGUARD_WORKSPACE=" + escapeBatchValue(workspace.root().toString()) + "\"\r\n"
+                + "set \"FROSTGUARD_CHANNEL=" + workspace.channel().directoryName() + "\"\r\n"
+                + "call \"" + escapeBatchValue(batFile.toAbsolutePath().normalize().toString()) + "\"\r\n";
+    }
+
+    private static String escapeBatchValue(String value) {
+        return value.replace("^", "^^").replace("%", "%%");
+    }
+
+    private static String escapeVbsString(String value) {
+        return value.replace("\"", "\"\"");
     }
 
     private void removeStartup() {

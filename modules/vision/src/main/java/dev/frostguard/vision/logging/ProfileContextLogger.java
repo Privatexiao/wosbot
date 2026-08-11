@@ -3,10 +3,10 @@ package dev.frostguard.vision.logging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import dev.frostguard.api.domain.AccountDescriptor;
+import dev.frostguard.api.runtime.WorkspacePaths;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
@@ -62,7 +62,7 @@ public final class ProfileContextLogger {
 
     private void ensureLogDirectory() {
         try {
-            Files.createDirectories(Paths.get("logs"));
+            Files.createDirectories(WorkspacePaths.current().logs());
         } catch (IOException e) {
             rootLog.error("Base directory creation failed: {}", e.getMessage());
         }
@@ -71,8 +71,8 @@ public final class ProfileContextLogger {
     private synchronized void initWriter(AccountDescriptor acc) throws IOException {
         if (writerRegistry.containsKey(acc.getId())) return;
 
-        String path = String.format("logs/account_%s_%d.log", cleanPath(acc.getName()), acc.getId());
-        File handle = new File(path);
+        File handle = WorkspacePaths.current().logs()
+                .resolve(String.format("account_%s_%d.log", cleanPath(acc.getName()), acc.getId())).toFile();
 
         if (handle.exists() && handle.length() > MAX_BYTES) {
             rollover(handle);
@@ -186,8 +186,8 @@ public final class ProfileContextLogger {
     private void enforceSizeLimit() {
         if (profile == null) return;
         
-        String path = String.format("logs/account_%s_%d.log", cleanPath(profile.getName()), profile.getId());
-        File handle = new File(path);
+        File handle = WorkspacePaths.current().logs()
+                .resolve(String.format("account_%s_%d.log", cleanPath(profile.getName()), profile.getId())).toFile();
         
         if (handle.exists() && handle.length() > MAX_BYTES) {
             try {
