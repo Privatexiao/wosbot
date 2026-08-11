@@ -18,21 +18,35 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class ApplicationLifecycle {
     private static final Logger LOG = LoggerFactory.getLogger(ApplicationLifecycle.class);
     private static final AtomicBoolean SHUTDOWN_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean RUNTIME_STARTED = new AtomicBoolean();
     private static final RuntimeShutdownCoordinator COORDINATOR = new RuntimeShutdownCoordinator(List.of(
-            new RuntimeShutdownCoordinator.Step("scheduler", () -> ScheduleService.obtain().haltEngine()),
-            new RuntimeShutdownCoordinator.Step("gift code automation",
+            runtimeStep("scheduler", () -> ScheduleService.obtain().haltEngine()),
+            runtimeStep("gift code automation",
                     () -> GiftCodeAutomationService.getInstance().shutdown()),
-            new RuntimeShutdownCoordinator.Step("Telegram command server",
+            runtimeStep("Telegram command server",
                     () -> TelegramBotService.getInstance().stop()),
-            new RuntimeShutdownCoordinator.Step("custom task loader", () -> CustomTaskService.getInstance().shutdown()),
-            new RuntimeShutdownCoordinator.Step("analytics", () -> AnalyticsService.getInstance().trackAppShutdown()),
-            new RuntimeShutdownCoordinator.Step("persistence", () -> DataStore.getInstance().close()),
-            new RuntimeShutdownCoordinator.Step("ADB", ApplicationLifecycle::terminateAdbProcess),
-            new RuntimeShutdownCoordinator.Step("profile logging", ProfileContextLogger::shutdown),
+            runtimeStep("custom task loader", () -> CustomTaskService.getInstance().shutdown()),
+            runtimeStep("analytics", () -> AnalyticsService.getInstance().trackAppShutdown()),
+            new RuntimeShutdownCoordinator.Step("persistence", DataStore::closeIfInitialized),
+            runtimeStep("ADB", ApplicationLifecycle::terminateAdbProcess),
+            runtimeStep("profile logging", ProfileContextLogger::shutdown),
             new RuntimeShutdownCoordinator.Step("workspace", Main::closeWorkspace)
     ));
 
     private ApplicationLifecycle() {
+    }
+
+    static void markRuntimeStarted() {
+        RUNTIME_STARTED.set(true);
+    }
+
+    private static RuntimeShutdownCoordinator.Step runtimeStep(
+            String name, RuntimeShutdownCoordinator.ShutdownAction action) {
+        return new RuntimeShutdownCoordinator.Step(name, () -> {
+            if (RUNTIME_STARTED.get()) {
+                action.run();
+            }
+        });
     }
 
     public static void stopForUpdate() throws LifecycleException {
@@ -42,7 +56,8 @@ public final class ApplicationLifecycle {
         try {
             COORDINATOR.shutdown();
         } catch (RuntimeShutdownCoordinator.ShutdownException exception) {
-            SHUTDOWN_ACTIVE.set(false);
+            LOG.error("Runtime shutdown for update was incomplete; cancelling installation and exiting: {}",
+                    exception.getMessage());
             throw new LifecycleException(exception.getMessage(), exception);
         }
     }
@@ -62,6 +77,11 @@ public final class ApplicationLifecycle {
     public static void exitAfterUpdateHandoff() {
         Platform.exit();
         System.exit(0);
+    }
+
+    public static void exitAfterCancelledUpdate() {
+        Platform.exit();
+        System.exit(1);
     }
 
     static void runShutdownHook() {

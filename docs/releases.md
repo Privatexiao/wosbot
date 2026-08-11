@@ -1,7 +1,9 @@
 # Releases
 
-Frostguard publishes three distinct Windows bundle types. Do not mix their
-notifications or download locations.
+Frostguard publishes signed installed releases for Stable and Nightly plus
+temporary ZIP builds for pull-request testing. The existing daily and Stable
+ZIP workflows remain transitional until #155 separates validation from public
+Nightly publication.
 
 | Type | Audience | Lifetime | Discord notification |
 |---|---|---|---|
@@ -9,15 +11,54 @@ notifications or download locations.
 | Daily `nightly` | Testers | Replaced daily | Update the daily download, no mass mention |
 | PR test `pr-test-*` | Requester/testers | Temporary | Reply only to the requester |
 
-## Stable promotion
+## Signed installed releases
 
-Stable releases promote an already successful `Daily Windows Bundle` run from
+Run **Signed Windows Channel Release** manually from `main`. It requires a
+semantic version, the target `stable` or `nightly` identity, and the minimum
+supported updater version. Stable versions use `X.Y.Z`; Nightly versions use an
+immutable prerelease such as `3.1.0-nightly.20260811.1`.
+
+Windows Installer compares only three numeric version fields. Stable maps
+directly to `X.Y.Z`. Nightly derives an independent, monotonically increasing
+Windows identity from `YYYYMMDD.N`; for example, the Nightly above uses
+`26.8.11001`. Use the current date and a sequence from 1 through 999, increasing
+the sequence for additional Nightlies on the same day.
+
+The workflow requires these repository secrets:
+
+- `FROSTGUARD_WINDOWS_SIGNING_CERTIFICATE_BASE64` — the PFX encoded as Base64;
+- `FROSTGUARD_WINDOWS_SIGNING_CERTIFICATE_PASSWORD` — the PFX password;
+- `FROSTGUARD_AUTHENTICODE_PUBLISHER` — the exact certificate subject embedded
+  into the application and required by every update manifest.
+
+Stable and Nightly use different application IDs, upgrade UUIDs, install
+directories, shortcuts, workspaces, and feeds. The workflow builds and smokes
+the selected identity, signs the installer, verifies the exact subject,
+uploads and re-downloads the immutable installer, derives its final size and
+SHA-256, and publishes the manifest last. Stable exposes its manifest through
+the latest immutable release; Nightly points `updates-nightly` at an installer
+stored in an immutable `nightly-<version>` release.
+
+A failure before publication removes the abandoned draft release and tag so the
+same immutable version can be retried. If a Nightly release becomes public but
+promotion of the rolling `updates-nightly` manifest fails afterward, leave the
+immutable release intact and keep the previous rolling manifest active. Recover
+by verifying and promoting the manifest asset from that immutable release; do
+not rebuild or replace its installer.
+
+## Transitional ZIP promotion
+
+The legacy Stable ZIP workflow promotes an already successful `Daily Windows Bundle` run from
 `main`; they do not rebuild a different tree. Run **Stable Windows Release**
 manually with:
 
 - `version`: the `X.Y.Z` value declared in `pom.xml`;
 - `daily_run_id`: a successful scheduled or manually triggered daily run from
   `main` after the intended release commit.
+
+This workflow rejects Frostguard 3.x. Installed 3.x releases must use the
+signed channel workflow so an unsigned ZIP can never become the latest Stable
+product accidentally.
 
 The workflow pins the run's exact commit, downloads its versioned artifact,
 re-runs structural and launch verification, creates the immutable `vX.Y.Z`
@@ -133,6 +174,15 @@ time:
 .\mvnw.cmd -Dfrostguard.update.manifest.stable=https://updates.example.invalid/stable.json `
   "-Dfrostguard.update.authenticode-publisher=CN=Frostguard Project, O=Frostguard" `
   "-Pwindows-app-image,windows-installer" package
+```
+
+Nightly adds its separate packaging identity and embeds both public endpoints:
+
+```powershell
+.\mvnw.cmd -Dfrostguard.update.manifest.stable=https://example.invalid/stable.json `
+  -Dfrostguard.update.manifest.nightly=https://example.invalid/nightly.json `
+  "-Dfrostguard.update.authenticode-publisher=CN=Frostguard Project, O=Frostguard" `
+  "-Pwindows-app-image,windows-installer,windows-nightly" package
 ```
 
 The checked-in endpoint and publisher defaults are empty, so ordinary local

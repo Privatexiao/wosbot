@@ -2,10 +2,10 @@
 
 This document summarizes Windows-specific setup for Frostguard.
 
-The [latest Stable Windows bundle](https://github.com/Shederator/wosbot/releases/latest/download/frostguard-windows-desktop-bundle.zip)
-is versioned and remains unchanged until the next Stable release. The
-[latest Nightly](https://github.com/Shederator/wosbot/releases/download/nightly/frostguard-windows-desktop-bundle.zip)
-is rebuilt daily from `main`. Git, Git LFS and Maven are needed only when
+The [latest Stable release](https://github.com/Shederator/wosbot/releases/latest)
+provides the tested signed Windows installer. Signed Nightly releases appear in
+the [release history](https://github.com/Shederator/wosbot/releases) as a
+separate product identity. Git, Git LFS, Maven, and a JDK are needed only when
 building from source.
 
 ## Build Requirements
@@ -83,9 +83,20 @@ then run:
 ```
 
 Outputs remain below `packaging/desktop/target`: the directly runnable image is
-at `app-image/Frostguard`, and the installer is under `installers`. Native
+at `app-image/Frostguard`, and the installer is under `installers/stable`. Native
 packaging is opt-in because it is Windows-specific; ordinary `mvn package`
 continues to build and test the platform-neutral reactor.
+
+Add `windows-nightly` to produce `Frostguard Nightly` with a distinct application
+ID, upgrade UUID, install directory, shortcut, workspace channel, and update
+feed:
+
+```powershell
+.\mvnw.cmd "-Pwindows-app-image,windows-installer,windows-nightly" package
+python build-support/verification/verify_app_image.py `
+  "packaging/desktop/target/app-image/Frostguard Nightly" `
+  --channel nightly --product-name "Frostguard Nightly"
+```
 
 ## Runtime Requirements
 
@@ -102,15 +113,19 @@ The application currently packages Windows ADB and Tesseract assets from `tools/
 
 ## Starting Frostguard
 
-After downloading a desktop bundle, extract the complete ZIP into an empty
-folder and double-click `Start Frostguard.bat`. The launcher locates the
-versioned application JAR and reports a clear error if Java 21 is missing.
-
-For a native Frostguard 3.0 build, run the installed `Frostguard.exe` instead.
+After downloading a signed Frostguard 3.0 installer, verify its Windows
+publisher and complete the per-user installation. Run the installed
+`Frostguard.exe` or `Frostguard Nightly.exe`.
 The per-user installer defaults to `%LOCALAPPDATA%\Frostguard`, while
 all mutable databases, configuration, logs, watcher state, and custom tasks
 remain in the selected workspace below `%USERPROFILE%\.frostguard`. The
 installation directory is treated as read-only application content.
+
+Stable and Nightly never share live settings. The first Nightly start can copy
+a one-time Stable snapshot only while Stable and its watcher are closed and
+before Nightly persistence opens. Choosing a fresh start or completing the copy
+is recorded in Nightly; no continuous synchronization or automatic reverse
+migration exists.
 
 For a source build, run from the repository root:
 

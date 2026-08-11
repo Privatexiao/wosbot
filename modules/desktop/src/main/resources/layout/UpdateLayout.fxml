@@ -39,4 +39,11 @@
         <Button fx:id="buttonDownloadInstall" text="Download and install"
                 onAction="#handleDownloadInstall" />
     </VBox>
+
+    <VBox fx:id="channelSwitchPane" spacing="10"
+          style="-fx-background-color: #1b2028; -fx-background-radius: 6; -fx-padding: 16;">
+        <Label text="Release channel" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #e6edf3;" />
+        <Label fx:id="labelChannelSwitch" wrapText="true" style="-fx-text-fill: #9da7b3;" />
+        <Button fx:id="buttonSwitchChannel" onAction="#handleSwitchChannel" />
+    </VBox>
 </VBox>

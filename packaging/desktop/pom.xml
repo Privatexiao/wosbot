@@ -16,6 +16,18 @@
     <description>Platform packaging inputs, native application images, and installers</description>
     <packaging>pom</packaging>
 
+    <properties>
+        <frostguard.release.channel>stable</frostguard.release.channel>
+        <frostguard.windows.app-version>${project.version}</frostguard.windows.app-version>
+        <frostguard.product.name>Frostguard</frostguard.product.name>
+        <frostguard.product.identifier>dev.frostguard.desktop</frostguard.product.identifier>
+        <frostguard.product.description>Frostguard automation desktop application</frostguard.product.description>
+        <frostguard.product.install-dir>Frostguard</frostguard.product.install-dir>
+        <frostguard.product.upgrade-uuid>fa0d66f6-1f7d-4da8-9701-88f7b4570797</frostguard.product.upgrade-uuid>
+        <frostguard.channel.page.stable>https://github.com/Shederator/wosbot/releases/latest</frostguard.channel.page.stable>
+        <frostguard.channel.page.nightly>https://github.com/Shederator/wosbot/releases</frostguard.channel.page.nightly>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>dev.frostguard</groupId>
@@ -219,7 +231,7 @@
                                                 else="${java.home}/bin/jpackage">
                                             <os family="windows" />
                                         </condition>
-                                        <delete dir="${project.build.directory}/app-image/Frostguard" />
+                                        <delete dir="${project.build.directory}/app-image/${frostguard.product.name}" />
                                         <mkdir dir="${project.build.directory}/app-image" />
                                         <exec executable="powershell.exe" failonerror="true">
                                             <arg value="-NoProfile" />
@@ -241,13 +253,13 @@
                                             <arg value="--input" />
                                             <arg path="${project.build.directory}/input" />
                                             <arg value="--name" />
-                                            <arg value="Frostguard" />
+                                            <arg value="${frostguard.product.name}" />
                                             <arg value="--app-version" />
-                                            <arg value="${project.version}" />
+                                            <arg value="${frostguard.windows.app-version}" />
                                             <arg value="--vendor" />
                                             <arg value="Frostguard" />
                                             <arg value="--description" />
-                                            <arg value="Frostguard automation desktop application" />
+                                            <arg value="${frostguard.product.description}" />
                                             <arg value="--icon" />
                                             <arg path="${project.build.directory}/jpackage/Frostguard.ico" />
                                             <arg value="--main-jar" />
@@ -257,15 +269,21 @@
                                             <arg value="--java-options" />
                                             <arg value="--enable-native-access=ALL-UNNAMED" />
                                             <arg value="--java-options" />
-                                            <arg value="-Dfrostguard.channel=stable" />
+                                            <arg value="-Dfrostguard.channel=${frostguard.release.channel}" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.application.id=${frostguard.product.identifier}" />
                                             <arg value="--java-options" />
                                             <arg value="-Dfrostguard.update.pullRequestBuild=${frostguard.pull-request-build}" />
                                             <arg value="--java-options" />
                                             <arg value="-Dfrostguard.update.manifest.stable=${frostguard.update.manifest.stable}" />
                                             <arg value="--java-options" />
-                                            <arg value="-Duser.dir=$APPDIR" />
+                                            <arg value="-Dfrostguard.update.manifest.nightly=${frostguard.update.manifest.nightly}" />
                                             <arg value="--java-options" />
-                                            <arg value="-Dfrostguard.launcher=$APPDIR/../Frostguard.exe" />
+                                            <arg value="-Dfrostguard.channel.page.stable=${frostguard.channel.page.stable}" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Dfrostguard.channel.page.nightly=${frostguard.channel.page.nightly}" />
+                                            <arg value="--java-options" />
+                                            <arg value="-Duser.dir=$APPDIR" />
                                             <arg value="--java-options" />
                                             <arg value="-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe" />
                                             <arg value="--add-launcher" />
@@ -306,28 +324,28 @@
                                                 else="${java.home}/bin/jpackage">
                                             <os family="windows" />
                                         </condition>
-                                        <delete dir="${project.build.directory}/installers" />
-                                        <mkdir dir="${project.build.directory}/installers" />
+                                        <delete dir="${project.build.directory}/installers/${frostguard.release.channel}" />
+                                        <mkdir dir="${project.build.directory}/installers/${frostguard.release.channel}" />
                                         <exec executable="${jpackage.executable}" failonerror="true">
                                             <arg value="--verbose" />
                                             <arg value="--type" />
                                             <arg value="exe" />
                                             <arg value="--dest" />
-                                            <arg path="${project.build.directory}/installers" />
+                                            <arg path="${project.build.directory}/installers/${frostguard.release.channel}" />
                                             <arg value="--name" />
-                                            <arg value="Frostguard" />
+                                            <arg value="${frostguard.product.name}" />
                                             <arg value="--app-version" />
-                                            <arg value="${project.version}" />
+                                            <arg value="${frostguard.windows.app-version}" />
                                             <arg value="--vendor" />
                                             <arg value="Frostguard" />
                                             <arg value="--description" />
-                                            <arg value="Frostguard automation desktop application" />
+                                            <arg value="${frostguard.product.description}" />
                                             <arg value="--app-image" />
-                                            <arg path="${project.build.directory}/app-image/Frostguard" />
+                                            <arg path="${project.build.directory}/app-image/${frostguard.product.name}" />
                                             <!-- Nested per-user install paths can trigger inconsistent WiX
                                                  directory validation (JDK-8226534). -->
                                             <arg value="--install-dir" />
-                                            <arg value="Frostguard" />
+                                            <arg value="${frostguard.product.install-dir}" />
                                             <arg value="--win-per-user-install" />
                                             <arg value="--win-dir-chooser" />
                                             <arg value="--win-menu" />
@@ -335,7 +353,7 @@
                                             <arg value="Frostguard" />
                                             <arg value="--win-shortcut-prompt" />
                                             <arg value="--win-upgrade-uuid" />
-                                            <arg value="fa0d66f6-1f7d-4da8-9701-88f7b4570797" />
+                                            <arg value="${frostguard.product.upgrade-uuid}" />
                                         </exec>
                                     </target>
                                 </configuration>
@@ -344,6 +362,18 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <profile>
+            <id>windows-nightly</id>
+            <properties>
+                <frostguard.release.channel>nightly</frostguard.release.channel>
+                <frostguard.product.name>Frostguard Nightly</frostguard.product.name>
+                <frostguard.product.identifier>dev.frostguard.desktop.nightly</frostguard.product.identifier>
+                <frostguard.product.description>Frostguard Nightly automation desktop application</frostguard.product.description>
+                <frostguard.product.install-dir>Frostguard Nightly</frostguard.product.install-dir>
+                <frostguard.product.upgrade-uuid>51ac745d-78e4-4d89-a36d-1c38b87598b3</frostguard.product.upgrade-uuid>
+            </properties>
         </profile>
     </profiles>
 </project>

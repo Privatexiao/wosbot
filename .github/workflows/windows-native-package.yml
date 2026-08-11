@@ -7,11 +7,14 @@ on:
       - "modules/**/src/**"
       - "packaging/desktop/**"
       - "build-support/packaging/**"
+      - "build-support/release/**"
       - "build-support/verification/*app_image*"
+      - "build-support/verification/test_channel_packaging.py"
       - "build-support/verification/smoke_test_app_image.ps1"
       - "tools/**"
       - "examples/custom-tasks/**"
       - ".github/workflows/windows-native-package.yml"
+      - ".github/workflows/signed-windows-channel-release.yml"
   workflow_dispatch:
 
 permissions:
@@ -60,7 +63,7 @@ jobs:
           }
           $wixBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Build application image and installer
+      - name: Build Stable application image and installer
         shell: pwsh
         run: |
           $mavenArgs = $env:MAVEN_ARGS -split " "
@@ -68,25 +71,29 @@ jobs:
               "-Pwindows-app-image,windows-installer" package
 
       - name: Test the application-image verifier
-        run: python build-support/verification/test_verify_app_image.py
+        run: |
+          python build-support/verification/test_verify_app_image.py
+          python build-support/verification/test_channel_packaging.py
+          python build-support/release/test_write_update_manifest.py
+          python build-support/release/test_windows_installer_version.py
 
-      - name: Verify application image
+      - name: Verify Stable application image
         run: >-
           python build-support/verification/verify_app_image.py
           packaging/desktop/target/app-image/Frostguard
 
-      - name: Smoke test native launchers and workspace isolation
+      - name: Smoke test Stable launchers and workspace isolation
         shell: pwsh
         run: |
           powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
               -File build-support/verification/smoke_test_app_image.ps1 `
               -ImagePath packaging/desktop/target/app-image/Frostguard
 
-      - name: Verify installer boundary
-        id: installer
+      - name: Verify Stable installer boundary
+        id: stable-installer
         shell: pwsh
         run: |
-          $installers = @(Get-ChildItem -LiteralPath packaging/desktop/target/installers `
+          $installers = @(Get-ChildItem -LiteralPath packaging/desktop/target/installers/stable `
               -Filter "Frostguard-*.exe" -File)
           if ($installers.Count -ne 1) {
               throw "Expected exactly one versioned installer, found $($installers.Count)"
@@ -97,10 +104,47 @@ jobs:
           "path=$($installers[0].FullName)" | Out-File `
               -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Build Nightly application image and installer
+        shell: pwsh
+        run: |
+          $mavenArgs = $env:MAVEN_ARGS -split " "
+          & .\mvnw.cmd @mavenArgs -DskipTests "-Dfrostguard.pull-request-build=true" `
+              "-Pwindows-app-image,windows-installer,windows-nightly" package
+
+      - name: Verify Nightly application image
+        run: >-
+          python build-support/verification/verify_app_image.py
+          "packaging/desktop/target/app-image/Frostguard Nightly"
+          --channel nightly
+          --product-name "Frostguard Nightly"
+
+      - name: Smoke test Nightly launchers and workspace isolation
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+              -File build-support/verification/smoke_test_app_image.ps1 `
+              -ImagePath "packaging/desktop/target/app-image/Frostguard Nightly" `
+              -Channel nightly -ProductName "Frostguard Nightly"
+
+      - name: Verify Nightly installer boundary
+        id: nightly-installer
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -LiteralPath packaging/desktop/target/installers/nightly `
+              -Filter "Frostguard Nightly-*.exe" -File)
+          if ($installers.Count -ne 1) {
+              throw "Expected exactly one versioned Nightly installer, found $($installers.Count)"
+          }
+          if ($installers[0].Length -lt 1MB) {
+              throw "Nightly installer is unexpectedly small: $($installers[0].Length) bytes"
+          }
+          "path=$($installers[0].FullName)" | Out-File `
+              -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Upload native application image
         uses: actions/upload-artifact@v4
         with:
-          name: frostguard-windows-app-image
+          name: frostguard-stable-windows-app-image
           path: packaging/desktop/target/app-image/Frostguard
           if-no-files-found: error
           retention-days: 14
@@ -108,8 +152,25 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: frostguard-windows-installer
-          path: ${{ steps.installer.outputs.path }}
+          name: frostguard-stable-windows-installer
+          path: ${{ steps.stable-installer.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload Nightly application image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frostguard-nightly-windows-app-image
+          path: packaging/desktop/target/app-image/Frostguard Nightly
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Nightly installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: frostguard-nightly-windows-installer
+          path: ${{ steps.nightly-installer.outputs.path }}
           if-no-files-found: error
           compression-level: 0
           retention-days: 14

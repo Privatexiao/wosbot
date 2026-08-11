@@ -49,6 +49,8 @@ import dev.frostguard.app.panel.profile.IProfileObserverInjectable;
 import dev.frostguard.app.panel.profile.ProfileAux;
 import dev.frostguard.app.panel.profile.ProfileManagerLayoutController;
 import dev.frostguard.api.domain.QueueStateData;
+import dev.frostguard.api.runtime.RuntimeChannel;
+import dev.frostguard.api.runtime.WorkspacePaths;
 import dev.frostguard.engine.listener.StaminaChangeListener;
 import dev.frostguard.engine.service.ConfigService;
 import dev.frostguard.engine.service.ScheduleService;
@@ -720,10 +722,8 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
 
         String version = getVersion();
         int stamina = StaminaService.getServices().getCurrentStamina(currentProfile.getId());
-        String title = String.format("Whiteout Survival Bot v%s - %s [Stamina: %d]",
-                version,
-                currentProfile.getName(),
-                stamina);
+        String title = formatWindowTitle(WorkspacePaths.current().channel(), version,
+                currentProfile.getName(), stamina);
 
         Platform.runLater(() -> {
             stage.setTitle(title);
@@ -731,6 +731,11 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
                 labelWindowTitle.setText(title);
             }
         });
+    }
+
+    static String formatWindowTitle(RuntimeChannel channel, String version, String profileName, int stamina) {
+        return String.format("%s v%s - %s [Stamina: %d]",
+                channel.productName(), version, profileName, stamina);
     }
 
     public void onEngineStateTransition(BotStateData botState) { /* bind */

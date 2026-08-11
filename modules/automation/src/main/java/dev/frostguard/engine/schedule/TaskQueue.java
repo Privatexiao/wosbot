@@ -840,7 +840,7 @@ public class TaskQueue {
 
     private String resolveAutostartCommand(WorkspacePaths workspace, java.nio.file.Path runtimeCache)
             throws java.io.IOException {
-        String nativeLauncher = System.getProperty(APP_LAUNCHER_PROPERTY, "").trim();
+        String nativeLauncher = packagedApplicationLauncher();
         if (!nativeLauncher.isBlank()) {
             java.nio.file.Path launcher = java.nio.file.Path.of(nativeLauncher).toAbsolutePath().normalize();
             if (java.nio.file.Files.isRegularFile(launcher)) {
@@ -854,6 +854,11 @@ public class TaskQueue {
         return "javaw.exe -D" + WorkspacePaths.WORKSPACE_PROPERTY + "=\"" + workspace.root()
                 + "\" -D" + WorkspacePaths.CHANNEL_PROPERTY + "=" + workspace.channel().directoryName()
                 + " -jar \"" + jar + "\" --autostart";
+    }
+
+    static String packagedApplicationLauncher() {
+        String configured = System.getProperty(APP_LAUNCHER_PROPERTY, "").trim();
+        return configured.isBlank() ? System.getProperty("jpackage.app-path", "").trim() : configured;
     }
 
     static String nativeAutostartLauncherContent(java.nio.file.Path launcher, WorkspacePaths workspace) {

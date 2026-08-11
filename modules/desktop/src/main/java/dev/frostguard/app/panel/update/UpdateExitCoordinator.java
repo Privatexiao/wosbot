@@ -4,11 +4,13 @@ import dev.frostguard.update.InstallerHandoff;
 
 final class UpdateExitCoordinator {
     private final ShutdownAction shutdown;
-    private final Runnable exit;
+    private final Runnable successfulExit;
+    private final Runnable failedExit;
 
-    UpdateExitCoordinator(ShutdownAction shutdown, Runnable exit) {
+    UpdateExitCoordinator(ShutdownAction shutdown, Runnable successfulExit, Runnable failedExit) {
         this.shutdown = shutdown;
-        this.exit = exit;
+        this.successfulExit = successfulExit;
+        this.failedExit = failedExit;
     }
 
     void execute(InstallerHandoff.HandoffSession session) throws Exception {
@@ -17,9 +19,10 @@ final class UpdateExitCoordinator {
             shutdown.run();
         } catch (Exception exception) {
             session.cancel();
+            failedExit.run();
             throw exception;
         }
-        exit.run();
+        successfulExit.run();
     }
 
     @FunctionalInterface

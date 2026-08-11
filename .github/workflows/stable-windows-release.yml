@@ -83,6 +83,10 @@ jobs:
             echo "::error::version must use X.Y.Z format."
             exit 1
           fi
+          if (( ${VERSION%%.*} >= 3 )); then
+            echo "::error::Frostguard 3.x must use Signed Windows Channel Release; the legacy ZIP workflow cannot publish an installed Stable identity."
+            exit 1
+          fi
           project_version="$(./mvnw -B --no-transfer-progress -q help:evaluate -Dexpression=project.version -DforceStdout)"
           if [[ "${VERSION}" != "${project_version}" ]]; then
             echo "::error::Requested ${VERSION}, but pom.xml declares ${project_version}."

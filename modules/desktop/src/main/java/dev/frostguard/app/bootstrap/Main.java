@@ -15,6 +15,14 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			if (java.util.Arrays.asList(args).contains("--frostguard-native-smoke-test")) {
+				java.nio.file.Files.writeString(
+						WORKSPACE.paths().cache().resolve("native-app-smoke.properties"),
+						"channel=" + WORKSPACE.paths().channel().directoryName() + "\n"
+								+ "applicationId=" + System.getProperty(WorkspacePaths.APPLICATION_ID_PROPERTY, "") + "\n"
+								+ "workspace=" + WORKSPACE.paths().root() + "\n"
+								+ "applicationDir=" + System.getProperty("user.dir") + "\n"
+								+ "appLauncher=" + System.getProperty("jpackage.app-path", "") + "\n",
+						java.nio.charset.StandardCharsets.UTF_8);
 				System.out.println("Frostguard native launcher smoke test passed");
 				System.out.println("channel=" + WORKSPACE.paths().channel().directoryName());
 				System.out.println("workspace=" + WORKSPACE.paths().root());
@@ -47,13 +55,10 @@ public class Main {
 				ApplicationLifecycle.runShutdownHook();
 			}, "frostguard-shutdown"));
 
-			// 3. Initialize Services
-			try { AnalyticsService.getInstance().initialize(); } catch (Exception ignored) {}
-			TaskRegistrations.initialize();
-			try { AnalyticsService.getInstance().trackAppLaunched(isHeadless); } catch (Exception ignored) {}
-
-			// 4. Delegate to appropriate launcher
+			// 3. Delegate to the selected launcher. Graphical startup initializes
+			// services only after Nightly onboarding has completed.
 			if (isHeadless) {
+				initializeRuntimeServices(true);
 				logger.info("Headless application triggered.");
 				HeadlessApp.start(args);
 				Thread.currentThread().join();
@@ -65,6 +70,13 @@ public class Main {
 			logger.error("Startup failure: ", e);
 			ApplicationLifecycle.exitNormally(1);
 		}
+	}
+
+	static void initializeRuntimeServices(boolean headless) {
+		ApplicationLifecycle.markRuntimeStarted();
+		try { AnalyticsService.getInstance().initialize(); } catch (Exception ignored) {}
+		TaskRegistrations.initialize();
+		try { AnalyticsService.getInstance().trackAppLaunched(headless); } catch (Exception ignored) {}
 	}
 
 	static void closeWorkspace() {

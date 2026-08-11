@@ -17,7 +17,7 @@ class UpdateExitCoordinatorTest {
         AtomicBoolean shutdown = new AtomicBoolean();
         AtomicBoolean exited = new AtomicBoolean();
         UpdateExitCoordinator coordinator = new UpdateExitCoordinator(() -> shutdown.set(true),
-                () -> exited.set(true));
+                () -> exited.set(true), () -> { throw new AssertionError("Failure exit should not run"); });
 
         coordinator.execute(session);
 
@@ -28,16 +28,18 @@ class UpdateExitCoordinatorTest {
     }
 
     @Test
-    void cancelsHandoffAndDoesNotExitWhenShutdownFails() {
+    void cancelsHandoffAndExitsWhenShutdownFails() {
         Session session = new Session();
-        AtomicBoolean exited = new AtomicBoolean();
+        AtomicBoolean failedExit = new AtomicBoolean();
         UpdateExitCoordinator coordinator = new UpdateExitCoordinator(
-                () -> { throw new IllegalStateException("database busy"); }, () -> exited.set(true));
+                () -> { throw new IllegalStateException("database busy"); },
+                () -> { throw new AssertionError("Success exit should not run"); },
+                () -> failedExit.set(true));
 
         assertThrows(IllegalStateException.class, () -> coordinator.execute(session));
         assertTrue(session.authorized);
         assertTrue(session.cancelled);
-        assertFalse(exited.get());
+        assertTrue(failedExit.get());
     }
 
     private static final class Session implements InstallerHandoff.HandoffSession {

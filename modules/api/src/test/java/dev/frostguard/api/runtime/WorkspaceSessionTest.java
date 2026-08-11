@@ -108,6 +108,53 @@ class WorkspaceSessionTest {
         }
     }
 
+    @Test
+    void resolvesOnlyCanonicalInstalledWorkspacesAcrossReleaseChannels() {
+        String oldHome = System.getProperty("user.home");
+        try {
+            System.setProperty("user.home", tempDir.toString());
+            WorkspacePaths stable = new WorkspacePaths(
+                    WorkspacePaths.userWorkspace(RuntimeChannel.STABLE, "Bot 1"), RuntimeChannel.STABLE);
+
+            assertEquals(WorkspacePaths.userWorkspace(RuntimeChannel.NIGHTLY, "Bot 1"),
+                    stable.releasePeer(RuntimeChannel.NIGHTLY).orElseThrow().root());
+            assertTrue(new WorkspacePaths(tempDir.resolve("custom"), RuntimeChannel.STABLE)
+                    .releasePeer(RuntimeChannel.NIGHTLY).isEmpty());
+            assertTrue(stable.releasePeer(RuntimeChannel.DEVELOPMENT).isEmpty());
+        } finally {
+            restore("user.home", oldHome);
+        }
+    }
+
+    @Test
+    void rejectsWorkspaceNamesThatEscapeTheirReleaseChannel() {
+        assertThrows(IllegalArgumentException.class,
+                () -> WorkspacePaths.userWorkspace(RuntimeChannel.STABLE, "."));
+        assertThrows(IllegalArgumentException.class,
+                () -> WorkspacePaths.userWorkspace(RuntimeChannel.STABLE, ".."));
+        assertThrows(IllegalArgumentException.class,
+                () -> WorkspacePaths.userWorkspace(RuntimeChannel.STABLE, "nested/name"));
+    }
+
+    @Test
+    void rejectsAProductIdentityThatDoesNotMatchItsChannel() {
+        String oldChannel = System.getProperty(WorkspacePaths.CHANNEL_PROPERTY);
+        String oldApplicationId = System.getProperty(WorkspacePaths.APPLICATION_ID_PROPERTY);
+        try {
+            System.setProperty(WorkspacePaths.CHANNEL_PROPERTY, "nightly");
+            System.setProperty(WorkspacePaths.APPLICATION_ID_PROPERTY, "dev.frostguard.desktop");
+
+            assertThrows(IllegalStateException.class, WorkspacePaths::current);
+
+            System.setProperty(WorkspacePaths.APPLICATION_ID_PROPERTY,
+                    RuntimeChannel.NIGHTLY.applicationId());
+            assertEquals(RuntimeChannel.NIGHTLY, WorkspacePaths.current().channel());
+        } finally {
+            restore(WorkspacePaths.CHANNEL_PROPERTY, oldChannel);
+            restore(WorkspacePaths.APPLICATION_ID_PROPERTY, oldApplicationId);
+        }
+    }
+
     private static void restore(String property, String value) {
         if (value == null) {
             System.clearProperty(property);

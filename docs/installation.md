@@ -7,28 +7,30 @@ required emulator, and building the project from source on Windows.
 
 | Build | Use it when | Download |
 |:------|:------------|:---------|
-| Stable | You want a tested, versioned build that changes only with a release | [Latest Stable](https://github.com/Shederator/wosbot/releases/latest/download/frostguard-windows-desktop-bundle.zip) |
-| Nightly | You want the latest `main` build, updated daily | [Latest Nightly](https://github.com/Shederator/wosbot/releases/download/nightly/frostguard-windows-desktop-bundle.zip) |
+| Stable | You want a tested, versioned build that changes only with a release | [Latest Stable release](https://github.com/Shederator/wosbot/releases/latest) |
+| Nightly | You want the latest signed preview without replacing Stable | [Nightly releases](https://github.com/Shederator/wosbot/releases) |
 | PR build | You want to test one or more open pull requests | Run `/build-pr` in Discord `#request-a-build` |
 
-Stable and Nightly are public Windows desktop bundles. They require Java 21,
-but not Git, Git LFS, or Maven. Nightly may contain unfinished changes; PR
-builds additionally contain unmerged code.
-
-The self-contained Windows installer is being introduced for Frostguard 3.0.
-Until it is published through the release workflows, the download links above
-continue to provide the existing ZIP distribution.
+Stable and Nightly use self-contained, signed Windows installers and do not
+require a separately installed Java runtime. Nightly may contain unfinished
+changes; PR builds additionally contain unmerged code and continue to use the
+temporary ZIP format.
 
 ## Install a downloaded build
 
-1. Install a Java 21 JDK, such as [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21).
-2. Download the desired ZIP from the table above.
-3. Extract the complete ZIP into an empty folder. Do not run Frostguard from inside the ZIP.
-4. Double-click `Start Frostguard.bat`.
-5. Open **Configuration** and select the emulator command-line controller.
+1. Open the desired release and download its Windows x64 EXE installer.
+2. Confirm that Windows reports the expected Frostguard publisher before running it.
+3. Complete the per-user installation and start `Frostguard` or `Frostguard Nightly` from its shortcut.
+4. Open **Configuration** and select the emulator command-line controller.
 
-Keep the extracted installation together. Its launcher, application JAR,
-runtime libraries, OCR data and templates are all required.
+Stable and Nightly install as separate applications. They can run side by side
+and use separate workspaces, databases, profiles, schedules, Telegram settings,
+logs, caches, and locks.
+
+On the first Nightly start, Frostguard offers either a fresh configuration or a
+one-time snapshot of the matching Stable workspace. Stable and its watcher must
+be closed during the copy. Later changes are not synchronized, and Nightly data
+is never copied back into Stable automatically.
 
 ## Emulator Setup
 
@@ -137,18 +139,30 @@ Building the versioned installer additionally requires WiX Toolset 3.14.1 with
 .\mvnw.cmd "-Pwindows-app-image,windows-installer" package
 ```
 
-The installer is written below `packaging/desktop/target/installers`. It is a
+The installer is written below `packaging/desktop/target/installers/stable`. It is a
 per-user installer and defaults to
 `%LOCALAPPDATA%\Frostguard`; the installer can offer another location.
 Normal `mvn package` remains platform-neutral and does not invoke `jpackage` or
 install Frostguard.
 
-Native Stable and Nightly builds can expose a channel-specific update feed in
+Build the independent Nightly identity by adding its explicit profile:
+
+```powershell
+.\mvnw.cmd "-Pwindows-app-image,windows-installer,windows-nightly" package
+python build-support/verification/verify_app_image.py `
+  "packaging/desktop/target/app-image/Frostguard Nightly" `
+  --channel nightly --product-name "Frostguard Nightly"
+```
+
+Nightly uses its own application ID, upgrade UUID, installation directory,
+shortcut, launcher identity, workspace channel, and update feed.
+
+Signed Stable and Nightly builds expose a channel-specific update feed in
 **Config > Updates**. Development and pull-request builds cannot install from
 release feeds. Frostguard accepts an update only after the manifest identity,
 download size, SHA-256, and Windows Authenticode signer all match. The current
 public ZIP feeds are not used by this updater; automatic installer updates stay
-disabled until signed Frostguard 3.0 release manifests are published.
+disabled in ordinary local and PR builds.
 
 ### Run a source build
 

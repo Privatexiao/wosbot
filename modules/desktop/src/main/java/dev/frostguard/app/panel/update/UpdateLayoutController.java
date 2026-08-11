@@ -42,12 +42,17 @@ public final class UpdateLayoutController {
     @FXML private Button buttonCheck;
     @FXML private Button buttonDownloadInstall;
     @FXML private ProgressIndicator progress;
+    @FXML private VBox channelSwitchPane;
+    @FXML private Label labelChannelSwitch;
+    @FXML private Button buttonSwitchChannel;
 
     private final UpdateEndpointResolver endpoints = new UpdateEndpointResolver();
     private final UpdateManager manager = new UpdateManager(
             new WindowsAuthenticodeVerifier(), new WindowsInstallerHandoff());
+    private final ChannelSwitchService channelSwitcher = new ChannelSwitchService();
     private RunningBuild runningBuild;
     private UpdateCandidate candidate;
+    private RuntimeChannel switchTarget;
 
     @FXML
     private void initialize() {
@@ -56,6 +61,7 @@ public final class UpdateLayoutController {
         labelChannel.setText("Channel: " + runningBuild.channel().directoryName());
         setAvailableUpdateVisible(false);
         progress.setVisible(false);
+        configureChannelSwitch();
 
         if (!runningBuild.permitsAutomaticUpdates()) {
             buttonCheck.setDisable(true);
@@ -71,6 +77,33 @@ public final class UpdateLayoutController {
             labelStatus.setText("Automatic installer handoff is currently available on Windows only.");
         } else {
             labelStatus.setText("Check the configured " + runningBuild.channel().directoryName() + " release feed.");
+        }
+    }
+
+    @FXML
+    private void handleSwitchChannel() {
+        if (switchTarget == null) {
+            return;
+        }
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Open Frostguard " + switchTarget.displayName());
+        confirmation.setHeaderText(switchTarget == RuntimeChannel.NIGHTLY
+                ? "Try Frostguard Nightly as a separate installation?"
+                : "Return to Frostguard Stable?");
+        confirmation.setContentText("Stable and Nightly keep separate profiles, tasks, schedules, Telegram "
+                + "settings, and databases. Both can run side by side. A first Nightly launch can copy a "
+                + "one-time Stable snapshot, but later changes are not synchronized.");
+        if (confirmation.showAndWait().filter(ButtonType.OK::equals).isEmpty()) {
+            return;
+        }
+        try {
+            ChannelSwitchService.Result result = channelSwitcher.open(switchTarget);
+            labelStatus.setText(result == ChannelSwitchService.Result.LAUNCHED_INSTALLED
+                    ? "Frostguard " + switchTarget.displayName() + " was launched separately."
+                    : "Opened the Frostguard " + switchTarget.displayName() + " release page.");
+        } catch (Exception failure) {
+            showFailure(new UpdateException("Could not open Frostguard " + switchTarget.displayName()
+                    + ": " + failure.getMessage(), failure));
         }
     }
 
@@ -132,7 +165,9 @@ public final class UpdateLayoutController {
         try {
             session = manager.stageHandoff(prepared, ProcessHandle.current().pid());
             UpdateExitCoordinator coordinator = new UpdateExitCoordinator(
-                    ApplicationLifecycle::stopForUpdate, ApplicationLifecycle::exitAfterUpdateHandoff);
+                    ApplicationLifecycle::stopForUpdate,
+                    ApplicationLifecycle::exitAfterUpdateHandoff,
+                    ApplicationLifecycle::exitAfterCancelledUpdate);
             coordinator.execute(session);
         } catch (Exception exception) {
             if (session != null) {
@@ -172,6 +207,24 @@ public final class UpdateLayoutController {
     private void setAvailableUpdateVisible(boolean visible) {
         availableUpdatePane.setVisible(visible);
         availableUpdatePane.setManaged(visible);
+    }
+
+    private void configureChannelSwitch() {
+        boolean supported = supportsChannelSwitch(runningBuild.channel());
+        channelSwitchPane.setVisible(supported);
+        channelSwitchPane.setManaged(supported);
+        if (!supported) {
+            switchTarget = null;
+            return;
+        }
+        switchTarget = runningBuild.channel().alternateRelease();
+        buttonSwitchChannel.setText(switchTarget == RuntimeChannel.NIGHTLY ? "Try Nightly" : "Return to Stable");
+        labelChannelSwitch.setText("Frostguard " + switchTarget.displayName()
+                + " is a separate application with its own settings and workspace.");
+    }
+
+    static boolean supportsChannelSwitch(RuntimeChannel channel) {
+        return channel != null && channel.isPublicRelease();
     }
 
     static RunningBuild runningBuild() {

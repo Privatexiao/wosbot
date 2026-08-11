@@ -27,9 +27,7 @@ public final class DataStore implements AutoCloseable {
 	private static final String PERSISTENCE_UNIT = "frostguardPU";
 	private final EntityManagerFactory emf;
 
-	private static final class Holder {
-		private static final DataStore INSTANCE = new DataStore(Map.of());
-	}
+	private static volatile DataStore instance;
 
 	private DataStore(Map<String, Object> overrides) {
 		try {
@@ -50,7 +48,23 @@ public final class DataStore implements AutoCloseable {
 	}
 
 	public static DataStore getInstance() {
-		return Holder.INSTANCE;
+		DataStore current = instance;
+		if (current != null) {
+			return current;
+		}
+		synchronized (DataStore.class) {
+			if (instance == null) {
+				instance = new DataStore(Map.of());
+			}
+			return instance;
+		}
+	}
+
+	public static void closeIfInitialized() {
+		DataStore current = instance;
+		if (current != null) {
+			current.close();
+		}
 	}
 
 	/**

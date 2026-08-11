@@ -6,10 +6,12 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Optional;
 
 public record WorkspacePaths(Path root, RuntimeChannel channel) {
     public static final String WORKSPACE_PROPERTY = "frostguard.workspace";
     public static final String CHANNEL_PROPERTY = "frostguard.channel";
+    public static final String APPLICATION_ID_PROPERTY = "frostguard.application.id";
 
     public WorkspacePaths {
         root = root.toAbsolutePath().normalize();
@@ -30,11 +32,39 @@ public record WorkspacePaths(Path root, RuntimeChannel channel) {
             override = developmentRoot.resolve(".frostguard-dev").toString();
         }
         RuntimeChannel channel = RuntimeChannel.from(configuredChannel);
+        String applicationId = System.getProperty(APPLICATION_ID_PROPERTY, "").trim();
+        if (!applicationId.isEmpty() && !applicationId.equals(channel.applicationId())) {
+            throw new IllegalStateException("Application ID " + applicationId
+                    + " does not match channel " + channel.directoryName());
+        }
         Path root = override == null || override.isBlank()
-                ? Path.of(System.getProperty("user.home"), ".frostguard", "workspaces",
-                        channel.directoryName(), "default")
+                ? userWorkspace(channel, "default")
                 : Path.of(override);
         return new WorkspacePaths(root, channel);
+    }
+
+    public static Path userWorkspace(RuntimeChannel channel, String name) {
+        if (channel == null || !channel.isPublicRelease()) {
+            throw new IllegalArgumentException("Only Stable and Nightly use installed user workspaces");
+        }
+        if (name == null || name.isBlank() || name.equals(".") || name.equals("..")
+                || name.contains("/") || name.contains("\\")) {
+            throw new IllegalArgumentException("Workspace name must be one path segment");
+        }
+        return Path.of(System.getProperty("user.home"), ".frostguard", "workspaces",
+                channel.directoryName(), name).toAbsolutePath().normalize();
+    }
+
+    public Optional<WorkspacePaths> releasePeer(RuntimeChannel targetChannel) {
+        if (!channel.isPublicRelease() || targetChannel == null || !targetChannel.isPublicRelease()
+                || targetChannel == channel) {
+            return Optional.empty();
+        }
+        Path name = root.getFileName();
+        if (name == null || !root.equals(userWorkspace(channel, name.toString()))) {
+            return Optional.empty();
+        }
+        return Optional.of(new WorkspacePaths(userWorkspace(targetChannel, name.toString()), targetChannel));
     }
 
     private static Path findDevelopmentRoot() {

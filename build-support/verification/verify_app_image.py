@@ -9,11 +9,9 @@ import zipfile
 from pathlib import Path
 
 MINIMUM_RUNTIME_JARS = 50
-REQUIRED_FILES = (
-    "Frostguard.exe",
+STATIC_REQUIRED_FILES = (
     "FrostguardWatcher.exe",
     "runtime/bin/server/jvm.dll",
-    "app/Frostguard.cfg",
     "app/FrostguardWatcher.cfg",
     "app/lib/adb/adb.exe",
     "app/lib/adb/AdbWinApi.dll",
@@ -28,26 +26,11 @@ FORBIDDEN_NAMES = {
     "telegram-watcher.properties",
 }
 BUILD_METADATA = "dev/frostguard/app/frostguard-build.properties"
-COMMON_JAVA_OPTIONS = (
-    "java-options=-Dfrostguard.channel=stable",
-    "java-options=-Duser.dir=$APPDIR",
-    "java-options=-Dfrostguard.launcher=$APPDIR/../Frostguard.exe",
-    "java-options=-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe",
-)
-CONFIG_SETTINGS = {
-    "app/Frostguard.cfg": (
-        "app.mainclass=dev.frostguard.app.bootstrap.Main",
-        "java-options=-Dfrostguard.update.manifest.stable=",
-        *COMMON_JAVA_OPTIONS,
-    ),
-    "app/FrostguardWatcher.cfg": (
-        "app.mainclass=dev.frostguard.watcher.TelegramWatcher",
-        *COMMON_JAVA_OPTIONS,
-    ),
-}
 
 
-def inspect_image(image: Path) -> list[str]:
+def inspect_image(
+        image: Path, channel: str = "stable", product_name: str = "Frostguard"
+) -> list[str]:
     problems: list[str] = []
     if not image.is_dir():
         return [f"Application image does not exist: {image}"]
@@ -57,7 +40,8 @@ def inspect_image(image: Path) -> list[str]:
         for path in image.rglob("*")
         if path.is_file()
     }
-    for required in REQUIRED_FILES:
+    required_files = (*STATIC_REQUIRED_FILES, f"{product_name}.exe", f"app/{product_name}.cfg")
+    for required in required_files:
         if required not in files:
             problems.append(f"Application image is missing {required}")
 
@@ -80,8 +64,27 @@ def inspect_image(image: Path) -> list[str]:
         if not any(re.match(pattern, name) for name in files):
             problems.append(f"Application image has no {description}")
 
+    common_java_options = (
+        f"java-options=-Dfrostguard.channel={channel}",
+        f"java-options=-Dfrostguard.application.id=dev.frostguard.desktop{'.nightly' if channel == 'nightly' else ''}",
+        "java-options=-Duser.dir=$APPDIR",
+        "java-options=-Dfrostguard.watcher.launcher=$APPDIR/../FrostguardWatcher.exe",
+    )
+    config_settings = {
+        f"app/{product_name}.cfg": (
+            "app.mainclass=dev.frostguard.app.bootstrap.Main",
+            "java-options=-Dfrostguard.update.manifest.stable=",
+            "java-options=-Dfrostguard.update.manifest.nightly=",
+            *common_java_options,
+        ),
+        "app/FrostguardWatcher.cfg": (
+            "app.mainclass=dev.frostguard.watcher.TelegramWatcher",
+            f"java-options=-Dfrostguard.launcher=$APPDIR/../{product_name}.exe",
+            *common_java_options,
+        ),
+    }
     config_identities: dict[str, str] = {}
-    for config_path, settings in CONFIG_SETTINGS.items():
+    for config_path, settings in config_settings.items():
         if config_path not in files:
             continue
         config = files[config_path].read_text(encoding="utf-8")
@@ -139,8 +142,10 @@ def inspect_image(image: Path) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("image", type=Path)
+    parser.add_argument("--channel", choices=("stable", "nightly"), default="stable")
+    parser.add_argument("--product-name", default="Frostguard")
     args = parser.parse_args(argv)
-    problems = inspect_image(args.image)
+    problems = inspect_image(args.image, args.channel, args.product_name)
     if problems:
         for problem in problems:
             print(f"::error::{problem}")
