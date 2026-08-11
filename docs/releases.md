@@ -48,7 +48,7 @@ not rebuild or replace its installer.
 
 ## Transitional ZIP promotion
 
-The legacy Stable ZIP workflow promotes an already successful `Daily Windows Bundle` run from
+The legacy Stable ZIP workflow promotes an already successful `Nightly Windows Bundle` run from
 `main`; they do not rebuild a different tree. Run **Stable Windows Release**
 manually with:
 

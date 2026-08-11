@@ -1,20 +1,6 @@
-name: Daily Windows Bundle
+name: Nightly Windows Bundle
 
 on:
-  push:
-    branches:
-      - "build-support/**"
-  pull_request:
-    paths:
-      - "**/pom.xml"
-      - "**/src/**"
-      - "tools/**"
-      - "examples/custom-tasks/**"
-      - "build-support/**"
-      - "packaging/desktop/src/main/windows/Start-Frostguard-Watcher.bat"
-      - "packaging/desktop/src/main/windows/Start-Frostguard.bat"
-      - ".gitattributes"
-      - ".github/workflows/daily-windows-bundle.yml"
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -33,7 +19,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: daily-windows-bundle-${{ github.ref }}
+  group: nightly-windows-bundle-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -43,7 +29,7 @@ env:
 
 jobs:
   build-windows-bundle:
-    name: Build Windows desktop bundle on Linux
+    name: Build and publish nightly Windows bundle
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -215,15 +201,11 @@ jobs:
           retention-days: 7
 
       # A rolling prerelease gives the Discord message a stable, public,
-      # login-free download URL. Pull requests are excluded on purpose: a PR
-      # from a fork gets a read-only token, and republishing `nightly` from an
-      # unmerged branch would hand testers an unreviewed build.
+      # login-free download URL. This workflow only runs from the default
+      # branch on its schedule or through an explicit manual dispatch.
       - name: Publish the rolling nightly release
         id: release
-        if: >-
-          success() &&
-          github.event_name != 'pull_request' &&
-          github.ref == 'refs/heads/main'
+        if: success() && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ZIP_PATH: ${{ steps.bundle.outputs.path }}
@@ -321,12 +303,12 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
           echo "Published and verified ${asset} at ${url} (HTTP ${code})"
 
-      # Keep one maintained Daily message instead of adding one post per run.
+      # Keep one maintained Nightly message instead of adding one post per run.
       # Failures remain visible in Actions and never overwrite the last working
       # public download.
-      - name: Update the Daily Discord message
+      - name: Update the Nightly Discord message
         id: discord
-        if: success() && github.event_name != 'pull_request'
+        if: success() && github.ref == 'refs/heads/main'
         continue-on-error: true
         env:
           DISCORD_NIGHTLY_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK_URL }}
@@ -382,14 +364,20 @@ jobs:
             "${discord_target[@]}"
 
       - name: Delete the superseded Discord message
-        if: success() && inputs.recreate_discord_message
+        if: >-
+          success() &&
+          github.ref == 'refs/heads/main' &&
+          inputs.recreate_discord_message &&
+          steps.discord.outcome == 'success'
         env:
           DISCORD_NIGHTLY_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK_URL }}
           OLD_MESSAGE_ID: ${{ vars.DISCORD_DAILY_MESSAGE_ID }}
           NEW_MESSAGE_ID: ${{ steps.discord.outputs.message_id }}
         run: |
           set -euo pipefail
-          if [[ ! "${OLD_MESSAGE_ID}" =~ ^[0-9]+$ || "${OLD_MESSAGE_ID}" == "${NEW_MESSAGE_ID}" ]]; then
+          if [[ ! "${OLD_MESSAGE_ID}" =~ ^[0-9]+$ ||
+                ! "${NEW_MESSAGE_ID}" =~ ^[0-9]+$ ||
+                "${OLD_MESSAGE_ID}" == "${NEW_MESSAGE_ID}" ]]; then
             echo "::error::Refusing to delete an invalid or current Discord message ID."
             exit 1
           fi

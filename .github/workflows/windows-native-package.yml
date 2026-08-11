@@ -1,4 +1,4 @@
-name: Native Windows Package
+name: Windows Installers
 
 on:
   pull_request:
@@ -29,7 +29,7 @@ env:
 
 jobs:
   package:
-    name: Build and verify native Windows package
+    name: Build and smoke-test Stable and Nightly installers
     runs-on: windows-latest
     timeout-minutes: 60
 

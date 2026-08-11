@@ -19,6 +19,29 @@ def properties(element: ET.Element) -> dict[str, str]:
 
 
 class ChannelPackagingTest(unittest.TestCase):
+    def test_pr_ci_and_nightly_publication_are_separate_workflows(self):
+        ci = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        nightly = (REPO_ROOT / ".github/workflows/daily-windows-bundle.yml").read_text(
+            encoding="utf-8")
+        installers = (REPO_ROOT / ".github/workflows/windows-native-package.yml").read_text(
+            encoding="utf-8")
+
+        self.assertIn("name: CI", ci)
+        self.assertIn("  pull_request:", ci)
+        self.assertIn("  contents: read", ci)
+        self.assertIn("Build and test Maven reactor", ci)
+        self.assertNotIn("contents: write", ci)
+
+        self.assertIn("name: Nightly Windows Bundle", nightly)
+        self.assertIn("  schedule:", nightly)
+        self.assertIn("  workflow_dispatch:", nightly)
+        self.assertNotIn("  pull_request:", nightly)
+        self.assertNotIn("\n  push:\n", nightly)
+        self.assertIn("  contents: write", nightly)
+
+        self.assertIn("name: Windows Installers", installers)
+        self.assertIn("Build and smoke-test Stable and Nightly installers", installers)
+
     def test_stable_and_nightly_use_distinct_durable_windows_identities(self):
         root = ET.parse(REPO_ROOT / "packaging/desktop/pom.xml").getroot()
         stable = properties(root)
