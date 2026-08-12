@@ -309,6 +309,23 @@ public class MarchHelper {
         dismissLeftPanel();
     }
 
+    /**
+     * Opens the left panel with one deliberate tap per control. Callers should use this only when
+     * they own the panel lifecycle and guarantee a matching {@link #closeLeftMenu()} in a finally
+     * block; it avoids the legacy blind multi-tap sequence toggling a responsive panel repeatedly.
+     */
+    public void openLeftMenuCitySectionOnce(boolean cityTab) {
+        log.debug("Left menu single-pass - " + (cityTab ? "city" : "wilderness"));
+        openLeftMenuCitySectionOnce(taps, cityTab);
+    }
+
+    static void openLeftMenuCitySectionOnce(TapInteractionService taps, boolean cityTab) {
+        taps.tapInside(CommonGameAreas.LEFT_MENU_TRIGGER, 1, 400);
+        taps.tapInside(cityTab
+                ? CommonGameAreas.LEFT_MENU_CITY_TAB
+                : CommonGameAreas.LEFT_MENU_WILDERNESS_TAB, 1, 300);
+    }
+
     private void dismissLeftPanel() {
         log.debug("Closing left menu");
         taps.tapNear(CommonGameAreas.LEFT_MENU_CLOSE_CITY, TapJitterPolicy.DEFAULT_POINT_JITTER_RADIUS);
