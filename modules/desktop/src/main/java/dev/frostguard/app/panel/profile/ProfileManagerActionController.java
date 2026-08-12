@@ -152,6 +152,10 @@ public class ProfileManagerActionController implements ProfileStatusChangeListen
 		return iModel.saveProfile(toDescriptor(currentProfile));
 	}
 
+	public boolean saveProfileSetting(Long profileId, ConfigurationKeyEnum key, String value) {
+		return iModel.saveProfileSetting(profileId, key, value);
+	}
+
 	public List<String> loadTags() {
 		return iModel.getTags();
 	}
@@ -262,7 +266,7 @@ public class ProfileManagerActionController implements ProfileStatusChangeListen
 		boolean allUpdatesSuccessful = true;
 		for (ProfileAux targetProfile : selectedProfiles) {
 			copyTemplateConfigs(templateProfile, targetProfile);
-			if (!saveProfile(targetProfile)) {
+			if (!persistTemplateConfigs(templateProfile, targetProfile)) {
 				allUpdatesSuccessful = false;
 				log(TpMessageSeverityEnum.ERROR, "Failed to update profile: " + targetProfile.getName());
 			} else {
@@ -273,6 +277,19 @@ public class ProfileManagerActionController implements ProfileStatusChangeListen
 		}
 
 		return allUpdatesSuccessful;
+	}
+
+	private boolean persistTemplateConfigs(ProfileAux templateProfile, ProfileAux targetProfile) {
+		boolean complete = true;
+		for (ConfigAux config : templateProfile.getConfigs()) {
+			try {
+				ConfigurationKeyEnum key = ConfigurationKeyEnum.valueOf(config.getName());
+				if (!saveProfileSetting(targetProfile.getId(), key, config.getValue())) complete = false;
+			} catch (IllegalArgumentException ex) {
+				complete = false;
+			}
+		}
+		return complete;
 	}
 
 	@Override

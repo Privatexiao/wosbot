@@ -70,7 +70,7 @@ public class TaskQueue {
 
     final TaskQueueStatusData statusModel = new TaskQueueStatusData();
     private final TaskQueueExecutor executor = new TaskQueueExecutor();
-    private AccountDescriptor   profile;
+    private volatile AccountDescriptor profile;
     private volatile ExecutionContext   runningContext;
     private volatile LocalDateTime      sessionOrigin;
     // Changed by pernerch | Date: 2026-07-04 | Why: ensure first startup cycle runs Initialize regardless of idle heuristics.
@@ -120,6 +120,13 @@ public class TaskQueue {
     public LocalDateTime     getScheduledUntil() { return statusModel.getDelayUntil(); }
     public boolean           isActive()          { return statusModel.isRunning(); }
     public AccountDescriptor getProfile()        { return profile; }
+
+    public synchronized void applyProfileUpdate(AccountDescriptor updatedProfile) {
+        if (updatedProfile == null || updatedProfile.getId() == null
+                || profile == null || !updatedProfile.getId().equals(profile.getId())) return;
+        profile = updatedProfile;
+        taskBacklog.forEach(task -> task.setProfile(updatedProfile));
+    }
 
     public boolean isExecutingTask(TpDailyTaskEnum kind) {
         ExecutionContext snap = runningContext;
@@ -630,6 +637,11 @@ public class TaskQueue {
     }
 
     private void handleReschedule(DelayedTask task, LocalDateTime before) {
+        task.setProfile(profile);
+        ConfigurationKeyEnum configKey = task.getTpTask().getConfigKey();
+        if (configKey != null && !Boolean.TRUE.equals(profile.getConfig(configKey, Boolean.class))) {
+            task.setRecurring(false);
+        }
         if (Objects.equals(before, task.getScheduled()) && task.isRecurring()) task.reschedule(LocalDateTime.now());
         if (task.isRecurring()) { emitInfoTask(task, "Next run in: " + GameTimeUtils.formatCountdown(task.getScheduled())); enqueue(task); }
         else emitInfoTask(task, "Task removed from queue");

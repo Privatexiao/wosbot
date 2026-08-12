@@ -107,10 +107,9 @@ private void scanAndStoreVipExpirationTime() {
 		nextMonthlyVipBuyTime = calculatedExpirationTime;
 
 
-		profile.setConfig(
+		writeProfileSetting(
 				ConfigurationKeyEnum.VIP_NEXT_MONTHLY_BUY_TIME_STRING,
 				calculatedExpirationTime.toString());
-		setShouldUpdateConfig(true);
 
 		logInfo(routineLogVipLine(String.format("VIP expiration time stored: %s (expires in %s)",
 				calculatedExpirationTime.format(DATETIME_FORMATTER),

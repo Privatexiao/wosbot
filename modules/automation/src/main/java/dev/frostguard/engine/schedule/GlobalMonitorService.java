@@ -97,6 +97,12 @@ public class GlobalMonitorService {
         log.info("Monitoring stopped for profile {}", profileId);
     }
 
+    public boolean updateProfile(AccountDescriptor profile) {
+        if (profile == null || profile.getId() == null) return false;
+        return monitoredProfiles.computeIfPresent(profile.getId(), (ignored, current) ->
+                new MonitoredEntry(profile, current.taskActiveCheck())) != null;
+    }
+
     // Dequeues the next pending injection for the given profile.
     public InjectionRule pollPendingInjection(Long profileId) {
         Queue<InjectionRule> q = pendingInjections.get(profileId);

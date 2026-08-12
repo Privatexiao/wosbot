@@ -313,10 +313,9 @@ public class StorehouseChestRoutine extends DelayedTask {
         }
 
         // Store the next claim time
-        profile.setConfig(
+        writeProfileSetting(
                 ConfigurationKeyEnum.STOREHOUSE_STAMINA_CLAIM_TIME_STRING,
                 nextStaminaTime.toString());
-        setShouldUpdateConfig(true);
     }
 
     /**

@@ -8,12 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.frostguard.api.configs.ConfigurationKeyEnum;
-import dev.frostguard.api.configs.TpConfigEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ProfileStatusData;
 import dev.frostguard.api.domain.ProfileTagData;
 import dev.frostguard.data.entity.Config;
-import dev.frostguard.data.entity.ConfigTemplate;
 import dev.frostguard.data.entity.Profile;
 import dev.frostguard.data.repository.ConfigRepository;
 import dev.frostguard.data.repository.ProfileRepository;
@@ -88,19 +86,19 @@ public class ProfileService implements ProfileServiceInterface {
 			return false;
 		}
 		return withDescriptor(descriptor, "save", account -> {
-			Profile entity = profiles.getAccountById(account.getId());
-			if (entity == null) {
+			if (!profiles.updateAccountMetadata(account)) {
 				return false;
 			}
-			copyDescriptorFields(account, entity);
-			if (!replaceProfileSettings(entity, account)) {
+			if (!profiles.replaceProfileTags(account.getId(), account.getTags())) {
 				return false;
 			}
-			if (!profiles.replaceProfileTags(entity.getId(), account.getTags())) {
-				return false;
-			}
-			return profiles.saveAccount(entity);
+			return true;
 		}, descriptor);
+	}
+
+	@Override
+	public boolean persistAccountSetting(Long profileId, ConfigurationKeyEnum key, String value) {
+		return ConfigService.obtain().writeAccountSetting(profileId, key, value);
 	}
 
 	@Override
@@ -133,17 +131,18 @@ public class ProfileService implements ProfileServiceInterface {
 
 		boolean complete = true;
 		for (AccountDescriptor account : accounts) {
-			try {
-				account.getConfigs().clear();
-				account.getConfigs().addAll(template.getConfigs());
-			} catch (Exception ex) {
-				complete = false;
-				LOG.error("Bulk profile update could not prepare {}: {}", account.getName(), ex.getMessage());
-				continue;
-			}
-			if (!persistAccount(account)) {
-				complete = false;
-				LOG.warn("Bulk profile update skipped or failed for {}", account.getName());
+			for (var setting : template.getConfigs()) {
+				try {
+					ConfigurationKeyEnum key = ConfigurationKeyEnum.valueOf(setting.getConfigurationName());
+					if (!ConfigService.obtain().writeAccountSetting(account, key, setting.getValue())) {
+						complete = false;
+						LOG.warn("Bulk profile config update failed for {} key={}", account.getName(), key.name());
+					}
+				} catch (IllegalArgumentException ex) {
+					complete = false;
+					LOG.warn("Bulk profile update skipped unknown key {} for {}",
+							setting.getConfigurationName(), account.getName());
+				}
 			}
 		}
 		return complete;
@@ -199,21 +198,6 @@ public class ProfileService implements ProfileServiceInterface {
 		dataListeners.forEach(listener -> listener.onAccountDataModified(profile));
 	}
 
-	private boolean replaceProfileSettings(Profile entity, AccountDescriptor descriptor) {
-		ConfigTemplate profileTemplate = configs.getWatcherSetting(TpConfigEnum.PROFILE_CONFIG);
-		if (profileTemplate == null) {
-			return false;
-		}
-		List<Config> previous = configs.getAccountSettings(entity.getId());
-		if (previous != null) {
-			previous.forEach(configs::deleteSetting);
-		}
-		descriptor.getConfigs().stream()
-				.map(setting -> new Config(entity, profileTemplate, setting.getConfigurationName(), setting.getValue()))
-				.forEach(configs::addSetting);
-		return true;
-	}
-
 	private boolean withDescriptor(AccountDescriptor descriptor, String action,
 			ProfileMutation mutation, AccountDescriptor changeEventPayload) {
 		if (descriptor == null) {
@@ -222,7 +206,10 @@ public class ProfileService implements ProfileServiceInterface {
 		try {
 			boolean changed = mutation.apply(descriptor);
 			if (changed) {
-				broadcastAccountDataChange(changeEventPayload);
+				AccountDescriptor committed = descriptor.getId() == null
+						? null
+						: profiles.getAccountWithSettingsById(descriptor.getId());
+				broadcastAccountDataChange(committed != null ? committed : changeEventPayload);
 			}
 			return changed;
 		} catch (Exception ex) {

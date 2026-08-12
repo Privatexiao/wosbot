@@ -96,6 +96,28 @@ public class ProfileRepository {
 		}
 	}
 	public boolean saveAccount(Profile profile) { return store.merge(profile); }
+
+	public boolean updateAccountMetadata(AccountDescriptor descriptor) {
+		if (descriptor == null || descriptor.getId() == null) return false;
+		try {
+			return store.withinTransaction(em -> {
+				Profile profile = em.find(Profile.class, descriptor.getId());
+				if (profile == null) return false;
+				profile.setLabel(descriptor.getName());
+				profile.setDeviceIndex(descriptor.getEmulatorNumber());
+				profile.setActive(descriptor.getEnabled());
+				profile.setWeight(descriptor.getPriority());
+				profile.setRetryInterval(descriptor.getReconnectionTime());
+				profile.setAvatarId(descriptor.getCharacterId());
+				profile.setAvatarName(descriptor.getCharacterName());
+				profile.setGuildTag(descriptor.getCharacterAllianceCode());
+				profile.setRealm(descriptor.getCharacterServer());
+				return true;
+			});
+		} catch (Exception ex) {
+			return false;
+		}
+	}
 	public boolean deleteAccount(Profile profile) { return store.remove(profile); }
 
 	public Profile getAccountById(Long id) {

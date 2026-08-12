@@ -1,5 +1,6 @@
 package dev.frostguard.engine.listener;
 
+import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ProfileTagData;
 
@@ -13,6 +14,8 @@ public interface ProfileServiceInterface {
     boolean createAccount(AccountDescriptor profile);
 
     boolean persistAccount(AccountDescriptor profile);
+
+    boolean persistAccountSetting(Long profileId, ConfigurationKeyEnum key, String value);
 
     boolean removeAccount(AccountDescriptor profile);
 

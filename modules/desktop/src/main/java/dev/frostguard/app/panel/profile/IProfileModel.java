@@ -3,6 +3,7 @@ package dev.frostguard.app.panel.profile;
 import java.util.Collection;
 import java.util.List;
 
+import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ProfileTagData;
 import dev.frostguard.engine.listener.ProfileStatusChangeListener;
@@ -14,6 +15,8 @@ public interface IProfileModel {
 	boolean addProfile(AccountDescriptor profile);
 
 	boolean saveProfile(AccountDescriptor profile);
+
+	boolean saveProfileSetting(Long profileId, ConfigurationKeyEnum key, String value);
 
 	boolean deleteProfile(AccountDescriptor profile);
 
