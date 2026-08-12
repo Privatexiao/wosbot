@@ -159,31 +159,14 @@ public class GatherRoutine extends DelayedTask {
             return;
         if (checkGatherSpeedWait())
             return;
-        // 1. Read the shared March Queue model and correct overflow while the same panel is open.
-        GatherMarchInspection inspection = inspectGatherMarchesAndCorrectOverflowFlow();
-        GatherMarchSnapshot marchSnapshot = inspection.snapshot();
+        // 1. Read the shared March Queue model. A lower runtime queue limit constrains future
+        // deployments; it must not recall marches that were valid under the previous config.
+        GatherMarchSnapshot marchSnapshot = readGatherMarchSnapshot();
         List<GatherType> activeMarches = new ArrayList<>(marchSnapshot.activeTypes());
         int activeGatherCount = marchSnapshot.activeGatherCount();
         int idleSlotCount = marchSnapshot.idleSlotCount();
         logInfo(String.format("Active gather marches: %d / %d; idle physical march slots: %d",
                 activeGatherCount, activeQueues, idleSlotCount));
-
-        // Changed by pernerch | Date: 2026-07-02 | Why: continuously self-heal gather state
-        // by recalling duplicate gather marches when active gathers exceed configured queue limit.
-        int recalledOverflow = inspection.overflowRecall().recalled();
-        if (recalledOverflow > 0) {
-            logInfo(String.format(
-                "Corrected gather overflow by recalling %d march(es). Re-scanning active marches.",
-                recalledOverflow));
-            sleepTask(500);
-            earliestReschedule = null;
-            marchSnapshot = readGatherMarchSnapshot();
-            activeMarches = new ArrayList<>(marchSnapshot.activeTypes());
-            activeGatherCount = marchSnapshot.activeGatherCount();
-            idleSlotCount = marchSnapshot.idleSlotCount();
-            logInfo(String.format("Active gather marches after correction: %d / %d; idle physical march slots: %d",
-                    activeGatherCount, activeQueues, idleSlotCount));
-        }
 
         // Changed by pernerch | Date: 2026-07-02 | Why: when higher-priority tasks are pending,
         // defer based on real active-march timing instead of a blind fixed delay.
@@ -241,7 +224,7 @@ public class GatherRoutine extends DelayedTask {
             return;
         }
 
-        if (activeGatherCount >= activeQueues && earliestReschedule == null) {
+        if (hasReachedConfiguredQueueLimit(activeGatherCount, activeQueues) && earliestReschedule == null) {
             // Only fall back to 5-min polling if the next check is near or unknown.
             LocalDateTime nextGatherCheck = marchSnapshot.earliestGatherCheckAt();
             LocalDateTime retryAt;
@@ -451,19 +434,6 @@ public class GatherRoutine extends DelayedTask {
         return toGatherMarchSnapshot(marchHelper.readMarchQueueSinglePass());
     }
 
-    private GatherMarchInspection inspectGatherMarchesAndCorrectOverflowFlow() {
-        navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
-        sleepTask(250);
-        marchHelper.openLeftMenuCitySectionOnce(false);
-        try {
-            GatherMarchSnapshot snapshot = toGatherMarchSnapshot(marchHelper.readVisibleMarchQueue());
-            OverflowRecallResult overflowRecall = recallDuplicateOverflowGatherMarchesFromOpenPanel(snapshot.slots());
-            return new GatherMarchInspection(snapshot, overflowRecall);
-        } finally {
-            marchHelper.closeLeftMenu();
-        }
-    }
-
     private GatherMarchSnapshot toGatherMarchSnapshot(List<MarchSlotState> slots) {
         List<GatherType> activeTypes = slots.stream()
                 .filter(slot -> slot.activityType() == MarchActivityType.GATHER)
@@ -553,80 +523,20 @@ public class GatherRoutine extends DelayedTask {
         }
     }
 
-    // Changed by pernerch | Date: 2026-07-02 | Why: enforce configured gather queue size by
-    // recalling duplicate long-running marches whenever active gather count overflows.
-    private OverflowRecallResult recallDuplicateOverflowGatherMarchesFromOpenPanel(List<MarchSlotState> slots) {
-        List<ActiveGatherMarchCandidate> candidates = collectActiveGatherMarchCandidates(slots);
-        List<OverflowRecallCandidate> recallPlan = planOverflowRecalls(candidates, enabledTypes, activeQueues);
-        if (recallPlan.isEmpty()) {
-            return new OverflowRecallResult(0, false);
-        }
-
-        OverflowRecallResult result = executeOverflowRecallPlan(recallPlan,
-                planned -> recallGatherMarchFromOpenPanelFlow(planned.candidate(), planned.reason()));
-        if (result.controlsMissing()) {
-            saveMissingRecallControlsScreenshot();
-            logWarning(String.format(
-                    "Gather overflow correction stopped: recall controls not detected; remaining overflow=%d",
-                    recallPlan.size() - result.recalled()));
-        }
-        return result;
-    }
-
-    static List<OverflowRecallCandidate> planOverflowRecalls(
-            List<ActiveGatherMarchCandidate> candidates, List<GatherType> enabledTypes, int activeQueues) {
-        int overflow = candidates.size() - activeQueues;
-        if (overflow <= 0) return List.of();
-
-        Comparator<ActiveGatherMarchCandidate> longestFirst =
-                Comparator.comparing(ActiveGatherMarchCandidate::returnTime).reversed();
-        List<OverflowRecallCandidate> plan = new ArrayList<>();
-        Set<Integer> plannedQueues = new HashSet<>();
-
-        candidates.stream()
-                .filter(candidate -> !enabledTypes.contains(candidate.type()))
-                .sorted(longestFirst)
-                .forEach(candidate -> addRecallCandidate(
-                        plan, plannedQueues, overflow, candidate, RecallReason.DISABLED_TYPE));
-
-        candidates.stream()
-                .collect(Collectors.groupingBy(ActiveGatherMarchCandidate::type))
-                .values().stream()
-                .filter(group -> group.size() > 1)
-                .flatMap(group -> group.stream().sorted(longestFirst).limit(group.size() - 1L))
-                .sorted(longestFirst)
-                .forEach(candidate -> addRecallCandidate(
-                        plan, plannedQueues, overflow, candidate, RecallReason.DUPLICATE_TYPE));
-
-        candidates.stream()
-                .sorted(longestFirst)
-                .forEach(candidate -> addRecallCandidate(
-                        plan, plannedQueues, overflow, candidate, RecallReason.OVERFLOW_FALLBACK));
-        return List.copyOf(plan);
-    }
-
-    private static void addRecallCandidate(List<OverflowRecallCandidate> plan, Set<Integer> plannedQueues,
-            int overflow, ActiveGatherMarchCandidate candidate, RecallReason reason) {
-        if (plan.size() < overflow && plannedQueues.add(candidate.queueIndex())) {
-            plan.add(new OverflowRecallCandidate(candidate, reason));
-        }
-    }
-
-    static OverflowRecallResult executeOverflowRecallPlan(List<OverflowRecallCandidate> plan,
-            Function<OverflowRecallCandidate, RecallAttempt> recall) {
+    static RecallBatchResult executeRecallBatch(List<ActiveGatherMarchCandidate> candidates,
+            Function<ActiveGatherMarchCandidate, RecallAttempt> recall) {
         int recalled = 0;
-        for (OverflowRecallCandidate candidate : plan) {
+        for (ActiveGatherMarchCandidate candidate : candidates) {
             RecallAttempt attempt = recall.apply(candidate);
             if (attempt == RecallAttempt.CONTROLS_NOT_FOUND) {
-                return new OverflowRecallResult(recalled, true);
+                return new RecallBatchResult(recalled, true);
             }
             if (attempt == RecallAttempt.RECALLED) recalled++;
         }
-        return new OverflowRecallResult(recalled, false);
+        return new RecallBatchResult(recalled, false);
     }
 
-    // Changed by pernerch | Date: 2026-07-02 | Why: build a typed snapshot of active gather
-    // marches (type, queue row, return time) to support deterministic overflow correction.
+    // Builds a typed snapshot of active gather marches for explicit high-priority event recalls.
     private List<ActiveGatherMarchCandidate> collectActiveGatherMarchCandidatesFlow() {
         return collectActiveGatherMarchCandidates(marchHelper.readMarchQueueSinglePass());
     }
@@ -655,8 +565,7 @@ public class GatherRoutine extends DelayedTask {
         return candidates;
     }
 
-    // Changed by pernerch | Date: 2026-07-02 | Why: target a specific gather row for recall
-    // so overflow cleanup removes the intended duplicate march.
+    // Targets a specific gather row when an explicit high-priority event recall is enabled.
     private RecallAttempt recallGatherMarchByQueueFlow(ActiveGatherMarchCandidate candidate, RecallReason reason) {
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
         sleepTask(250);
@@ -704,7 +613,7 @@ public class GatherRoutine extends DelayedTask {
         tapInside(targetButton.getPoint(), targetButton.getPoint(), 1, 200);
         tapInside(RECALL_CONFIRM_TL, RECALL_CONFIRM_BR, 1, 200);
         logInfo(String.format(
-                "Gather overflow recall | reason=%s | queue=#%d | type=%s | return=%s",
+                "Gather march recall | reason=%s | queue=#%d | type=%s | return=%s",
                 reason.logValue,
                 queueIndex + 1,
                 candidate.type(),
@@ -950,6 +859,10 @@ public class GatherRoutine extends DelayedTask {
             earliestReschedule = t;
     }
 
+    static boolean hasReachedConfiguredQueueLimit(int activeGatherCount, int configuredQueueLimit) {
+        return activeGatherCount >= configuredQueueLimit;
+    }
+
     private void finalizeReschedule(GatherFillResult fillResult) {
         if (GatherSameTargetRetryPolicy.requiresCooldown(
                 fillResult.sameTargetBlocked(), fillResult.unfilledSlots())) {
@@ -1110,11 +1023,8 @@ public class GatherRoutine extends DelayedTask {
             logInfo("No active gather marches found to recall.");
             return;
         }
-        List<OverflowRecallCandidate> recallPlan = candidates.stream()
-                .map(candidate -> new OverflowRecallCandidate(candidate, RecallReason.HIGH_PRIORITY_EVENT))
-                .toList();
-        OverflowRecallResult result = executeOverflowRecallPlan(recallPlan, planned -> {
-            RecallAttempt attempt = recallGatherMarchByQueueFlow(planned.candidate(), planned.reason());
+        RecallBatchResult result = executeRecallBatch(candidates, candidate -> {
+            RecallAttempt attempt = recallGatherMarchByQueueFlow(candidate, RecallReason.HIGH_PRIORITY_EVENT);
             if (attempt == RecallAttempt.RECALLED) sleepTask(300);
             return attempt;
         });
@@ -1264,16 +1174,10 @@ public class GatherRoutine extends DelayedTask {
                                        LocalDateTime nextCheckAt, LocalDateTime earliestGatherCheckAt) {
     }
 
-    private record GatherMarchInspection(GatherMarchSnapshot snapshot, OverflowRecallResult overflowRecall) {
-    }
-
     record ActiveGatherMarchCandidate(GatherType type, int queueIndex, LocalDateTime returnTime) {
     }
 
-    record OverflowRecallCandidate(ActiveGatherMarchCandidate candidate, RecallReason reason) {
-    }
-
-    record OverflowRecallResult(int recalled, boolean controlsMissing) {
+    record RecallBatchResult(int recalled, boolean controlsMissing) {
     }
 
     private record GatherFillResult(int deployed, int noNode, int blocked, int sameTargetBlocked,
@@ -1294,9 +1198,6 @@ public class GatherRoutine extends DelayedTask {
     }
 
     enum RecallReason {
-        DISABLED_TYPE("disabled-type"),
-        DUPLICATE_TYPE("duplicate-type"),
-        OVERFLOW_FALLBACK("overflow-fallback"),
         // pernerch/2026-07-02: march recalled because Intel (full-recall) or Bear Trap (recall+rally) is imminent
         HIGH_PRIORITY_EVENT("high-priority-event");
 
