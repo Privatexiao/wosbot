@@ -1,5 +1,9 @@
 package dev.frostguard.api.domain;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import dev.frostguard.api.configs.FlowStepKind;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,21 +24,55 @@ import java.util.Map;
  *   <li><b>TEMPLATE_SEARCH</b> — templatePath, threshold, grayscale, tlX, brX</li>
  *   <li><b>NAVIGATE</b> — location</li>
  * </ul>
+ *
+ * <h3>JSON mapping</h3>
+ * <p>Persistence binds to the private fields only. This class also exposes
+ * legacy accessor shims ({@code getParams}, {@code getNextNodeId}, …) and
+ * derived read-only views ({@code getSummary}, {@code isBranching}, …). Were
+ * Jackson allowed to auto-detect those methods, every stored value would be
+ * written two or three times under different names and each derived getter
+ * would be invoked while writing — so one failing getter aborts the write
+ * midway and leaves a truncated, unparseable document on disk. Field-only
+ * visibility keeps the saved file canonical and makes future helper methods
+ * inert by default instead of silently joining the output. {@link JsonAlias}
+ * still accepts the historical key spellings when reading older files.</p>
  */
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        setterVisibility = JsonAutoDetect.Visibility.NONE,
+        creatorVisibility = JsonAutoDetect.Visibility.NONE)
 public class AutomationStep {
     public static final String PARAM_NODE_NAME = "nodeName";
     public static final int NODE_NAME_MAX_LENGTH = 30;
 
+    @JsonAlias("id")
     private int stepId;
+
+    @JsonAlias("type")
     private FlowStepKind kind;
+
+    @JsonAlias("params")
+    @JsonSetter(nulls = Nulls.SKIP)
     private Map<String, String> attributes;
+
+    @JsonAlias("executed")
     private boolean completed;
 
+    @JsonAlias("canvasX")
     private double layoutX;
+
+    @JsonAlias("canvasY")
     private double layoutY;
 
+    @JsonAlias("nextNodeId")
     private int successorId  = -1;
+
+    @JsonAlias("nextNodeFalseId")
     private int alternateId  = -1;
+
+    @JsonAlias("lastOcrResult")
     private String lastReadValue = null;
 
     /** Creates a blank step with an empty attribute map. */
@@ -69,9 +107,33 @@ public class AutomationStep {
     /* ---- attributes ---- */
 
     public Map<String, String> getAttributes()                { return attributes; }
-    public void setAttributes(Map<String, String> attrs)      { this.attributes = attrs; }
 
-    public void putAttribute(String key, String value)  { attributes.put(key, value); }
+    /**
+     * Replaces the attribute map, copying the supplied entries so the step
+     * never aliases a caller-owned map and never holds a null map. A stored
+     * node name is re-sanitized on the way in, because attribute maps also
+     * arrive from hand-edited files.
+     */
+    public void setAttributes(Map<String, String> attrs) {
+        Map<String, String> replacement = new HashMap<>();
+        if (attrs != null) {
+            replacement.putAll(attrs);
+        }
+        this.attributes = replacement;
+        if (replacement.containsKey(PARAM_NODE_NAME)) {
+            setNodeName(replacement.get(PARAM_NODE_NAME));
+        }
+    }
+
+    /** Stores an attribute, keeping the node name sanitized and readable. */
+    public void putAttribute(String key, String value) {
+        if (PARAM_NODE_NAME.equals(key)) {
+            setNodeName(value);
+        } else {
+            attributes.put(key, value);
+        }
+    }
+
     public String getAttribute(String key)              { return attributes.get(key); }
 
     public String getNodeName() {
@@ -221,7 +283,7 @@ public class AutomationStep {
     public FlowStepKind getType()               { return kind; }
     public void setType(FlowStepKind type)      { this.kind = type; }
     public Map<String, String> getParams()      { return attributes; }
-    public void setParams(Map<String, String> p){ this.attributes = p; }
+    public void setParams(Map<String, String> p){ setAttributes(p); }
     public void setParam(String k, String v)    { putAttribute(k, v); }
     public String getParam(String k)            { return getAttribute(k); }
     public int getParamAsInt(String k, int d)   { return readIntAttribute(k, d); }
@@ -276,7 +338,7 @@ public class AutomationStep {
                         && getAttribute("brX") != null;
                 String suffix    = (gs ? " GS" : "")
                         + (bounded ? " [area]" : " [full]");
-                yield String.format("Find: %s @%s\\% %s",
+                yield String.format("Find: %s @%s%% %s",
                         tplPath, threshold, suffix);
             }
 
