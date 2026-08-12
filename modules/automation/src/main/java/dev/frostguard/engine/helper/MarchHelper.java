@@ -90,6 +90,19 @@ public class MarchHelper {
     }
 
     /**
+     * Reads the March Queue using the deliberate single-pass panel interaction. This is intended
+     * for flows that already normalize their world state and do not need legacy multi-tap recovery.
+     */
+    public List<MarchSlotState> readMarchQueueSinglePass() {
+        openLeftMenuCitySectionOnce(false);
+        try {
+            return readVisibleMarchQueue();
+        } finally {
+            dismissLeftPanel();
+        }
+    }
+
+    /**
      * Reads the already-open wilderness March Queue panel without changing its state. This is for
      * workflows such as Intel recall that must inspect rows and then interact with the same panel.
      */

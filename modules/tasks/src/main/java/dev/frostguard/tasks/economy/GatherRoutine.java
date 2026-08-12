@@ -448,7 +448,7 @@ public class GatherRoutine extends DelayedTask {
     // ================= SCAN & CHECKS =================
 
     private GatherMarchSnapshot readGatherMarchSnapshot() {
-        return toGatherMarchSnapshot(marchHelper.readMarchQueue());
+        return toGatherMarchSnapshot(marchHelper.readMarchQueueSinglePass());
     }
 
     private GatherMarchInspection inspectGatherMarchesAndCorrectOverflowFlow() {
@@ -628,7 +628,7 @@ public class GatherRoutine extends DelayedTask {
     // Changed by pernerch | Date: 2026-07-02 | Why: build a typed snapshot of active gather
     // marches (type, queue row, return time) to support deterministic overflow correction.
     private List<ActiveGatherMarchCandidate> collectActiveGatherMarchCandidatesFlow() {
-        return collectActiveGatherMarchCandidates(marchHelper.readMarchQueue());
+        return collectActiveGatherMarchCandidates(marchHelper.readMarchQueueSinglePass());
     }
 
     private List<ActiveGatherMarchCandidate> collectActiveGatherMarchCandidates(List<MarchSlotState> slots) {
@@ -995,7 +995,7 @@ public class GatherRoutine extends DelayedTask {
     private LocalDateTime resolveEarliestGatherRedeployTime() {
         try {
             LocalDateTime now = LocalDateTime.now();
-            return marchHelper.readMarchQueue().stream()
+            return marchHelper.readMarchQueueSinglePass().stream()
                     .map(slot -> estimateGatherRedeployTime(slot, now))
                     .filter(time -> time != null)
                     .min(Comparator.naturalOrder())
