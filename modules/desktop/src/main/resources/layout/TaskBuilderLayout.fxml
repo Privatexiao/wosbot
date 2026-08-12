@@ -145,6 +145,14 @@
                         <padding><Insets top="8" bottom="8"/></padding>
                     </Separator>
 
+                    <!-- Shared node metadata: applies to every node kind -->
+                    <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                        <padding><Insets bottom="10"/></padding>
+                        <Label text="Node name:" styleClass="tb-props-label"/>
+                        <TextField fx:id="nodeNameField" promptText="Optional display name"
+                                   prefWidth="240" styleClass="tb-text-field"/>
+                    </FlowPane>
+
                     <!-- TAP properties -->
                     <VBox fx:id="tapPropsBox" spacing="10" visible="false" managed="false">
                         <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">

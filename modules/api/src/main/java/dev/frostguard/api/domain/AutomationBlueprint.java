@@ -1,5 +1,9 @@
 package dev.frostguard.api.domain;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,14 +11,37 @@ import java.util.List;
  * Defines a complete user-created automation workflow. Contains an ordered
  * sequence of {@link AutomationStep} entries that execute in series when
  * the custom routine runs. Designed for JSON serialization for save/load/share.
+ *
+ * <p>Persistence binds to the private fields only, for the reasons documented
+ * on {@link AutomationStep}: the legacy accessor shims kept here would
+ * otherwise duplicate every value under a second name in the saved file.
+ * {@link JsonAlias} still accepts the historical key spellings on read.</p>
  */
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        setterVisibility = JsonAutoDetect.Visibility.NONE,
+        creatorVisibility = JsonAutoDetect.Visibility.NONE)
 public class AutomationBlueprint {
 
+    @JsonAlias("name")
     private String title;
+
+    @JsonAlias("description")
     private String notes;
+
+    @JsonAlias("startLocation")
     private String initialScreen; // HOME, WORLD, ANY
+
+    @JsonAlias("nodes")
+    @JsonSetter(nulls = Nulls.SKIP)
     private List<AutomationStep> steps;
+
+    @JsonAlias("createdAt")
     private long createdEpochMs;
+
+    @JsonAlias("updatedAt")
     private long modifiedEpochMs;
 
     public AutomationBlueprint() {
@@ -70,7 +97,11 @@ public class AutomationBlueprint {
     public void setInitialScreen(String screen) { this.initialScreen = screen; }
 
     public List<AutomationStep> getSteps() { return steps; }
-    public void setSteps(List<AutomationStep> steps) { this.steps = steps; }
+
+    /** Replaces the step list, treating a null list as an empty flow. */
+    public void setSteps(List<AutomationStep> steps) {
+        this.steps = steps != null ? steps : new ArrayList<>();
+    }
 
     public long getCreatedEpochMs() { return createdEpochMs; }
     public void setCreatedEpochMs(long ms) { this.createdEpochMs = ms; }

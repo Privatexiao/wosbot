@@ -33,5 +33,16 @@
 			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!--
+			Test-only: pins the persisted JSON shape of the task-builder domain
+			types here, where they are defined. Production code keeps depending
+			on the annotations alone.
+		-->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 </project>

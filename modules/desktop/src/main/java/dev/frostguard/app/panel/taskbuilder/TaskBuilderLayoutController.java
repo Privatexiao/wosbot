@@ -12,6 +12,7 @@ import dev.frostguard.engine.service.BranchEvaluator;
 import dev.frostguard.engine.service.ProfileService;
 import dev.frostguard.engine.service.TaskBuilderService;
 import dev.frostguard.engine.service.TaskCodeGenerator;
+import dev.frostguard.engine.service.TemplatePathResolver;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -105,7 +106,7 @@ public class TaskBuilderLayoutController {
     @FXML private TextField templateOffsetXField, templateOffsetYField;
 
     /** Sentinel prefix stored in templatePath param to distinguish custom file paths from TemplatesEnum names. */
-    private static final String CUSTOM_TEMPLATE_PREFIX = "file://";
+    private static final String CUSTOM_TEMPLATE_PREFIX = TemplatePathResolver.FILE_PREFIX;
     // ===== Preview Column (right) =====
     @FXML private VBox rightPanel;
 
@@ -1605,15 +1606,20 @@ public class TaskBuilderLayoutController {
                 if (templatePropsBox != null) {
                     templatePropsBox.setVisible(true); templatePropsBox.setManaged(true);
                     String curTpl = node.getParam("templatePath");
-                    if (curTpl != null && curTpl.startsWith(CUSTOM_TEMPLATE_PREFIX)) {
-                        // Custom file path — add to combo dynamically if not present
+                    if (TemplatePathResolver.isFileReference(curTpl)) {
+                        // File-backed template (operator-chosen or bundled with a
+                        // shared task) — add to the combo dynamically if absent.
                         if (!templateComboBox.getItems().contains(curTpl)) {
                             templateComboBox.getItems().add(curTpl);
                         }
                         templateComboBox.setValue(curTpl);
-                        String fname = Paths.get(curTpl.substring(CUSTOM_TEMPLATE_PREFIX.length())).getFileName().toString();
+                        boolean picked = curTpl.startsWith(CUSTOM_TEMPLATE_PREFIX);
+                        String shown = picked
+                                ? curTpl.substring(CUSTOM_TEMPLATE_PREFIX.length())
+                                : curTpl;
                         if (templateCustomPathLabel != null) {
-                            templateCustomPathLabel.setText("📁 Custom: " + fname);
+                            templateCustomPathLabel.setText("📁 " + (picked ? "Custom: " : "Package: ")
+                                    + Paths.get(shown).getFileName());
                             templateCustomPathLabel.setVisible(true);
                             templateCustomPathLabel.setManaged(true);
                         }
