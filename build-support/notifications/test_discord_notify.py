@@ -93,21 +93,34 @@ class PayloadTest(unittest.TestCase):
         )
         self.assertIn("#79", changes["value"])
 
-    def test_splits_many_changes_instead_of_truncating_at_five(self):
-        changes = "\n".join(f"• change {index} " + "x" * 180 for index in range(12))
+    def test_splits_many_changes_without_omitting_any(self):
+        changes = "\n".join(f"• change {index} " + "x" * 180 for index in range(20))
         fields = payload(["--changes", changes])["embeds"][0]["fields"]
         text = "\n".join(field["value"] for field in fields)
         self.assertGreater(len(fields), 1)
-        self.assertIn("change 0", text)
-        self.assertIn("change 11", text)
+        for index in range(20):
+            self.assertIn(f"change {index} ", text)
 
-    def test_overflow_links_the_complete_release_changelog(self):
+    def test_long_entries_are_shortened_but_every_change_remains(self):
         changes = "\n".join(f"• change {index} " + "x" * 900 for index in range(8))
         fields = payload(["--changes", changes])["embeds"][0]["fields"]
         text = "\n".join(field["value"] for field in fields)
-        self.assertEqual(len(fields), discord_notify.MAX_CHANGE_FIELDS)
-        self.assertIn("releases/tag/nightly", text)
-        self.assertIn("change 7", text)
+        for index in range(8):
+            self.assertIn(f"change {index} ", text)
+
+    def test_impossible_change_count_fails_instead_of_hiding_entries(self):
+        changes = "\n".join(f"• change {index}" for index in range(100))
+        with self.assertRaisesRegex(ValueError, "too many entries"):
+            payload(["--changes", changes])
+
+    def test_unchanged_build_retains_changes_and_dates_their_last_update(self):
+        embed = payload([
+            "--changes-unchanged",
+            "--changes-updated-at", "2026-08-13T04:00:00Z",
+        ])["embeds"][0]
+        self.assertIn("No code changes were added", embed["description"])
+        self.assertIn("<t:1786593600:f>", embed["description"])
+        self.assertIn("#79", embed["fields"][0]["value"])
 
     def test_omits_internal_ci_metrics(self):
         result = payload()
@@ -145,6 +158,13 @@ class PayloadTest(unittest.TestCase):
             self.assertLessEqual(
                 len(field["value"]), discord_notify.EMBED_FIELD_VALUE_LIMIT
             )
+        total = (
+            len(embed["title"]) + len(embed["description"])
+            + len(embed["footer"]["text"])
+            + sum(len(field["name"]) + len(field["value"])
+                  for field in embed["fields"])
+        )
+        self.assertLessEqual(total, discord_notify.EMBED_TOTAL_LIMIT)
 
     def test_embed_stays_within_the_ten_field_ceiling_of_a_readable_card(self):
         self.assertLessEqual(len(payload()["embeds"][0]["fields"]), 10)

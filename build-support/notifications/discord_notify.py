@@ -40,7 +40,11 @@ EMBED_FOOTER_LIMIT = 2048
 # and falls back to a link when the file is larger, because a failed upload
 # would otherwise swallow the notification entirely.
 ATTACHMENT_LIMIT_BYTES = 8 * 1024 * 1024
-MAX_CHANGE_FIELDS = 4
+EMBED_TOTAL_LIMIT = 6000
+MAX_EMBED_FIELDS = 10
+# Leaves room for the Nightly title, download guidance, field names and footer.
+CHANGE_VALUES_TOTAL_LIMIT = 4400
+MIN_CHANGE_LINE_LIMIT = 80
 
 STATUS_STYLE = {
     # Amber distinguishes an intentionally unstable Nightly from the green
@@ -89,8 +93,19 @@ def first_line(text: str) -> str:
 
 def change_fields(changes: str, repository: str) -> list[dict]:
     """Split Nightly changes across readable fields within Discord's limits."""
-    lines = [truncate(line, EMBED_FIELD_VALUE_LIMIT) for line in changes.splitlines()
-             if line.strip()]
+    lines = [line.strip() for line in changes.splitlines() if line.strip()]
+    if not lines:
+        return []
+    separators = max(0, len(lines) - 1)
+    per_line_limit = min(
+        EMBED_FIELD_VALUE_LIMIT,
+        (CHANGE_VALUES_TOTAL_LIMIT - separators) // len(lines),
+    )
+    if per_line_limit < MIN_CHANGE_LINE_LIMIT:
+        raise ValueError(
+            "Nightly changelog has too many entries for one Discord message"
+        )
+    lines = [truncate(line, per_line_limit) for line in lines]
     chunks: list[list[str]] = []
     for line in lines:
         if not chunks or len("\n".join([*chunks[-1], line])) > EMBED_FIELD_VALUE_LIMIT:
@@ -98,13 +113,10 @@ def change_fields(changes: str, repository: str) -> list[dict]:
         else:
             chunks[-1].append(line)
 
-    if len(chunks) > MAX_CHANGE_FIELDS:
-        chunks = chunks[-MAX_CHANGE_FIELDS:]
-        release_url = f"https://github.com/{repository}/releases/tag/nightly"
-        link = f"• Earlier changes: [view the complete Nightly changelog]({release_url})"
-        while chunks[0] and len("\n".join([link, *chunks[0]])) > EMBED_FIELD_VALUE_LIMIT:
-            chunks[0].pop(0)
-        chunks[0].insert(0, link)
+    if len(chunks) > MAX_EMBED_FIELDS:
+        raise ValueError(
+            "Nightly changelog needs more than Discord's ten embed fields"
+        )
 
     return [{
         "name": "Changes since the previous Nightly"
@@ -159,6 +171,12 @@ def build_payload(args: argparse.Namespace) -> dict:
                 links.append(f"[🌙 Latest Nightly]({args.channel_url})")
             if links:
                 description_parts.append(" • ".join(links))
+            if args.changes_unchanged:
+                updated = discord_timestamp(args.changes_updated_at)
+                description_parts.append(
+                    "No code changes were added in this build. The changelog "
+                    f"below was retained from its last update {updated}."
+                )
             if args.changes:
                 fields.extend(change_fields(args.changes, args.repository))
         elif args.run_url:
@@ -191,6 +209,18 @@ def build_payload(args: argparse.Namespace) -> dict:
     elif args.run_url:
         embed["url"] = args.run_url
 
+    embed_characters = (
+        len(embed["title"]) + len(embed["description"])
+        + len(embed.get("footer", {}).get("text", ""))
+        + sum(len(field["name"]) + len(field["value"])
+              for field in embed["fields"])
+    )
+    if embed_characters > EMBED_TOTAL_LIMIT:
+        raise ValueError(
+            f"Nightly Discord embed uses {embed_characters} characters; "
+            f"the limit is {EMBED_TOTAL_LIMIT}"
+        )
+
     payload = {
         # PATCH preserves omitted fields. Explicitly clear content so the raw
         # URL from the original version of the maintained message disappears.
@@ -201,6 +231,16 @@ def build_payload(args: argparse.Namespace) -> dict:
         "allowed_mentions": {"parse": []},
     }
     return payload
+
+
+def discord_timestamp(value: str) -> str:
+    """Render an ISO-8601 release time in Discord's absolute and relative forms."""
+    try:
+        parsed = datetime.fromisoformat((value or "").replace("Z", "+00:00"))
+        epoch = int(parsed.timestamp())
+    except (TypeError, ValueError):
+        return "at an unknown time"
+    return f"on <t:{epoch}:f> (<t:{epoch}:R>)"
 
 
 def encode_multipart(payload: dict, file_path: str) -> tuple[bytes, str]:
@@ -324,6 +364,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--commit-message", default="")
     parser.add_argument("--actor", default="")
     parser.add_argument("--changes", default="")
+    parser.add_argument("--changes-unchanged", action="store_true")
+    parser.add_argument("--changes-updated-at", default="")
     parser.add_argument("--username", default="Frostguard Builds")
     parser.add_argument(
         "--attach",
