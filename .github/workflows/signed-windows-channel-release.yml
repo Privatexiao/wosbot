@@ -47,6 +47,7 @@ jobs:
       - name: Check out main with release assets
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           lfs: true
 
       - name: Verify Git LFS assets are real binaries
@@ -523,6 +524,29 @@ jobs:
                   -Encoding utf8 -Append
           }
 
+      - name: Collect changes between Nightly builds
+        id: nightly-changes
+        if: success() && env.CHANNEL == 'nightly'
+        shell: pwsh
+        env:
+          TAG: ${{ steps.identity.outputs.tag }}
+        run: |
+          $history = Join-Path $env:RUNNER_TEMP "nightly-release-history.json"
+          gh api --paginate --slurp `
+              "repos/$($env:GITHUB_REPOSITORY)/releases?per_page=100" |
+              Out-File -LiteralPath $history -Encoding utf8
+          if ($LASTEXITCODE -ne 0) {
+              throw "Could not list immutable Nightly releases"
+          }
+          python build-support/release/nightly_changes.py `
+              --repository $env:GITHUB_REPOSITORY `
+              --release-history $history `
+              --current-tag $env:TAG `
+              --github-output $env:GITHUB_OUTPUT
+          if ($LASTEXITCODE -ne 0) {
+              throw "Could not collect changes between Nightly builds"
+          }
+
       - name: Update the maintained Nightly Discord message
         if: always() && env.CHANNEL == 'nightly'
         continue-on-error: true
@@ -534,6 +558,9 @@ jobs:
           RELEASE_URL: ${{ steps.publish.outputs.release_url }}
           CHANNEL_URL: ${{ steps.publish.outputs.channel_url }}
           TAG: ${{ steps.identity.outputs.tag }}
+          NIGHTLY_CHANGES: ${{ steps.nightly-changes.outputs.changes }}
+          CHANGES_UNCHANGED: ${{ steps.nightly-changes.outputs.unchanged }}
+          CHANGES_UPDATED_AT: ${{ steps.nightly-changes.outputs.updated_at }}
         shell: pwsh
         run: |
           $notificationArgs = @(
@@ -544,8 +571,13 @@ jobs:
               '--channel-url', $env:CHANNEL_URL,
               '--run-url', "$($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)",
               '--repository', $env:GITHUB_REPOSITORY,
+              '--changes', $env:NIGHTLY_CHANGES,
+              '--changes-updated-at', $env:CHANGES_UPDATED_AT,
               '--message-id', $env:DISCORD_DAILY_MESSAGE_ID
           )
+          if ($env:CHANGES_UNCHANGED -eq 'true') {
+              $notificationArgs += '--changes-unchanged'
+          }
           python build-support/notifications/discord_notify.py @notificationArgs
 
       - name: Remove an abandoned draft release

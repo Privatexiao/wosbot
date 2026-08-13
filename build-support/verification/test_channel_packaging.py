@@ -180,6 +180,10 @@ class ChannelPackagingTest(unittest.TestCase):
         self.assertIn('          $tag = "v$($env:VERSION)"', workflow)
         self.assertIn("next_nightly_version.py", workflow)
         self.assertIn("Update the maintained Nightly Discord message", workflow)
+        self.assertIn("Collect changes between Nightly builds", workflow)
+        self.assertIn("build-support/release/nightly_changes.py", workflow)
+        self.assertIn("--changes-unchanged", workflow)
+        self.assertIn("fetch-depth: 0", workflow)
         self.assertIn("Remove an abandoned draft release", workflow)
         self.assertIn('java-version: "21.0.12+8.0"', workflow)
         for launcher_hash in (
@@ -234,6 +238,9 @@ class ChannelPackagingTest(unittest.TestCase):
         self.assertIn("does not match exactly one public installer asset", workflow)
         self.assertIn("Nightly installer URL returned HTTP", workflow)
         self.assertIn("build-support/notifications/discord_notify.py", workflow)
+        self.assertIn("build-support/release/nightly_changes.py", workflow)
+        self.assertIn("--changes-unchanged", workflow)
+        self.assertIn("fetch-depth: 0", workflow)
         self.assertNotIn("gh release create", workflow)
 
 
