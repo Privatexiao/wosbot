@@ -1,16 +1,17 @@
 package dev.frostguard.app.panel.profile;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.prefs.Preferences;
-import java.io.File;
 
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -22,7 +23,6 @@ import dev.frostguard.api.domain.ProfileTagData;
 import dev.frostguard.app.bootstrap.WorkspacePreferences;
 import dev.frostguard.engine.service.LoggingService;
 import dev.frostguard.engine.service.ProfileService;
-import dev.frostguard.engine.service.ScheduleService;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -68,13 +68,6 @@ import javafx.util.Duration;
 
 public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
-	private static final java.util.Set<ConfigurationKeyEnum> BEAR_PARTICIPATION_SCHEDULE_KEYS = java.util.Set.of(
-			ConfigurationKeyEnum.BEAR_TRAP_EVENT_BOOL,
-			ConfigurationKeyEnum.BEAR_TRAP_NUMBER_INT,
-			ConfigurationKeyEnum.BEAR_TRAP_PREPARATION_TIME_INT,
-			ConfigurationKeyEnum.BEAR_TRAP_SCHEDULE_DATETIME_STRING,
-			ConfigurationKeyEnum.BEAR_TRAP_TIMER_2_SCHEDULE_DATETIME_STRING);
-
 	private static final String SORT_NAME = "Name";
 	private static final String SORT_PRIORITY = "Priority";
 	private static final String SORT_STATUS = "Status";
@@ -82,6 +75,7 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	private static final String ALL_PROFILES_VIEW = "All profiles";
 
 	private final ExecutorService profileQueueExecutor = Executors.newSingleThreadExecutor();
+	private final Map<ProfileSettingKey, String> pendingProfileSettings = new ConcurrentHashMap<>();
 	private final List<IProfileLoadListener> profileLoadListeners = new ArrayList<>();
 	private ProfileManagerActionController profileManagerActionController;
 	private ObservableList<ProfileAux> profiles;
@@ -1041,6 +1035,10 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
 	private void mergeProfileConfigs(ProfileAux target, AccountDescriptor dto) {
 		dto.getConfigs().forEach(cfgDto -> {
+			ProfileSettingKey settingKey = new ProfileSettingKey(dto.getId(), cfgDto.getConfigurationName());
+			if (pendingProfileSettings.containsKey(settingKey)) {
+				return;
+			}
 			ConfigAux existing = target.getConfigs().stream()
 					.filter(config -> config.getName().equals(cfgDto.getConfigurationName()))
 					.findFirst()
@@ -1098,10 +1096,27 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 			}
 
 			loadedProfile.setConfig(key, value);
+			Long profileId = loadedProfile.getId();
+			String serializedValue = value == null ? "" : value.toString();
+			ProfileSettingKey settingKey = new ProfileSettingKey(profileId, key.name());
+			pendingProfileSettings.put(settingKey, serializedValue);
 			profileQueueExecutor.submit(() -> {
-				boolean saved = profileManagerActionController.saveProfile(loadedProfile);
-				if (saved && BEAR_PARTICIPATION_SCHEDULE_KEYS.contains(key)) {
-					ScheduleService.obtain().realignBearTrapParticipationSchedule(loadedProfile.getId());
+				boolean saved;
+				try {
+					saved = profileManagerActionController.saveProfileSetting(profileId, key, serializedValue);
+				} catch (Exception exception) {
+					saved = false;
+				}
+				boolean wasLatestWrite = pendingProfileSettings.remove(settingKey, serializedValue);
+				if (!saved) {
+					LoggingService.obtain().emit(TpMessageSeverityEnum.ERROR, "Profile Manager",
+							String.valueOf(profileId), "Failed to persist configuration " + key.name());
+					if (wasLatestWrite) {
+						Platform.runLater(this::loadProfiles);
+					}
+				} else if (key == ConfigurationKeyEnum.SKIP_TUTORIAL_ENABLED_BOOL) {
+					LoggingService.obtain().emit(TpMessageSeverityEnum.INFO, "Profile Manager",
+							String.valueOf(profileId), key.name() + " was saved and applies after the next bot restart");
 				}
 			});
 		} catch (Exception e) {
@@ -1112,6 +1127,9 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 					"-",
 					"Error while saving profile: " + e.getMessage());
 		}
+	}
+
+	private record ProfileSettingKey(Long profileId, String configurationName) {
 	}
 
 	private void showAlert(Alert.AlertType type, String title, String content) {

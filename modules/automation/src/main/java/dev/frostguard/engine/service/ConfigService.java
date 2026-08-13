@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -14,7 +15,6 @@ import dev.frostguard.api.configs.TpConfigEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.data.entity.Config;
 import dev.frostguard.data.entity.ConfigTemplate;
-import dev.frostguard.data.entity.Profile;
 import dev.frostguard.data.repository.ConfigRepository;
 import dev.frostguard.data.repository.ProfileRepository;
 
@@ -28,6 +28,7 @@ public class ConfigService {
 
 	private final ConfigRepository configStore;
 	private final ProfileRepository profileStore;
+	private final ConcurrentHashMap<Long, Object> profileWriteLocks = new ConcurrentHashMap<>();
 
 	private ConfigService() {
 		configStore = ConfigRepository.getRepository();
@@ -63,24 +64,36 @@ public class ConfigService {
 	}
 
 	public boolean writeAccountSetting(AccountDescriptor profile, ConfigurationKeyEnum key, String value) {
-		if (profile == null || key == null) {
+		if (profile == null) {
 			return false;
 		}
-		try {
-			profile.setConfig(key, value);
-			Optional<Config> existing = findProfileConfig(profile.getId(), key);
-			boolean saved = existing
-					.map(row -> updateConfigRow(row, value, () -> configStore.saveSetting(row)))
-					.orElseGet(() -> createProfileConfig(profile, key, value));
+		boolean saved = writeAccountSetting(profile.getId(), key, value);
+		if (saved) profile.setConfig(key, value == null ? "" : value);
+		return saved;
+	}
 
-			if (saved) {
-				logProfileWrite(key, value, existing.isPresent());
-				ProfileService.obtain().broadcastAccountDataChange(profile);
+	public boolean writeAccountSetting(Long profileId, ConfigurationKeyEnum key, String value) {
+		if (profileId == null || key == null) return false;
+		Object writeLock = profileWriteLocks.computeIfAbsent(profileId, ignored -> new Object());
+		synchronized (writeLock) {
+			try {
+				boolean saved = configStore.writeProfileSetting(profileId, key.name(), value);
+				if (saved) {
+					AccountDescriptor committed = profileStore.getAccountWithSettingsById(profileId);
+					if (committed == null) return false;
+					ProfileService.obtain().broadcastAccountDataChange(committed);
+					String runtimeResult = ScheduleService.obtain().applyCommittedProfileSetting(committed, key);
+					logProfileWrite(committed, key, runtimeResult);
+				} else {
+					LOG.warn("Profile config write failed profile={} key={} persistence=failure runtime=not-applied",
+							profileId, key.name());
+				}
+				return saved;
+			} catch (Exception ex) {
+				LOG.error("Could not write profile config profile={} key={}: {}",
+						profileId, key.name(), ex.getMessage(), ex);
+				return false;
 			}
-			return saved;
-		} catch (Exception ex) {
-			LOG.error("Could not write profile config {}: {}", key.name(), ex.getMessage(), ex);
-			return false;
 		}
 	}
 
@@ -120,30 +133,12 @@ public class ConfigService {
 		}
 	}
 
-	private Optional<Config> findProfileConfig(Long profileId, ConfigurationKeyEnum key) {
-		return Optional.ofNullable(configStore.getAccountSettings(profileId)).stream()
-				.flatMap(List::stream)
-				.filter(Objects::nonNull)
-				.filter(row -> key.name().equalsIgnoreCase(row.getIdentifier()))
-				.findFirst();
-	}
-
 	private Optional<Config> findGlobalConfig(ConfigurationKeyEnum key) {
 		return Optional.ofNullable(configStore.getGlobalSettings()).stream()
 				.flatMap(List::stream)
 				.filter(Objects::nonNull)
 				.filter(row -> key.name().equals(row.getIdentifier()))
 				.findFirst();
-	}
-
-	private boolean createProfileConfig(AccountDescriptor descriptor, ConfigurationKeyEnum key, String value) {
-		ConfigTemplate template = configStore.getWatcherSetting(TpConfigEnum.PROFILE_CONFIG);
-		Profile entity = profileStore.getAccountById(descriptor.getId());
-		if (template == null || entity == null) {
-			LOG.error("Cannot create profile config {}; profile or template was not found", key.name());
-			return false;
-		}
-		return configStore.addSetting(new Config(entity, template, key.name(), value));
 	}
 
 	private boolean createGlobalConfig(ConfigurationKeyEnum key, String value) {
@@ -172,15 +167,17 @@ public class ConfigService {
 		return Boolean.TRUE.equals(persistence.get());
 	}
 
-	private void logProfileWrite(ConfigurationKeyEnum key, String value, boolean updatedExisting) {
+	private void logProfileWrite(AccountDescriptor profile, ConfigurationKeyEnum key, String runtimeResult) {
 		if (isHiddenStatisticsUpdate(key)) {
 			return;
 		}
 		if (key == ConfigurationKeyEnum.GIFT_CODE_STATE_JSON) {
-			LOG.debug("Profile gift code state {}", updatedExisting ? "updated" : "created");
+			LOG.debug("Profile config committed profile={} key={} runtime={}",
+					profile.getName(), key.name(), runtimeResult);
 			return;
 		}
-		LOG.info("Profile config {} {}: {}", key.name(), updatedExisting ? "updated" : "created", value);
+		LOG.info("Profile config committed profile={} key={} persistence=success runtime={}",
+				profile.getName(), key.name(), runtimeResult);
 	}
 
 	private boolean isHiddenStatisticsUpdate(ConfigurationKeyEnum key) {

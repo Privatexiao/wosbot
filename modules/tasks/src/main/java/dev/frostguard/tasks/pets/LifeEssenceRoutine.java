@@ -324,9 +324,8 @@ public class LifeEssenceRoutine extends DelayedTask {
 			// Set next available time even though we didn't buy
 			// This prevents repeatedly checking for an already-purchased scroll
 			LocalDateTime nextScrollTime = calculateNextMondayReset();
-			profile.setConfig(ConfigurationKeyEnum.LIFE_ESSENCE_NEXT_SCROLL_TIME_STRING,
+			writeProfileSetting(ConfigurationKeyEnum.LIFE_ESSENCE_NEXT_SCROLL_TIME_STRING,
 					nextScrollTime.toString());
-			setShouldUpdateConfig(true);
 			logInfo("Next scroll purchase check scheduled for: " + nextScrollTime);
 
 			tapNear(EXIT_BUTTON);
@@ -359,7 +358,7 @@ public class LifeEssenceRoutine extends DelayedTask {
 		logInfo("Weekly free scroll purchased successfully");
 
 		LocalDateTime nextScrollTime = calculateNextMondayReset();
-		profile.setConfig(ConfigurationKeyEnum.LIFE_ESSENCE_NEXT_SCROLL_TIME_STRING,
+		writeProfileSetting(ConfigurationKeyEnum.LIFE_ESSENCE_NEXT_SCROLL_TIME_STRING,
 				nextScrollTime.toString());
 		logInfo("Next scroll purchase available at: " + nextScrollTime);
 
@@ -374,7 +373,7 @@ public class LifeEssenceRoutine extends DelayedTask {
 	private void handleNavigationFailure() {
 		consecutiveFailures++;
 
-		profile.setConfig(ConfigurationKeyEnum.LIFE_ESSENCE_CONSECUTIVE_FAILURES_INT, consecutiveFailures);
+		writeProfileSetting(ConfigurationKeyEnum.LIFE_ESSENCE_CONSECUTIVE_FAILURES_INT, consecutiveFailures);
 
 		logWarning("Navigation failed. Consecutive failures: " + consecutiveFailures +
 				"/" + MAX_NAVIGATION_FAILURES);
@@ -422,7 +421,7 @@ public class LifeEssenceRoutine extends DelayedTask {
 		// Reset failure count on successful execution
 		if (consecutiveFailures > 0) {
 			consecutiveFailures = 0;
-			profile.setConfig(ConfigurationKeyEnum.LIFE_ESSENCE_CONSECUTIVE_FAILURES_INT, 0);
+			writeProfileSetting(ConfigurationKeyEnum.LIFE_ESSENCE_CONSECUTIVE_FAILURES_INT, 0);
 			logInfo("Consecutive failure count reset after successful execution");
 		}
 

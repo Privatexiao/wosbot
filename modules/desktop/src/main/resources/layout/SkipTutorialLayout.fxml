@@ -38,6 +38,9 @@
                                                 <CheckBox fx:id="checkBoxEnableSkipTutorial" mnemonicParsing="false" />
                                             </children>
                                         </HBox>
+                                        <Label styleClass="label-muted"
+                                               text="Saved immediately. Takes effect the next time the bot starts."
+                                               wrapText="true" />
                                     </children>
                                 </VBox>
                             </children>

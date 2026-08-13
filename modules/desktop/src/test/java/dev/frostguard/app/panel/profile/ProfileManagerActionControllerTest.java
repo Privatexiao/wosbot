@@ -128,6 +128,12 @@ class ProfileManagerActionControllerTest {
 		}
 
 		@Override
+		public boolean saveProfileSetting(Long profileId,
+				dev.frostguard.api.configs.ConfigurationKeyEnum key, String value) {
+			return !failingProfileIds.contains(profileId);
+		}
+
+		@Override
 		public boolean deleteProfile(AccountDescriptor profile) {
 			return true;
 		}

@@ -17,7 +17,7 @@ import dev.frostguard.api.domain.TesseractSettingsData;
 import dev.frostguard.engine.input.TapInteractionService;
 import dev.frostguard.engine.input.TapJitterPolicy;
 import dev.frostguard.engine.service.LoggingService;
-import dev.frostguard.engine.service.ProfileService;
+import dev.frostguard.engine.service.ConfigService;
 import dev.frostguard.engine.service.ScheduleService;
 import dev.frostguard.engine.service.StaminaService;
 import dev.frostguard.engine.service.BotOcrEngine;
@@ -32,6 +32,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -151,6 +153,7 @@ public abstract class DelayedTask implements Runnable, Delayed, StaminaWaitSched
         staminaDeferral = null;
         refreshProfileFromDb();
         checkPreemption();
+        Map<String, String> configBeforeExecution = snapshotProfileConfig();
         boolean switchedProfileOnEmulator = markAndDetectProfileSwitchFlow();
         if (switchedProfileOnEmulator) {
             // Changed by pernerch | Date: 2026-07-02 | Why: publish active-profile changes
@@ -187,8 +190,7 @@ public abstract class DelayedTask implements Runnable, Delayed, StaminaWaitSched
             execute();
 
             if (shouldUpdateConfig) {
-                ProfileService.obtain().persistAccount(profile);
-                shouldUpdateConfig = false;
+                persistChangedProfileSettings(configBeforeExecution);
             }
 
             sleepTask(2000);
@@ -211,6 +213,38 @@ public abstract class DelayedTask implements Runnable, Delayed, StaminaWaitSched
         } catch (Exception ex) {
             logWarning("Profile refresh failed before execution: " + ex.getMessage());
         }
+    }
+
+    private Map<String, String> snapshotProfileConfig() {
+        Map<String, String> snapshot = new LinkedHashMap<>();
+        if (profile == null || profile.getConfigs() == null) return snapshot;
+        profile.getConfigs().forEach(setting ->
+                snapshot.put(setting.getConfigurationName(), setting.getValue()));
+        return snapshot;
+    }
+
+    private void persistChangedProfileSettings(Map<String, String> before) {
+        shouldUpdateConfig = false;
+        for (var change : changedProfileSettings(before, profile).entrySet()) {
+            if (!ConfigService.obtain().writeAccountSetting(profile, change.getKey(), change.getValue())) {
+                logWarning("Profile config write failed for " + change.getKey().name());
+            }
+        }
+    }
+
+    static Map<ConfigurationKeyEnum, String> changedProfileSettings(
+            Map<String, String> before, AccountDescriptor after) {
+        Map<ConfigurationKeyEnum, String> changed = new EnumMap<>(ConfigurationKeyEnum.class);
+        if (after == null || after.getConfigs() == null) return changed;
+        for (var setting : after.getConfigs()) {
+            if (Objects.equals(before.get(setting.getConfigurationName()), setting.getValue())) continue;
+            try {
+                changed.put(ConfigurationKeyEnum.valueOf(setting.getConfigurationName()), setting.getValue());
+            } catch (IllegalArgumentException ignored) {
+                // Unknown persisted keys cannot be routed through the typed configuration writer.
+            }
+        }
+        return changed;
     }
 
     // Changed by pernerch | Date: 2026-07-02 | Why: detect emulator-local profile handover
@@ -515,6 +549,9 @@ public abstract class DelayedTask implements Runnable, Delayed, StaminaWaitSched
     public LocalDateTime getScheduled() { return scheduledTime; }
     public AccountDescriptor getProfile() { return profile; }
     public void setShouldUpdateConfig(boolean v) { this.shouldUpdateConfig = v; }
+    protected boolean writeProfileSetting(ConfigurationKeyEnum key, Object value) {
+        return ConfigService.obtain().writeAccountSetting(profile, key, value == null ? "" : value.toString());
+    }
     public void setCustomTaskIdentifier(String id) { this.customTaskIdentifier = id; }
 
     // ── equality & hashing ──────────────────────────────────────────

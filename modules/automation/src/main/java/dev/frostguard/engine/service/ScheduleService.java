@@ -52,6 +52,12 @@ import dev.frostguard.engine.schedule.TaskQueue;
 public class ScheduleService {
 
 	private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+	private static final Set<ConfigurationKeyEnum> BEAR_SCHEDULE_KEYS = Set.of(
+			ConfigurationKeyEnum.BEAR_TRAP_EVENT_BOOL,
+			ConfigurationKeyEnum.BEAR_TRAP_NUMBER_INT,
+			ConfigurationKeyEnum.BEAR_TRAP_PREPARATION_TIME_INT,
+			ConfigurationKeyEnum.BEAR_TRAP_SCHEDULE_DATETIME_STRING,
+			ConfigurationKeyEnum.BEAR_TRAP_TIMER_2_SCHEDULE_DATETIME_STRING);
 	private static volatile ScheduleService singleton;
 
 	private final TaskDispatcher dispatcher = new TaskDispatcher();
@@ -394,6 +400,44 @@ public class ScheduleService {
 
 	public TaskDispatcher getCoordinator() {
 		return dispatcher;
+	}
+
+	public String applyCommittedProfileSetting(AccountDescriptor account, ConfigurationKeyEnum key) {
+		if (account == null || account.getId() == null || key == null) return "not-applicable";
+		if (!dispatcher.applyProfileUpdate(account)) return "next-start";
+		if (key == ConfigurationKeyEnum.SKIP_TUTORIAL_ENABLED_BOOL) return "restart-required";
+
+		List<TpDailyTaskEnum> affectedTasks = Stream.of(TpDailyTaskEnum.values())
+				.filter(type -> key == type.getConfigKey())
+				.toList();
+		if (!affectedTasks.isEmpty()) {
+			reconcileConfigDrivenTasks(account, key, affectedTasks);
+		}
+		if (BEAR_SCHEDULE_KEYS.contains(key)) {
+			realignBearTrapParticipationSchedule(account.getId());
+		}
+		return affectedTasks.isEmpty() ? "next-task" : "queue-reconciled";
+	}
+
+	private void reconcileConfigDrivenTasks(AccountDescriptor account, ConfigurationKeyEnum key,
+			List<TpDailyTaskEnum> affectedTasks) {
+		TaskQueue queue = dispatcher.getQueue(account.getId());
+		if (queue == null) return;
+		boolean enabled = Boolean.TRUE.equals(account.getConfig(key, Boolean.class));
+		if (!enabled) {
+			affectedTasks.forEach(type -> evictTask(account.getId(), type));
+			return;
+		}
+
+		Map<Integer, DailyTaskStatusData> progressByType = safeProgress(account.getId()).stream()
+				.filter(row -> row != null)
+				.collect(Collectors.toMap(DailyTaskStatusData::getIdTpDailyTask, row -> row,
+						(first, ignored) -> first));
+		for (TpDailyTaskEnum type : affectedTasks) {
+			if (queue.isTaskQueued(type) || queue.isExecutingTask(type)) continue;
+			DelayedTask task = DelayedTaskRegistry.create(type, account);
+			if (task != null) enqueuePlannedTask(account, queue, task, progressByType);
+		}
 	}
 
 	private boolean initializeBridge() {

@@ -3,6 +3,7 @@ package dev.frostguard.app.panel.profile;
 import java.util.List;
 import java.util.function.Function;
 
+import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ProfileTagData;
 import dev.frostguard.engine.listener.ProfileServiceInterface;
@@ -34,6 +35,11 @@ public class ProfileModel implements IProfileModel {
 	@Override
 	public boolean saveProfile(AccountDescriptor profile) {
 		return withProfileService(service -> service.persistAccount(profile));
+	}
+
+	@Override
+	public boolean saveProfileSetting(Long profileId, ConfigurationKeyEnum key, String value) {
+		return withProfileService(service -> service.persistAccountSetting(profileId, key, value));
 	}
 
 	@Override

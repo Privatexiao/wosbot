@@ -37,6 +37,16 @@ public class TaskDispatcher implements PreemptionListener, StaminaChangeListener
         return managedQueues.get(accountId);
     }
 
+    public boolean applyProfileUpdate(AccountDescriptor profile) {
+        if (profile == null || profile.getId() == null) return false;
+        TaskQueue queue = managedQueues.get(profile.getId());
+        if (queue == null) return false;
+        queue.applyProfileUpdate(profile);
+        GlobalMonitorService.getInstance().updateProfile(profile);
+        log.info("Committed profile state applied to queue profile={}", profile.getName());
+        return true;
+    }
+
     // ── preemption handling ─────────────────────────────────────────
 
     @Override

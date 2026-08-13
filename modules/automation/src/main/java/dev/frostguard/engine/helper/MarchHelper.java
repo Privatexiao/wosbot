@@ -90,6 +90,19 @@ public class MarchHelper {
     }
 
     /**
+     * Reads the March Queue using the deliberate single-pass panel interaction. This is intended
+     * for flows that already normalize their world state and do not need legacy multi-tap recovery.
+     */
+    public List<MarchSlotState> readMarchQueueSinglePass() {
+        openLeftMenuCitySectionOnce(false);
+        try {
+            return readVisibleMarchQueue();
+        } finally {
+            dismissLeftPanel();
+        }
+    }
+
+    /**
      * Reads the already-open wilderness March Queue panel without changing its state. This is for
      * workflows such as Intel recall that must inspect rows and then interact with the same panel.
      */
@@ -307,6 +320,23 @@ public class MarchHelper {
     // Closes the left panel via two sequential touch points.
     public void closeLeftMenu() {
         dismissLeftPanel();
+    }
+
+    /**
+     * Opens the left panel with one deliberate tap per control. Callers should use this only when
+     * they own the panel lifecycle and guarantee a matching {@link #closeLeftMenu()} in a finally
+     * block; it avoids the legacy blind multi-tap sequence toggling a responsive panel repeatedly.
+     */
+    public void openLeftMenuCitySectionOnce(boolean cityTab) {
+        log.debug("Left menu single-pass - " + (cityTab ? "city" : "wilderness"));
+        openLeftMenuCitySectionOnce(taps, cityTab);
+    }
+
+    static void openLeftMenuCitySectionOnce(TapInteractionService taps, boolean cityTab) {
+        taps.tapInside(CommonGameAreas.LEFT_MENU_TRIGGER, 1, 400);
+        taps.tapInside(cityTab
+                ? CommonGameAreas.LEFT_MENU_CITY_TAB
+                : CommonGameAreas.LEFT_MENU_WILDERNESS_TAB, 1, 300);
     }
 
     private void dismissLeftPanel() {
