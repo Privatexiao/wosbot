@@ -79,7 +79,7 @@ private static final ZoneId UTC = ZoneId.of("UTC");
 
         StringBuilder sb = new StringBuilder();
         if (d > 0) {
-            sb.append(d).append(" days ");
+            sb.append(d).append(d == 1 ? " day " : " days ");
         }
         sb.append(String.format("%02d:%02d:%02d", h, m, s));
         return sb.toString();
@@ -190,7 +190,7 @@ private static final DateTimeFormatter FULL_TIME =
             throw new IllegalArgumentException("Input span is null or blank");
         }
 
-        String normalised = input.trim().toLowerCase().replaceAll("\\s+", "");
+        String normalised = normalizeDurationText(input);
 
         try {
             DayTimeSplit split = splitDayQualifier(normalised);
@@ -382,7 +382,7 @@ private static final DateTimeFormatter STRICT_HMS =
             return false;
         }
         try {
-            String core = stripDayQualifier(input.trim());
+            String core = stripDayQualifier(normalizeDurationText(input));
             return checkFullColon(core)
                     || checkHoursMinutesColon(core)
                     || checkMinutesSecondsColon(core)
@@ -392,6 +392,10 @@ private static final DateTimeFormatter STRICT_HMS =
         } catch (Exception suppressed) {
             return false;
         }
+    }
+
+    private static String normalizeDurationText(String input) {
+        return input.trim().toLowerCase().replaceAll("\\s+", "");
     }
 
     // ------------------------------------------------------------------

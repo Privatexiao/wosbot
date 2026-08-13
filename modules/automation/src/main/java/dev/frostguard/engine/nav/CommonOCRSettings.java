@@ -31,6 +31,14 @@ public final class CommonOCRSettings {
     public static final TesseractSettingsData INTEL_COOLDOWN_SETTINGS =
             buildLstmConfig("0123456789:", true, 255, 255, 255, PageAnalysis.SINGLE_LINE);
 
+    // red cooldown clock, isolated from illustrated skill backgrounds
+    public static final TesseractSettingsData RED_DURATION_SETTINGS =
+            buildLstmConfig("0123456789:", true, 243, 59, 59, PageAnalysis.SINGLE_LINE);
+
+    // Keep raw anti-aliased glyphs: colour isolation drops the slender "1" in wrapped "1d" timers.
+    public static final TesseractSettingsData RED_MULTILINE_DURATION_SETTINGS =
+            buildLstmConfig("0123456789d:", false, 0, 0, 0, PageAnalysis.SPARSE);
+
     // polar terror level: dark slate digits inside a pale pill
     public static final TesseractSettingsData POLAR_LEVEL_SETTINGS =
             TesseractSettingsData.assembler()

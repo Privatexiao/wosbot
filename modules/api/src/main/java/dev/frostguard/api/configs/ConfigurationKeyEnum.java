@@ -239,6 +239,7 @@ public enum ConfigurationKeyEnum {
     PET_PERSONAL_TREASURE_BOOL              ("false",   Boolean.class,  ConfigCategory.PETS),
     PET_SKILL_FOOD_BOOL                     ("false",   Boolean.class,  ConfigCategory.PETS),
     PET_SKILL_GATHERING_BOOL                ("false",   Boolean.class,  ConfigCategory.PETS),
+    PET_SKILL_GATHERING_LAST_DEPLOYED_AT_STRING ("",    String.class,   ConfigCategory.PETS),
     PET_SKILL_GATHERING_RESOURCE_STRING     ("MEAT",    String.class,   ConfigCategory.PETS),
     PET_SKILL_STAMINA_BOOL                  ("false",   Boolean.class,  ConfigCategory.PETS),
     PET_SKILL_TREASURE_BOOL                 ("false",   Boolean.class,  ConfigCategory.PETS),

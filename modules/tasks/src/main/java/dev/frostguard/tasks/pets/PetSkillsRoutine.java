@@ -1,29 +1,30 @@
 package dev.frostguard.tasks.pets;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import dev.frostguard.vision.convert.GameTimeUtils;
-import dev.frostguard.vision.convert.RegexNumberParser;
-import dev.frostguard.vision.convert.RegexNumberParser;
-import dev.frostguard.vision.convert.GameTimeUtils;
-import dev.frostguard.vision.convert.GameTimeUtils;
 import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.configs.TemplatesEnum;
 import dev.frostguard.api.configs.TpDailyTaskEnum;
+import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.AreaData;
 import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.PointData;
-import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.TesseractSettingsData;
-import dev.frostguard.engine.service.StaminaService;
+import dev.frostguard.engine.nav.CommonOCRSettings;
+import dev.frostguard.engine.nav.SearchConfigConstants;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
-import dev.frostguard.engine.nav.SearchConfigConstants;
+import dev.frostguard.engine.service.StaminaService;
+import dev.frostguard.vision.color.PixelStats;
+import dev.frostguard.vision.convert.GameTimeUtils;
+import dev.frostguard.vision.convert.RegexNumberParser;
+import dev.frostguard.vision.ocr.TesseractOcrProvider;
 
 /**
  * Unified Pet Skills task that processes all enabled pet skills in a single
@@ -86,13 +87,13 @@ public class PetSkillsRoutine extends DelayedTask {
     private static final AreaData TREASURE_COOLDOWN_OCR_AREA = new AreaData(
             new PointData(231, 428),
             new PointData(330, 470));
-    private static final AreaData GATHERING_COOLDOWN_OCR_AREA = new AreaData(
-            new PointData(379, 292),
-            new PointData(474, 314));
+    static final AreaData GATHERING_COOLDOWN_OCR_AREA = new AreaData(
+            new PointData(379, 282),
+            new PointData(477, 338));
     private static final AreaData FOOD_COOLDOWN_OCR_AREA = new AreaData(
             new PointData(522, 288),
             new PointData(626, 318));
-    private static final AreaData STAMINA_COOLDOWN_OCR_AREA = new AreaData(
+    static final AreaData STAMINA_COOLDOWN_OCR_AREA = new AreaData(
             new PointData(229, 285),
             new PointData(334, 320));
     private static final PointData SKILL_LEVEL_OCR_TOP_LEFT = new PointData(276, 779);
@@ -102,6 +103,12 @@ public class PetSkillsRoutine extends DelayedTask {
     private static final int FALLBACK_RESCHEDULE_MINUTES = 5;
     private static final int SKILL_LEVEL_OCR_MAX_RETRIES = 3;
     private static final int OCR_RETRY_DELAY_MS = 200;
+    private static final int GATHERING_ACTIVE_RECHECK_MINUTES = 1;
+    private static final int GATHERING_MAX_LEVEL_ADJUSTMENTS = 20;
+    private static final int GATHERING_SAME_TARGET_ATTEMPTS = 2;
+    private static final Duration GATHERING_DEPLOYMENT_GUARD = Duration.ofMinutes(15);
+    // Saved frame: learned tiles have more than 6,000 distinctive pixels; empty slots have none.
+    private static final int MIN_SKILL_TILE_DISTINCTIVE_PIXELS = 400;
 
     // ========== Stamina Calculation Constants ==========
     private static final int STAMINA_BASE_VALUE = 35;
@@ -109,11 +116,8 @@ public class PetSkillsRoutine extends DelayedTask {
     private static final int STAMINA_FALLBACK_VALUE = 35; // Level 1 equivalent
 
     // ========== OCR Settings ==========
-    private static final TesseractSettingsData COOLDOWN_OCR_SETTINGS = TesseractSettingsData.assembler()
-            .charWhitelist("0123456789d:")
-            .stripBackground(true)
-            .setTextColor(new Color(244, 59, 59))
-            .build();
+    private static final TesseractSettingsData COOLDOWN_OCR_SETTINGS =
+            CommonOCRSettings.RED_DURATION_SETTINGS;
 
     private static final TesseractSettingsData SKILL_LEVEL_OCR_SETTINGS = TesseractSettingsData.assembler()
             .charWhitelist("0123456789")
@@ -371,6 +375,11 @@ public class PetSkillsRoutine extends DelayedTask {
      * @param skill the skill to process
      */
     private void processSkill(PetSkill skill) {
+        if (!isSkillPresent(skill)) {
+            logInfo(skill.name() + " skill is not available. Skipping.");
+            return;
+        }
+
         tapSkillIcon(skill);
 
         if (!isSkillLearned(skill)) {
@@ -381,11 +390,8 @@ public class PetSkillsRoutine extends DelayedTask {
             return;
         }
 
-        // Special handling for gathering skill: check if already Active
-        if (skill == PetSkill.GATHERING && isGatheringSkillActive()) {
-            logInfo("Gathering skill is already Active. Proceeding with deployment flow.");
-            deployGatheringSkillMarch();
-            readAndTrackCooldown(skill);
+        if (skill == PetSkill.GATHERING) {
+            processGatheringSkill();
             return;
         }
 
@@ -397,6 +403,108 @@ public class PetSkillsRoutine extends DelayedTask {
         }
 
         readAndTrackCooldown(skill);
+    }
+
+    private void processGatheringSkill() {
+        if (isGatheringSkillActive()) {
+            if (hasRecentGatheringDeployment()) {
+                logInfo("Gathering skill is still Active after its bonus march. Waiting for cooldown state.");
+                scheduleGatheringActiveRecheck();
+                return;
+            }
+
+            logInfo("Gathering skill is Active without a recent bonus march. Retrying deployment.");
+            handleGatheringDeployment(deployGatheringSkillMarch());
+            return;
+        }
+
+        boolean skillUsed = tryUseSkill(PetSkill.GATHERING);
+        if (skillUsed) {
+            logInfo("GATHERING skill used successfully.");
+            handleGatheringDeployment(deployGatheringSkillMarch());
+            return;
+        }
+
+        clearGatheringDeploymentMarker();
+        logDebug("GATHERING skill is on cooldown.");
+        readAndTrackCooldown(PetSkill.GATHERING);
+    }
+
+    private void handleGatheringDeployment(GatheringDeployResult result) {
+        if (result == GatheringDeployResult.DEPLOYED) {
+            recordGatheringDeployment();
+            logInfo("Gathering bonus march deployed. Waiting for the Active state to clear.");
+        } else {
+            logWarning("Gathering bonus march not deployed: " + result.logValue + ". Retrying while the skill is Active.");
+        }
+        scheduleGatheringActiveRecheck();
+    }
+
+    private void scheduleGatheringActiveRecheck() {
+        updateEarliestCooldown(LocalDateTime.now().plusMinutes(GATHERING_ACTIVE_RECHECK_MINUTES));
+    }
+
+    private boolean hasRecentGatheringDeployment() {
+        String value = profile.getConfig(
+                ConfigurationKeyEnum.PET_SKILL_GATHERING_LAST_DEPLOYED_AT_STRING,
+                String.class);
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            return isRecentGatheringDeployment(LocalDateTime.parse(value), LocalDateTime.now());
+        } catch (RuntimeException ex) {
+            logWarning("Ignoring malformed Gathering deployment marker: " + value);
+            clearGatheringDeploymentMarker();
+            return false;
+        }
+    }
+
+    static boolean isRecentGatheringDeployment(LocalDateTime deployedAt, LocalDateTime now) {
+        return deployedAt != null
+                && now != null
+                && !deployedAt.isAfter(now)
+                && deployedAt.plus(GATHERING_DEPLOYMENT_GUARD).isAfter(now);
+    }
+
+    private void recordGatheringDeployment() {
+        profile.setConfig(
+                ConfigurationKeyEnum.PET_SKILL_GATHERING_LAST_DEPLOYED_AT_STRING,
+                LocalDateTime.now().toString());
+        shouldUpdateConfig = true;
+    }
+
+    private void clearGatheringDeploymentMarker() {
+        String value = profile.getConfig(
+                ConfigurationKeyEnum.PET_SKILL_GATHERING_LAST_DEPLOYED_AT_STRING,
+                String.class);
+        if (value != null && !value.isBlank()) {
+            profile.setConfig(ConfigurationKeyEnum.PET_SKILL_GATHERING_LAST_DEPLOYED_AT_STRING, "");
+            shouldUpdateConfig = true;
+        }
+    }
+
+    private boolean isSkillPresent(PetSkill skill) {
+        try {
+            BufferedImage image = TesseractOcrProvider.toBufferedImage(
+                    emuManager.captureScreen(EMULATOR_NUMBER));
+            return hasDistinctiveSkillTilePixels(image, skill.area);
+        } catch (Exception ex) {
+            logWarning("Could not verify " + skill.name() + " skill tile. Continuing conservatively.");
+            return true;
+        }
+    }
+
+    static boolean hasDistinctiveSkillTilePixels(BufferedImage image, AreaData area) {
+        int distinctivePixels = PixelStats.count(image, area, rgb -> {
+            int red = (rgb >> 16) & 0xFF;
+            int green = (rgb >> 8) & 0xFF;
+            int blue = rgb & 0xFF;
+            int brightest = Math.max(red, Math.max(green, blue));
+            int darkest = Math.min(red, Math.min(green, blue));
+            return brightest < 175 || brightest - darkest >= 45;
+        });
+        return distinctivePixels >= MIN_SKILL_TILE_DISTINCTIVE_PIXELS;
     }
 
     /**
@@ -479,9 +587,6 @@ public class PetSkillsRoutine extends DelayedTask {
 
         if (skill == PetSkill.STAMINA) {
             addStaminaBySkillLevel();
-        } else if (skill == PetSkill.GATHERING) {
-            // Deploy gathering march as part of gathering skill activation
-            deployGatheringSkillMarch();
         }
 
         return true;
@@ -516,7 +621,9 @@ public class PetSkillsRoutine extends DelayedTask {
                 break;
 
             case GATHERING:
-                cooldownDuration = readSkillCooldown(GATHERING_COOLDOWN_OCR_AREA);
+                cooldownDuration = readSkillCooldown(
+                        GATHERING_COOLDOWN_OCR_AREA,
+                        CommonOCRSettings.RED_MULTILINE_DURATION_SETTINGS);
                 break;
 
             default:
@@ -545,12 +652,16 @@ public class PetSkillsRoutine extends DelayedTask {
      * @return Duration representing the cooldown time, or null if OCR fails
      */
     private Duration readSkillCooldown(AreaData area) {
+        return readSkillCooldown(area, COOLDOWN_OCR_SETTINGS);
+    }
+
+    private Duration readSkillCooldown(AreaData area, TesseractSettingsData settings) {
         return durationHelper.attemptRecognition(
                 area.topLeft(),
                 area.bottomRight(),
                 5, // Max retries
                 200L, // Retry delay in ms
-                COOLDOWN_OCR_SETTINGS,
+                settings,
                 GameTimeUtils::isAcceptedFormat,
                 GameTimeUtils::parseDuration);
     }
@@ -698,78 +809,57 @@ public class PetSkillsRoutine extends DelayedTask {
         return LaunchPoint.ANY;
     }
 
-    /**
-     * Executes the gathering skill deployment if enabled.
-     * 
-     * <p>
-     * Flow:
-     * <ol>
-     * <li>Leave pets menu</li>
-     * <li>Check for idle marches using MarchHelper</li>
-     * <li>If no idle marches, set fallback cooldown and return</li>
-     * <li>Open resource search menu</li>
-     * <li>Select resource tile based on user configuration</li>
-     * <li>Select highest level available</li>
-     * <li>Search for tile and deploy march</li>
-     * <li>Reopen pets menu to read gathering skill cooldown</li>
-     * </ol>
-     */
-    private void deployGatheringSkillMarch() {
+    private GatheringDeployResult deployGatheringSkillMarch() {
         logInfo("Deploying gathering skill march...");
 
+        GatheringDeployResult result = GatheringDeployResult.BLOCKED;
         try {
-            // Step 1: Leave pets menu
             pressBack();
             sleepTask(500);
-
             navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
             sleepTask(500);
 
-            // Step 2: Check for idle marches using MarchHelper
             if (!marchHelper.checkMarchesAvailable()) {
-                logWarning("No idle marches available for gathering skill march. Config 5 minute fallback cooldown.");
-                LocalDateTime fallbackCooldown = LocalDateTime.now().plusMinutes(5);
-                updateEarliestCooldown(fallbackCooldown);
-                return;
+                return GatheringDeployResult.NO_IDLE_MARCH;
             }
 
             logInfo("Idle march found, proceeding with deployment");
             sleepTask(500);
 
-            // Step 3: Open resource search menu
-            if (!openResourceSearchMenu()) {
-                logWarning("Failed to open resource search menu");
-                LocalDateTime fallbackCooldown = LocalDateTime.now().plusMinutes(5);
-                updateEarliestCooldown(fallbackCooldown);
-                return;
-            }
-
-            // Step 4-7: Select resource tile, set level, execute search, and deploy
             GatheringResourceType resourceType = getConfiguredGatheringResource();
-            if (!deployGatheringMarch(resourceType)) {
-                logWarning("Failed to deploy gathering march");
-                pressBack();
-                LocalDateTime fallbackCooldown = LocalDateTime.now().plusMinutes(5);
-                updateEarliestCooldown(fallbackCooldown);
-                return;
+            for (int attempt = 1; attempt <= GATHERING_SAME_TARGET_ATTEMPTS; attempt++) {
+                if (!openResourceSearchMenu()) {
+                    return GatheringDeployResult.BLOCKED;
+                }
+                result = deployGatheringMarch(resourceType);
+                if (result != GatheringDeployResult.SAME_TARGET) {
+                    return result;
+                }
+                if (attempt < GATHERING_SAME_TARGET_ATTEMPTS) {
+                    logInfo(String.format(
+                            "Gathering target already has an incoming march. Searching another node (%d/%d).",
+                            attempt,
+                            GATHERING_SAME_TARGET_ATTEMPTS));
+                }
             }
-
-            // Step 8: Reopen pets menu to read gathering skill cooldown
-            logDebug("Reopening pets menu to read gathering skill cooldown");
-            if (openPetsMenu()) {
-                // Navigate to gathering skill and read its cooldown
-                tapSkillIcon(PetSkill.GATHERING);
-                sleepTask(300);
-                readAndTrackCooldown(PetSkill.GATHERING);
-            } else {
-                logWarning("Could not reopen pets menu to read gathering skill cooldown. Using fallback.");
-                LocalDateTime fallbackCooldown = LocalDateTime.now().plusMinutes(5);
-                updateEarliestCooldown(fallbackCooldown);
-            }
+            return result;
         } catch (Exception e) {
             logWarning("Error deploying gathering skill march: " + e.getMessage());
-            LocalDateTime fallbackCooldown = LocalDateTime.now().plusMinutes(5);
-            updateEarliestCooldown(fallbackCooldown);
+            return GatheringDeployResult.BLOCKED;
+        } finally {
+            reopenPetsMenuAfterGatheringDeployment();
+        }
+    }
+
+    private void reopenPetsMenuAfterGatheringDeployment() {
+        try {
+            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
+            logDebug("Reopening pets menu after gathering deployment attempt");
+            if (!openPetsMenu()) {
+                logWarning("Could not reopen Pets menu after gathering deployment attempt.");
+            }
+        } catch (RuntimeException ex) {
+            logWarning("Could not restore Pets menu after gathering deployment attempt: " + ex.getMessage());
         }
     }
 
@@ -827,67 +917,94 @@ public class PetSkillsRoutine extends DelayedTask {
      * </ul>
      * 
      * @param resourceType the resource to gather
-     * @return true if march was deployed successfully, false otherwise
+     * @return the verified deployment result
      */
-    private boolean deployGatheringMarch(GatheringResourceType resourceType) {
+    private GatheringDeployResult deployGatheringMarch(GatheringResourceType resourceType) {
         logInfo("Deploying gathering march for: " + resourceType.name());
 
         try {
-            // Step 1: Select resource tile by searching for tile template
             if (!selectResourceTile(resourceType)) {
                 logWarning("Failed to select resource tile");
-                return false;
+                return GatheringDeployResult.BLOCKED;
             }
             sleepTask(500);
 
-            // Step 2: Set level to highest available
-            if (!selectHighestLevel()) {
+            Integer selectedLevel = selectHighestAvailableLevel();
+            if (selectedLevel == null) {
                 logWarning("Failed to set resource level");
-                return false;
+                return GatheringDeployResult.BLOCKED;
             }
             sleepTask(500);
 
-            // Step 3: Execute search
             if (!executeResourceSearch()) {
                 logWarning("Failed to execute resource search");
-                return false;
+                return GatheringDeployResult.BLOCKED;
             }
             sleepTask(500);
 
-            // Step 4: Find and tap gather button on map
             ImageSearchResultData gatherButton = templateSearchHelper.locatePattern(
                     TemplatesEnum.GAME_HOME_SHORTCUTS_FARM_GATHER,
                     SearchConfigConstants.SINGLE_WITH_RETRIES);
 
             if (!gatherButton.isFound()) {
-                logWarning("Gather button not found. Tile may be occupied.");
-                return false;
+                logWarning(String.format("No %s node found at highest available level %d.",
+                        resourceType.name(), selectedLevel));
+                return GatheringDeployResult.NO_NODE;
             }
 
             logDebug("Tapping gather button");
             tapInside(gatherButton);
-            sleepTask(1000); // Wait for march configuration screen
+            sleepTask(1000);
 
-            // Step 5: Deploy the march
+            if (deploymentHelper.hasNoDeployableTroops()) {
+                pressBack();
+                return GatheringDeployResult.NO_TROOPS;
+            }
+
             ImageSearchResultData deployButton = templateSearchHelper.locatePattern(
                     TemplatesEnum.GATHER_DEPLOY_BUTTON,
                     SearchConfigConstants.SINGLE_WITH_RETRIES);
 
             if (!deployButton.isFound()) {
-                logError("Deploy button not found");
-                return false;
+                GatheringDeployResult missingDeployResult = deploymentHelper.hasNoDeployableTroops()
+                        ? GatheringDeployResult.NO_TROOPS
+                        : GatheringDeployResult.BLOCKED;
+                logWarning("Gather deploy button not found: " + missingDeployResult.logValue);
+                pressBack();
+                return missingDeployResult;
             }
 
             logInfo("Deploying gather march");
             tapInside(deployButton);
-            sleepTask(1000); // Wait for deployment confirmation
+            sleepTask(1000);
 
-            logInfo(String.format("%s march deployed successfully!", resourceType.name()));
-            return true;
+            if (deploymentHelper.isMarchQueueFull()) {
+                pressBack();
+                return GatheringDeployResult.MARCH_QUEUE_FULL;
+            }
+
+            if (deploymentHelper.isSameTargetDialog()) {
+                pressBack();
+                pressBack();
+                return GatheringDeployResult.SAME_TARGET;
+            }
+
+            ImageSearchResultData deployStillVisible = templateSearchHelper.locatePattern(
+                    TemplatesEnum.GATHER_DEPLOY_BUTTON,
+                    SearchConfigConstants.QUICK_SEARCH);
+            if (deployStillVisible.isFound()) {
+                logWarning("Gather deploy button remained visible after pressing it.");
+                pressBack();
+                return GatheringDeployResult.BLOCKED;
+            }
+
+            logInfo(String.format("%s level %d bonus march deployed successfully.",
+                    resourceType.name(), selectedLevel));
+            return GatheringDeployResult.DEPLOYED;
 
         } catch (Exception e) {
             logWarning("Error deploying gathering march: " + e.getMessage());
-            return false;
+            return GatheringDeployResult.BLOCKED;
         }
     }
 
@@ -956,67 +1073,48 @@ public class PetSkillsRoutine extends DelayedTask {
      * Sets the resource level to the highest available.
      * 
      * <p>
-     * Reads current level via OCR, then adjusts to maximum by incrementing.
-     * If OCR fails, uses backup plan of resetting to level 1 and incrementing to max.
+     * Reads the current level and increments one step at a time until the UI stops
+     * advancing. The game UI therefore remains authoritative when State Age changes
+     * the highest unlocked resource level.
      * 
-     * @return true if level was set successfully, false otherwise
+     * @return the verified highest available level, or null if it could not be read
      */
-    private boolean selectHighestLevel() {
-        logInfo("Config resource level to highest available");
+    private Integer selectHighestAvailableLevel() {
+        logInfo("Selecting highest available resource level");
 
-        final int DESIRED_LEVEL = 20; // Highest gather level
         final PointData LEVEL_INCREMENT_BUTTON_TOP_LEFT = new PointData(470, 1040);
         final PointData LEVEL_INCREMENT_BUTTON_BOTTOM_RIGHT = new PointData(500, 1066);
-        final PointData LEVEL_DECREMENT_BUTTON_TOP_LEFT = new PointData(50, 1040);
-        final PointData LEVEL_DECREMENT_BUTTON_BOTTOM_RIGHT = new PointData(85, 1066);
         final PointData LEVEL_LOCK_BUTTON = new PointData(183, 1140);
-        final int LEVEL_BUTTON_TAP_DELAY = 150;
-
-        // Read current level
         Integer currentLevel = readCurrentGatheringLevel();
 
-        if (currentLevel != null && currentLevel == DESIRED_LEVEL) {
-            logInfo("Desired level already selected");
-            return true;
-        }
-
         if (currentLevel == null) {
-            // OCR failed, use backup plan: reset to level 1 and increment
-            logDebug("OCR failed, using backup level selection");
+            logDebug("Initial level OCR failed. Resetting selector to level 1.");
             resetLevelToOne();
-
-            if (DESIRED_LEVEL > 1) {
-                tapInside(
-                        LEVEL_INCREMENT_BUTTON_TOP_LEFT,
-                        LEVEL_INCREMENT_BUTTON_BOTTOM_RIGHT,
-                        DESIRED_LEVEL - 1,
-                        LEVEL_BUTTON_TAP_DELAY);
-            }
-        } else {
-            // OCR succeeded, adjust from current level
-            logDebug(String.format("Current level: %d, adjusting to %d", currentLevel, DESIRED_LEVEL));
-
-            if (currentLevel < DESIRED_LEVEL) {
-                int taps = DESIRED_LEVEL - currentLevel;
-                tapInside(
-                        LEVEL_INCREMENT_BUTTON_TOP_LEFT,
-                        LEVEL_INCREMENT_BUTTON_BOTTOM_RIGHT,
-                        taps,
-                        LEVEL_BUTTON_TAP_DELAY);
-            } else {
-                int taps = currentLevel - DESIRED_LEVEL;
-                tapInside(
-                        LEVEL_DECREMENT_BUTTON_TOP_LEFT,
-                        LEVEL_DECREMENT_BUTTON_BOTTOM_RIGHT,
-                        taps,
-                        LEVEL_BUTTON_TAP_DELAY);
+            currentLevel = readCurrentGatheringLevel();
+            if (currentLevel == null) {
+                return null;
             }
         }
 
-        // Ensure level lock checkbox is checked
-        ensureLevelLocked(LEVEL_LOCK_BUTTON);
+        for (int attempt = 0; attempt < GATHERING_MAX_LEVEL_ADJUSTMENTS; attempt++) {
+            tapInside(LEVEL_INCREMENT_BUTTON_TOP_LEFT, LEVEL_INCREMENT_BUTTON_BOTTOM_RIGHT);
+            sleepTask(200);
 
-        return true;
+            Integer nextLevel = readCurrentGatheringLevel();
+            if (nextLevel == null) {
+                logWarning("Could not verify resource level after incrementing.");
+                return null;
+            }
+            if (nextLevel <= currentLevel) {
+                ensureLevelLocked(LEVEL_LOCK_BUTTON);
+                logInfo("Highest available resource level: " + currentLevel);
+                return currentLevel;
+            }
+            currentLevel = nextLevel;
+        }
+
+        logWarning("Resource level kept increasing past the bounded adjustment limit.");
+        return null;
     }
 
     /**
@@ -1091,6 +1189,22 @@ public class PetSkillsRoutine extends DelayedTask {
         sleepTask(3000); // Wait for search to complete and map to load
 
         return true;
+    }
+
+    private enum GatheringDeployResult {
+        DEPLOYED("deployed"),
+        NO_IDLE_MARCH("no idle march slot"),
+        NO_TROOPS("no deployable troops"),
+        NO_NODE("no node found"),
+        SAME_TARGET("target already has an incoming march"),
+        MARCH_QUEUE_FULL("march queue became full"),
+        BLOCKED("deployment screen was blocked or could not be verified");
+
+        private final String logValue;
+
+        GatheringDeployResult(String logValue) {
+            this.logValue = logValue;
+        }
     }
 
     /**
