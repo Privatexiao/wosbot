@@ -20,6 +20,13 @@ STATIC_REQUIRED_FILES = (
     "app/lib/tesseract/eng.traineddata",
     "app/lib/tesseract/osd.traineddata",
     "app/lib/tesseract/chi_sim.traineddata",
+    "app/custom_tasks/README.md",
+    "app/custom_tasks/dead_shot.json",
+    "app/custom_tasks/dead_shot.txt",
+    "app/custom_tasks/expert_idle_exploration.json",
+    "app/custom_tasks/expert_idle_exploration.txt",
+    "app/custom_tasks/shield.java",
+    "app/custom_tasks/templates/deals/deadshot/event_tab.png",
 )
 FORBIDDEN_NAMES = {
     "frostguard-workspace.json",
