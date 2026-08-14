@@ -8,10 +8,7 @@ import dev.frostguard.api.domain.PointData;
 import dev.frostguard.engine.helper.NavigationHelper;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
-import dev.frostguard.engine.schedule.TaskQueue;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 public class AllianceAutojoinRoutine extends DelayedTask {
 
@@ -49,8 +46,6 @@ private static final int SCHEDULE_HOURS_VALUE = 7;
 
 private static final int SCHEDULE_MINUTES_VALUE = 50;
 
-private static final int LOOKAHEAD_RETRY_MINUTES_VALUE = 5;
-
 private boolean useAllTroops;
 
 private int queueCount;
@@ -64,7 +59,9 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 
 		hydrateConfiguration();
 
-		if (deferForUpcomingAutoJoinReset()) {
+		Boolean autojoinEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(autojoinEnabled)) {
+			logInfo(routineLogAllianceAutojoinLine("Alliance autojoin task turned OFF in GUI profile configuration. Skipping autojoin execution."));
 			return;
 		}
 
@@ -83,27 +80,6 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 		enableAutoJoinFlow();
 
 		queueNextRun();
-	}
-
-private boolean deferForUpcomingAutoJoinReset() {
-		TaskQueue queue = scheduleService.getCoordinator().getQueue(profile.getId());
-		if (queue == null) {
-			return false;
-		}
-
-		List<TpDailyTaskEnum> queuedTasks = queue.getNextQueuedTaskTypes(
-				AutojoinActivationPolicy.LOOKAHEAD_TASK_COUNT);
-		Optional<TpDailyTaskEnum> resetTask = AutojoinActivationPolicy.findUpcomingResetTask(queuedTasks);
-		if (resetTask.isEmpty()) {
-			return false;
-		}
-
-		reschedule(LocalDateTime.now().plusMinutes(LOOKAHEAD_RETRY_MINUTES_VALUE));
-		logInfo(routineLogAllianceAutojoinLine("Deferring activation because "
-				+ resetTask.get().getName() + " is within the next "
-				+ AutojoinActivationPolicy.LOOKAHEAD_TASK_COUNT
-				+ " queued tasks and will restore auto-join afterwards"));
-		return true;
 	}
 
 @Override
@@ -222,14 +198,11 @@ private void manageTaskFailure(String reason) {
 		logInfo(routineLogAllianceAutojoinLine("Task rescheduled to retry in 5 minutes"));
 	}
 
-private void queueNextRun() {
-		LocalDateTime nextExecutionTime = LocalDateTime.now()
-				.plusHours(SCHEDULE_HOURS_VALUE)
-				.plusMinutes(SCHEDULE_MINUTES_VALUE);
+	private void queueNextRun() {
+		LocalDateTime nextExecutionTime = LocalDateTime.now().plusHours(1);
 
 		reschedule(nextExecutionTime);
 
-		logInfo(routineLogAllianceAutojoinLine("Alliance auto-join configured successfully. Next execution in " +
-				SCHEDULE_HOURS_VALUE + "h " + SCHEDULE_MINUTES_VALUE + "m"));
+		logInfo(routineLogAllianceAutojoinLine("Alliance auto-join configured successfully. Next execution in 1 hour"));
 	}
 }

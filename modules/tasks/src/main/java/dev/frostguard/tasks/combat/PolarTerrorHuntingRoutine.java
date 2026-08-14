@@ -725,12 +725,13 @@ private boolean openUpPolarsMenu(int polarLevel) {
         }
 
         if (!polarTerror.isFound()) {
-            logWarning(routineLogPolarTerrorHuntingLine("Polar Terror tab not found after swiping search tabs"));
-            return false;
+            logWarning(routineLogPolarTerrorHuntingLine("Polar Terror tab not found via template; using fallback tap on search tab at (260, 913)"));
+            tapNear(new PointData(260, 913));
+            sleepTask(800);
+        } else {
+            tapInside(polarTerror);
+            sleepTask(500);
         }
-
-        tapInside(polarTerror);
-        sleepTask(500);
         if (polarLevel != -1) {
             if (huntHighestLevel) {
                 selectHighestPolarLevel();

@@ -130,6 +130,12 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 
 		hydrateConfiguration();
 
+		Boolean intelTaskEnabled = profile.getConfig(ConfigurationKeyEnum.INTEL_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(intelTaskEnabled)) {
+			logInfo(routineLogIntelligenceLine("Intel task is turned OFF in GUI profile configuration. Exiting Intel routine immediately."));
+			processingTask = false;
+			return;
+		}
 
 		processingTask = true;
 		beastMarchSent = false;
@@ -160,7 +166,7 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 		// recalling gather marches, so Intel does not disrupt gathering when nothing is actionable.
 		boolean intelMissionsDetected = hasAnyIntelMissionAvailableFlow();
 		if (!intelMissionsDetected) {
-			logInfo(routineLogIntelligenceLine("No intel missions detected. Skipping Intel run for now."));
+			logInfo(routineLogIntelligenceLine("No intel missions detected or Intel disabled. Skipping Intel run for now."));
 			tryRescheduleFromCooldownFlow();
 			processingTask = false;
 			return;
@@ -251,8 +257,17 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 	}
 
 private boolean hasAnyIntelMissionAvailableFlow() {
-		// Changed by pernerch | Date: 2026-07-02 | Why: lightweight pre-check to avoid unnecessary
-		// gather recalls when Intel has no visible missions to process.
+		Boolean intelEnabled = profile.getConfig(ConfigurationKeyEnum.INTEL_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(intelEnabled)) {
+			logInfo(routineLogIntelligenceLine("Intel is disabled in profile configuration. Skipping Intel screen opening."));
+			return false;
+		}
+
+		if (!beastsEnabled && !fireBeastsEnabled && !survivorCampsEnabled && !explorationsEnabled) {
+			logWarning(routineLogIntelligenceLine("All Intel task sub-types are disabled in account profile configuration! Skipping Intel run."));
+			return false;
+		}
+
 		intelScreenHelper.ensureOnIntelScreen();
 
 		if (fireBeastsEnabled && templateSearchHelper
