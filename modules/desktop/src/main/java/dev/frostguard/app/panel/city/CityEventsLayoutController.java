@@ -27,11 +27,23 @@ public class CityEventsLayoutController extends AbstractProfileController {
 
 	@FXML
 	private void initialize() {
-		cityEventSwitches().forEach(binding -> checkBoxMappings.put(binding.control(), binding.configKey()));
-		offsetFields().forEach(binding -> textFieldMappings.put(binding.control(), binding.configKey()));
-		comboBoxMondayRefinements.getItems().setAll(WEEKLY_REFINEMENT_WINDOWS);
-		comboBoxMappings.put(comboBoxMondayRefinements, ConfigurationKeyEnum.INT_WEEKLY_RFC);
-		checkBoxExplorationQuickDeploy.disableProperty().bind(checkBoxDoExploration.selectedProperty().not());
+		cityEventSwitches().forEach(binding -> {
+			if (binding.control() != null) {
+				checkBoxMappings.put(binding.control(), binding.configKey());
+			}
+		});
+		offsetFields().forEach(binding -> {
+			if (binding.control() != null) {
+				textFieldMappings.put(binding.control(), binding.configKey());
+			}
+		});
+		if (comboBoxMondayRefinements != null) {
+			comboBoxMondayRefinements.getItems().setAll(WEEKLY_REFINEMENT_WINDOWS);
+			comboBoxMappings.put(comboBoxMondayRefinements, ConfigurationKeyEnum.INT_WEEKLY_RFC);
+		}
+		if (checkBoxExplorationQuickDeploy != null && checkBoxDoExploration != null) {
+			checkBoxExplorationQuickDeploy.disableProperty().bind(checkBoxDoExploration.selectedProperty().not());
+		}
 		initializeChangeEvents();
 	}
 

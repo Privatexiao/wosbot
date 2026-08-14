@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane maxHeight="Infinity" maxWidth="Infinity"
+            HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                    styleClass="task-page-scroll">
+            <VBox spacing="14" styleClass="task-page-root" maxWidth="Infinity">
+
+                <VBox styleClass="content-card">
+                    <HBox alignment="CENTER_LEFT" maxWidth="Infinity" styleClass="header-blue">
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: white; -fx-font-size: 13px;"
+                               text="Hospital Heal Routine" />
+                    </HBox>
+                    <VBox spacing="12" styleClass="task-section-inner">
+                        <Label styleClass="task-card-description"
+                               text="Automatically manages and heals wounded troops using Dual-Entry detection (Field hospital and City hospital)." wrapText="true" />
+                        
+                        <Separator style="-fx-opacity: 0.25;" />
+
+                        <CheckBox fx:id="checkBoxHospitalHeal" graphicTextGap="6.0"
+                                  mnemonicParsing="false" text="Enable Hospital Heal Routine" />
+
+                        <CheckBox fx:id="checkBoxFieldHospital" graphicTextGap="6.0"
+                                  mnemonicParsing="false" text="Process Field Hospital shortcut icon (from World screen)" />
+
+                        <CheckBox fx:id="checkBoxCityHospital" graphicTextGap="6.0"
+                                  mnemonicParsing="false" text="Process City Hospital building (from Home screen)" />
+
+                        <CheckBox fx:id="checkBoxUseSpeedup" graphicTextGap="6.0"
+                                  mnemonicParsing="false" text="Allow using healing speedups (Default: Disabled for safety)" />
+
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label styleClass="task-field-label" text="Max Wait Minutes:" />
+                            <TextField fx:id="textFieldMaxWaitMinutes" prefWidth="80.0" text="30" />
+                        </HBox>
+                    </VBox>
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

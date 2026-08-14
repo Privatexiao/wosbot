@@ -48,6 +48,7 @@ public class TaskRegistrations {
             case CRYSTAL_LABORATORY -> new CrystalLaboratoryRoutine(profile, type);
             case CITY_UPGRADE_FURNACE -> new UpgradeBuildingsRoutine(profile, type);
             case CITY_UPGRADE_PRIORITISE_FURNACE -> new PrioritiseFurnaceRoutine(profile, type);
+            case HOSPITAL_HEAL -> new HospitalHealRoutine(profile, type);
             case CITY_SURVIVORS -> new NewSurvivorsRoutine(profile, type);
             case TRAINING_TROOPS -> new TrainingRoutine(profile, type);
             case RESEARCH -> new ResearchRoutine(profile, type);
