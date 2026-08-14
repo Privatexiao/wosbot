@@ -65,6 +65,8 @@ changes.
 - Keep agent-facing documentation concise. Preserve constraints, decisions,
   evidence, fragile assumptions, fallbacks, and unsupported states; do not
   restate information that is clear from code and tests.
+- **Custom Features Documentation**: Whenever adding, modifying, or fixing custom features or bug fixes in this repository (`Privatexiao/wosbot`) compared to upstream (`Shederator/wosbot`), always update `docs/custom-features.md` synchronously to maintain an accurate inventory.
+- **Batch Scripts Sync**: Whenever modifying the project's version, build structure, packaging paths, or Java execution arguments, ensure that `一键启动挂机脚本.bat` at the repository root is also updated synchronously to reflect the changes.
 
 ## Logging And Verification
 

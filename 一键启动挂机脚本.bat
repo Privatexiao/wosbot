@@ -9,8 +9,8 @@ echo ========================================================
 set "JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
-cd /d "E:\MeComputer\Desktop\wosbot"
+cd /d "E:\MeComputer\Desktop\wosbot\packaging\desktop\target\input"
 
-java -jar fg-app\target\frostguard-2.1.0.jar
+java --enable-native-access=ALL-UNNAMED -cp "frostguard-desktop-2.1.0.jar;lib/*" dev.frostguard.app.bootstrap.Main
 
 pause
