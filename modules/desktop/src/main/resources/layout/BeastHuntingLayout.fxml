@@ -41,6 +41,42 @@
                         <Label styleClass="task-card-note"
                                text="Stamina kept back for Intel/Rally. Beast Hunting only spends stamina above this value."
                                wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="14">
+                            <Label styleClass="task-field-label" text="Max Attacks Limit (0=Unlimited)" minWidth="120" />
+                            <TextField fx:id="textFieldBeastMaxAttacks" prefWidth="140" promptText="0" />
+                        </HBox>
+                        <Separator style="-fx-opacity: 0.25;" />
+                        <Label styleClass="task-field-label" style="-fx-font-weight: bold;" text="Beast Hunting March Presets" />
+                        <GridPane hgap="8" vgap="4">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" />
+                                <ColumnConstraints percentWidth="50" />
+                            </columnConstraints>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 1" />
+                                <ComboBox fx:id="comboBoxMarchFlag1" prefWidth="90.0" />
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 2" />
+                                <ComboBox fx:id="comboBoxMarchFlag2" prefWidth="90.0" />
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 3" />
+                                <ComboBox fx:id="comboBoxMarchFlag3" prefWidth="90.0" />
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 4" />
+                                <ComboBox fx:id="comboBoxMarchFlag4" prefWidth="90.0" />
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 5" />
+                                <ComboBox fx:id="comboBoxMarchFlag5" prefWidth="90.0" />
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                <Label minWidth="55" styleClass="task-field-label" text="March 6" />
+                                <ComboBox fx:id="comboBoxMarchFlag6" prefWidth="90.0" />
+                            </HBox>
+                        </GridPane>
                     </VBox>
                 </VBox>
 

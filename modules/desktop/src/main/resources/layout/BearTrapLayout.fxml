@@ -133,12 +133,73 @@
                                 <ComboBox fx:id="comboBoxRallyFlag" prefWidth="100.0" />
                             </HBox>
                             <CheckBox fx:id="checkBoxEnableJoin" mnemonicParsing="false"
-                                      text="Enable Join Rally" />
-                            <HBox alignment="CENTER_LEFT" spacing="10">
-                                <Label minWidth="90.0" styleClass="task-field-label"
-                                       text="Join Flag" />
-                                <CheckComboBox fx:id="checkComboBoxJoinFlag" prefWidth="100.0" />
-                            </HBox>
+                                      text="开启自动加入集结" />
+                            <GridPane hgap="8" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50" />
+                                    <ColumnConstraints percentWidth="50" />
+                                </columnConstraints>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 1" />
+                                    <ComboBox fx:id="comboBoxJoinFlag1" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 2" />
+                                    <ComboBox fx:id="comboBoxJoinFlag2" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 3" />
+                                    <ComboBox fx:id="comboBoxJoinFlag3" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 4" />
+                                    <ComboBox fx:id="comboBoxJoinFlag4" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 5" />
+                                    <ComboBox fx:id="comboBoxJoinFlag5" prefWidth="90.0" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                    <Label minWidth="55" styleClass="task-field-label" text="编队 6" />
+                                    <ComboBox fx:id="comboBoxJoinFlag6" prefWidth="90.0" />
+                                </HBox>
+                            </GridPane>
+                            <CheckComboBox fx:id="checkComboBoxJoinFlag" prefWidth="100.0" visible="false" managed="false" />
+                            <Separator style="-fx-opacity: 0.25;" />
+                            <CheckBox fx:id="checkBoxAdvancedJoin" mnemonicParsing="false"
+                                      text="开启高级集结候选筛选" />
+                            <VBox fx:id="vBoxAdvancedJoinOptions" spacing="8" style="-fx-padding: 0 0 0 18;">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <Label minWidth="130.0" styleClass="task-field-label"
+                                           text="最少队伍人数门槛" />
+                                    <TextField fx:id="textFieldMinMemberCount" prefWidth="70.0" promptText="0" text="0" />
+                                    <Label styleClass="task-card-description"
+                                           text="集结队伍达到该人数才加入 (0=不限制)" wrapText="true" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <Label minWidth="130.0" styleClass="task-field-label"
+                                           text="别人最大集结量门槛" />
+                                    <TextField fx:id="textFieldMinRallyCapacity" prefWidth="70.0" promptText="0" text="0" />
+                                    <Label styleClass="task-card-description"
+                                           text="别人集结总容量需超过该值才加入 (0=不限制)" wrapText="true" />
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <Label minWidth="130.0" styleClass="task-field-label"
+                                           text="最少剩余可加入兵量" />
+                                    <TextField fx:id="textFieldMinRemainingCapacity" prefWidth="70.0" promptText="0" text="0" />
+                                    <Label styleClass="task-card-description"
+                                           text="别人集结还能加入的兵量需超过该值才加入 (0=不限制)" wrapText="true" />
+                                </HBox>
+                                <CheckBox fx:id="checkBoxFrenzyMode" mnemonicParsing="false"
+                                          text="开启狂热模式 (活动尾声自动放宽门槛)" />
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <Label minWidth="130.0" styleClass="task-field-label"
+                                           text="狂热启动分钟" />
+                                    <TextField fx:id="textFieldFrenzyStartMin" prefWidth="70.0" promptText="22" text="22" />
+                                    <Label styleClass="task-card-description"
+                                           text="活动第几分钟后触发狂热模式" wrapText="true" />
+                                </HBox>
+                            </VBox>
                         </VBox>
                     </VBox>
                 </HBox>
