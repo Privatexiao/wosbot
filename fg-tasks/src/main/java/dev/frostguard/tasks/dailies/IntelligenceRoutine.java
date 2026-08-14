@@ -140,9 +140,14 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 	@Override
 	protected void execute() {
 
-
 		hydrateConfiguration();
 
+		Boolean intelTaskEnabled = profile.getConfig(ConfigurationKeyEnum.INTEL_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(intelTaskEnabled)) {
+			logInfo(routineLogIntelligenceLine("Intel task is turned OFF in GUI profile configuration. Exiting Intel routine immediately."));
+			processingTask = false;
+			return;
+		}
 
 		processingTask = true;
 		beastMarchSent = false;
@@ -156,21 +161,15 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 
 		try {
 
-
-		// Changed by pernerch | Date: 2026-07-02 | Why: check mission availability before
-		// recalling gather marches, so Intel does not disrupt gathering when nothing is actionable.
 		boolean intelMissionsDetected = hasAnyIntelMissionAvailableFlow();
 		if (!intelMissionsDetected) {
-			logInfo(routineLogIntelligenceLine("No intel missions detected. Skipping Intel run for now."));
-			tryRescheduleFromCooldownFlow();
+			logInfo(routineLogIntelligenceLine("No intel missions detected or Intel disabled. Skipping Intel run for now."));
 			processingTask = false;
 			return;
 		}
 
-		// Changed by pernerch | Date: 2026-07-02 | Why: return to the world screen so gather marches can be recalled from the correct UI context.
 		navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
 
-		// Changed by pernerch | Date: 2026-07-02 | Why: Intel must preempt gather for full-march execution when smart processing is disabled.
 		if (!useSmartProcessing || recallGatherTroopsFlow) {
 			logInfo(routineLogIntelligenceLine("Intel gather-priority mode active (smart=" + useSmartProcessing
 					+ ", recall=" + recallGatherTroopsFlow + "). Recalling all gather troops..."));
@@ -178,7 +177,6 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 			shouldRequeueGatherAfterIntel = true;
 			logInfo(routineLogIntelligenceLine("All gather troops recalled. Proceeding with intel processing."));
 		} else {
-			// Changed by pernerch | Date: 2026-07-02 | Why: in smart processing mode, free Intel marches by recalling long-running duplicate gather marches first.
 			int recalledDuplicateMarches = recallDuplicateGatherMarchesForSmartProcessingFlow();
 			if (recalledDuplicateMarches > 0) {
 				shouldRequeueGatherAfterIntel = true;
@@ -190,34 +188,35 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 		initializeIntelMarchCountersFlow();
 
 		while (processingTask) {
+			hydrateConfiguration();
+			Boolean loopIntelEnabled = profile.getConfig(ConfigurationKeyEnum.INTEL_BOOL, Boolean.class);
+			if (!Boolean.TRUE.equals(loopIntelEnabled)) {
+				logInfo(routineLogIntelligenceLine("Intel task turned OFF by user in GUI. Exiting Intel routine immediately."));
+				processingTask = false;
+				return;
+			}
+
 			boolean anyIntelProcessed = false;
 			boolean nonBeastIntelProcessed = false;
 			beastMarchSent = false;
 
-
 			navigationHelper.ensureCorrectScreenLocation(LaunchPoint.WORLD);
-
 
 			MarchesAvailable marchesAvailable = inspectMarchAvailability();
 			marchQueueLimitReached = !marchesAvailable.available();
 
-
 			redeemCompletedMissions();
-
 
 			if (!hasEnoughStaminaFlow()) {
 				processingTask = false;
 				return;
-
 			}
 
-
-			if (beastsEnabled && shouldProcessBeastsFlow()) {
+			if ((beastsEnabled || fireBeastsEnabled) && shouldProcessBeastsFlow()) {
 				if (handleBeastIntel()) {
 					anyIntelProcessed = true;
 				}
 			}
-
 
 			if (survivorCampsEnabled) {
 				intelScreenHelper.ensureOnIntelScreen();
@@ -251,7 +250,6 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 				}
 			}
 
-
 			manageRescheduling(anyIntelProcessed, nonBeastIntelProcessed, marchesAvailable);
 		}
 		} finally {
@@ -267,6 +265,17 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 			.build();
 
 	private boolean hasAnyIntelMissionAvailableFlow() {
+		Boolean intelEnabled = profile.getConfig(ConfigurationKeyEnum.INTEL_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(intelEnabled)) {
+			logInfo(routineLogIntelligenceLine("Intel is disabled in profile configuration. Skipping Intel screen opening."));
+			return false;
+		}
+
+		if (!beastsEnabled && !fireBeastsEnabled && !survivorCampsEnabled && !explorationsEnabled) {
+			logWarning(routineLogIntelligenceLine("All Intel task sub-types are disabled in account profile configuration! Skipping Intel run."));
+			return false;
+		}
+
 		intelScreenHelper.ensureOnIntelScreen();
 
 		if (!beastsEnabled && !fireBeastsEnabled && !survivorCampsEnabled && !explorationsEnabled) {
@@ -283,15 +292,22 @@ public IntelligenceRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask) {
 			return true;
 		}
 
-		if (fireBeastsEnabled && (templateSearchHelper.locatePatternMono(TemplatesEnum.INTEL_FIRE_BEAST, INTEL_CARD_SEARCH_CONFIG).isFound()
-				|| templateSearchHelper.locatePattern(TemplatesEnum.INTEL_FIRE_BEAST, INTEL_CARD_SEARCH_CONFIG).isFound())) {
-			return true;
+		if (fireBeastsEnabled) {
+			TemplatesEnum[] fireBeastTemplates = new TemplatesEnum[] {
+					TemplatesEnum.INTEL_FIRE_BEAST,
+					TemplatesEnum.INTEL_BEAST_GRAYSCALE_FC,
+					TemplatesEnum.INTEL_BEAST_GRAYSCALE_FC1
+			};
+			for (TemplatesEnum template : fireBeastTemplates) {
+				if (templateSearchHelper.locatePatternMono(template, INTEL_CARD_SEARCH_CONFIG).isFound()
+						|| templateSearchHelper.locatePattern(template, INTEL_CARD_SEARCH_CONFIG).isFound()) {
+					return true;
+				}
+			}
 		}
 
 		if (beastsEnabled) {
 			TemplatesEnum[] beastTemplates = new TemplatesEnum[] {
-					TemplatesEnum.INTEL_BEAST_GRAYSCALE_FC,
-					TemplatesEnum.INTEL_BEAST_GRAYSCALE_FC1,
 					TemplatesEnum.INTEL_BEAST_GRAYSCALE
 			};
 

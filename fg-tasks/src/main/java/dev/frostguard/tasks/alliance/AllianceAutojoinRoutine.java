@@ -59,6 +59,12 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 
 		hydrateConfiguration();
 
+		Boolean autojoinEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_BOOL, Boolean.class);
+		if (!Boolean.TRUE.equals(autojoinEnabled)) {
+			logInfo(routineLogAllianceAutojoinLine("Alliance autojoin task turned OFF in GUI profile configuration. Skipping autojoin execution."));
+			return;
+		}
+
 		if (!openUpAllianceWarMenu()) {
 			manageTaskFailure("Failed to open Alliance War menu");
 			return;
