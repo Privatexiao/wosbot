@@ -24,6 +24,7 @@ import dev.frostguard.app.panel.dailies.ChiefOrderLayoutController;
 import dev.frostguard.app.panel.city.CityEventsExtraLayoutController;
 import dev.frostguard.app.panel.city.CityEventsLayoutController;
 import dev.frostguard.app.panel.city.CityUpgradesLayoutController;
+import dev.frostguard.app.panel.city.HospitalLayoutController;
 import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.configs.TpMessageSeverityEnum;
 import dev.frostguard.app.panel.console.ConsoleLogLayoutController;
@@ -48,6 +49,7 @@ import dev.frostguard.app.panel.profile.IProfileLoadListener;
 import dev.frostguard.app.panel.profile.IProfileObserverInjectable;
 import dev.frostguard.app.panel.profile.ProfileAux;
 import dev.frostguard.app.panel.profile.ProfileManagerLayoutController;
+import dev.frostguard.app.i18n.I18nService;
 import dev.frostguard.api.domain.QueueStateData;
 import dev.frostguard.api.runtime.RuntimeChannel;
 import dev.frostguard.api.runtime.WorkspacePaths;
@@ -272,16 +274,13 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
             iconGithub.setIconCode(MaterialDesignG.GITHUB);
         }
 
-        if (java.util.concurrent.ThreadLocalRandom.current().nextBoolean()) {
-            if (null != discordBubbleContainer) {
-                discordBubbleContainer.setVisible(false);
-                discordBubbleContainer.setManaged(false);
-            }
-        } else {
-            if (null != coffeeBubbleContainer) {
-                coffeeBubbleContainer.setVisible(false);
-                coffeeBubbleContainer.setManaged(false);
-            }
+        if (null != discordBubbleContainer) {
+            discordBubbleContainer.setVisible(false);
+            discordBubbleContainer.setManaged(false);
+        }
+        if (null != coffeeBubbleContainer) {
+            coffeeBubbleContainer.setVisible(false);
+            coffeeBubbleContainer.setManaged(false);
         }
     }
 
@@ -554,7 +553,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
     }
 
     private Tab makeTab(String title, Parent content) { /* internal */
-        Tab tab = new Tab(title, content);
+        Tab tab = new Tab(dev.frostguard.app.i18n.I18nService.tr(title), content);
         return tab;
     }
 
@@ -656,6 +655,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         List<ModuleDefinition> modules = Arrays.asList(
                 new ModuleDefinition("DummyLayout",               "Dummy Task",           MaterialDesignD.DATABASE_REMOVE_OUTLINE,    DummyLayoutController::new),
                 new ModuleDefinition("CityUpgradesLayout",        "City Upgrades",        MaterialDesignC.CITY_VARIANT_OUTLINE,       CityUpgradesLayoutController::new),
+                new ModuleDefinition("HospitalLayout",            "Hospital Heal",        MaterialDesignH.HOSPITAL_BUILDING,          HospitalLayoutController::new),
                 new ModuleDefinition("CityEventsLayout",         "City Events",          MaterialDesignC.CALENDAR_OUTLINE,           CityEventsLayoutController::new),
                 new ModuleDefinition("CityEventsExtraLayout",    "Extra City Events",    MaterialDesignC.CALENDAR_PLUS,              CityEventsExtraLayoutController::new),
                 new ModuleDefinition("PolarTerrorLayout",        "Rally",                MaterialDesignF.FLAG_OUTLINE,               PolarTerrorLayoutController::new),
@@ -743,7 +743,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
             if (botState.getRunning()) {
                 cancelAutoStart();
                 if (botState.getPaused() != null && botState.getPaused()) {
-                    buttonStartStop.setText("Stop");
+                    buttonStartStop.setText(I18nService.tr("Stop"));
                     buttonStartStop.setDisable(false);
                     allQueuesPaused = true;
                     buttonPauseResume.setDisable(false);
@@ -751,7 +751,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
                     updatePauseButtonState();
                     refreshPauseMenuItems();
                 } else {
-                    buttonStartStop.setText("Stop");
+                    buttonStartStop.setText(I18nService.tr("Stop"));
                     buttonStartStop.setDisable(false);
                     allQueuesPaused = false;
                     buttonPauseResume.setDisable(false);
@@ -760,7 +760,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
                     refreshPauseMenuItems();
                 }
             } else {
-                buttonStartStop.setText("Start Bot");
+                buttonStartStop.setText(I18nService.tr("Start Bot"));
                 buttonStartStop.setDisable(false);
                 buttonPauseResume.setDisable(true);
                 resetPauseStates();
@@ -1105,13 +1105,13 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         Thread startStopThread = Thread.ofVirtual().unstarted(() -> {
             if (!estado) {
                 Platform.runLater(() -> {
-                    buttonStartStop.setText("Starting...");
+                    buttonStartStop.setText(I18nService.tr("Starting..."));
                     buttonStartStop.setDisable(true);
                 });
                 actionController.startBot();
             } else {
                 Platform.runLater(() -> {
-                    buttonStartStop.setText("Stopping...");
+                    buttonStartStop.setText(I18nService.tr("Stopping..."));
                     buttonStartStop.setDisable(true);
                     buttonPauseResume.setDisable(true);
                 });
@@ -1141,7 +1141,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
             cancelAutoStart();
             Thread startStopThread = Thread.ofVirtual().unstarted(() -> {
                 Platform.runLater(() -> {
-                    buttonStartStop.setText("Starting...");
+                    buttonStartStop.setText(I18nService.tr("Starting..."));
                     buttonStartStop.setDisable(true);
                 });
                 actionController.startBot();
@@ -1242,7 +1242,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         if (null == buttonPauseResume) return;
         List<MenuItem> items = new ArrayList<>();
         if (null != menuToggleAllQueues) {
-            menuToggleAllQueues.setText(allQueuesPaused ? "Resume" : "Pause");
+            menuToggleAllQueues.setText(I18nService.tr(allQueuesPaused ? "Resume" : "Pause"));
             menuToggleAllQueues.setDisable(!estado);
             items.add(menuToggleAllQueues);
         }
@@ -1267,12 +1267,12 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
     private String formatQueueMenuItemLabel(QueueProfileStateData state) { /* internal */
         if (null == state) return "Toggle queue";
         String profileName = state.getProfileName() != null ? state.getProfileName() : String.valueOf(state.getProfileId());
-        return (state.isPaused() ? "Resume " : "Pause ") + profileName;
+        return I18nService.tr(state.isPaused() ? "Resume " : "Pause ") + profileName;
     }
 
     private void updatePauseButtonState() { /* internal */
         if (null == buttonPauseResume) return;
-        buttonPauseResume.setText(allQueuesPaused ? "Resume All Queues" : "Pause All Queues");
+        buttonPauseResume.setText(I18nService.tr(allQueuesPaused ? "Resume All Queues" : "Pause All Queues"));
     }
 
     private void resetPauseStates() { /* internal */
@@ -1307,12 +1307,12 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
             autoStartSecondsRemaining--;
             int mins = autoStartSecondsRemaining / 60;
             int secs = autoStartSecondsRemaining % 60;
-            buttonStartStop.setText(String.format("Start (%02d:%02d)", mins, secs));
+            buttonStartStop.setText(String.format(I18nService.tr("Start (%02d:%02d)"), mins, secs));
             if (autoStartSecondsRemaining <= 0) {
                 cancelAutoStart();
                 Thread autoStartThread = Thread.ofVirtual().unstarted(() -> {
                     Platform.runLater(() -> {
-                        buttonStartStop.setText("Starting...");
+                        buttonStartStop.setText(I18nService.tr("Starting..."));
                         buttonStartStop.setDisable(true);
                     });
                     actionController.startBot();
@@ -1329,7 +1329,7 @@ public class LauncherLayoutController implements IProfileLoadListener, StaminaCh
         if (null != autoStartTimeline) {
             autoStartTimeline.stop();
             autoStartTimeline = null;
-            buttonStartStop.setText("Start Bot");
+            buttonStartStop.setText(I18nService.tr("Start Bot"));
         }
     }
 

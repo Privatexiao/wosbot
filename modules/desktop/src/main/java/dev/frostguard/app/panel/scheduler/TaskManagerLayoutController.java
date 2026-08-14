@@ -26,6 +26,7 @@ import dev.frostguard.engine.service.ProfileService;
 import dev.frostguard.engine.service.ScheduleService;
 import dev.frostguard.engine.service.TaskManagementService;
 import dev.frostguard.vision.convert.GameTimeUtils;
+import dev.frostguard.app.i18n.I18nService;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -330,6 +331,10 @@ public class TaskManagerLayoutController implements ProfileDataChangeListener {
 
 	private TaskManagerAux createTaskAux(Long profileId, TpDailyTaskEnum task, String taskName, String customTaskName,
 			List<DailyTaskStatusData> statuses) {
+		taskName = I18nService.tr(taskName);
+		if (customTaskName != null) {
+			customTaskName = I18nService.tr(customTaskName);
+		}
 		TaskQueue queue = ScheduleService.obtain().getCoordinator().getQueue(profileId);
 		TaskStateData liveState = TaskManagementService.shared().lookupTaskState(profileId, task.getId(), customTaskName);
 		if (liveState != null && queue != null) {
@@ -402,7 +407,7 @@ public class TaskManagerLayoutController implements ProfileDataChangeListener {
 	}
 
 	private TableColumn<TaskManagerAux, String> taskNameColumn() {
-		TableColumn<TaskManagerAux, String> column = new TableColumn<>("Task Name");
+		TableColumn<TaskManagerAux, String> column = new TableColumn<>(I18nService.tr("Task Name"));
 		column.setPrefWidth(200);
 		column.setCellValueFactory(cellData -> cellData.getValue().taskNameProperty());
 		column.setCellFactory(col -> new TableCell<>() {
@@ -430,19 +435,29 @@ public class TaskManagerLayoutController implements ProfileDataChangeListener {
 	}
 
 	private TableColumn<TaskManagerAux, String> lastExecutionColumn() {
-		TableColumn<TaskManagerAux, String> column = new TableColumn<>("Last Execution");
+		TableColumn<TaskManagerAux, String> column = new TableColumn<>(I18nService.tr("Last Execution"));
 		column.setPrefWidth(150);
 		column.setCellValueFactory(cellData -> {
 			TaskManagerAux task = cellData.getValue();
-			return Bindings.createStringBinding(() -> GameTimeUtils.formatElapsed(task.getLastExecution()),
+			return Bindings.createStringBinding(() -> translateElapsed(GameTimeUtils.formatElapsed(task.getLastExecution())),
 					task.nextExecutionProperty(), task.executingProperty(), globalClock);
 		});
 		column.setCellFactory(col -> plainTextCell("-fx-text-fill: white; -fx-font-size: 14px;"));
 		return column;
 	}
 
+	private String translateElapsed(String elapsed) {
+		if (elapsed == null) return null;
+		if ("Just now".equals(elapsed)) return I18nService.tr("Just now");
+		if ("Never".equals(elapsed)) return I18nService.tr("Never");
+		if (elapsed.endsWith("m ago")) return elapsed.replace("m ago", I18nService.tr("m ago"));
+		if (elapsed.endsWith("h ago")) return elapsed.replace("h ago", I18nService.tr("h ago"));
+		if (elapsed.endsWith("d ago")) return elapsed.replace("d ago", I18nService.tr("d ago"));
+		return I18nService.tr(elapsed);
+	}
+
 	private TableColumn<TaskManagerAux, String> nextExecutionColumn() {
-		TableColumn<TaskManagerAux, String> column = new TableColumn<>("Next Execution");
+		TableColumn<TaskManagerAux, String> column = new TableColumn<>(I18nService.tr("Next Execution"));
 		column.setPrefWidth(150);
 		column.setCellValueFactory(cellData -> {
 			TaskManagerAux task = cellData.getValue();
@@ -467,7 +482,7 @@ public class TaskManagerLayoutController implements ProfileDataChangeListener {
 	}
 
 	private TableColumn<TaskManagerAux, Void> actionsColumn() {
-		TableColumn<TaskManagerAux, Void> column = new TableColumn<>("Actions");
+		TableColumn<TaskManagerAux, Void> column = new TableColumn<>(I18nService.tr("Actions"));
 		column.setPrefWidth(200);
 		column.setCellFactory(col -> new ActionCell());
 		return column;
@@ -491,15 +506,15 @@ public class TaskManagerLayoutController implements ProfileDataChangeListener {
 
 	private String describeNextExecution(TaskManagerAux task) {
 		if (task.executingProperty().get()) {
-			return "Executing";
+			return I18nService.tr("Executing");
 		}
 		LocalDateTime next = task.getNextExecution();
 		if (next == null) {
-			return "Never";
+			return I18nService.tr("Never");
 		}
 		long seconds = java.time.Duration.between(globalClock.get(), next).getSeconds();
 		if (seconds <= 0) {
-			return "Ready";
+			return I18nService.tr("Ready");
 		}
 		if (seconds < 60) {
 			return seconds + "s";

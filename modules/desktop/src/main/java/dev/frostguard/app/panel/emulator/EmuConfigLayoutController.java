@@ -18,6 +18,8 @@ import dev.frostguard.app.panel.emulator.EmulatorAux;
 import dev.frostguard.engine.service.ConfigService;
 import dev.frostguard.engine.service.ScheduleService;
 import dev.frostguard.app.panel.launcher.LauncherLayoutController;
+import dev.frostguard.app.i18n.I18nService;
+import javafx.util.StringConverter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -291,6 +293,19 @@ public class EmuConfigLayoutController {
 		return binding;
 	}
 
+	private <T> void setTranslatedConverter(ComboBox<T> comboBox) {
+		comboBox.setConverter(new StringConverter<>() {
+			@Override
+			public String toString(T object) {
+				return object == null ? null : I18nService.tr(object.toString());
+			}
+			@Override
+			public T fromString(String string) {
+				return null;
+			}
+		});
+	}
+
 	/* ────────────────────────────────────────────────
 	 *  Game version & idle behaviour dropdowns
 	 * ──────────────────────────────────────────────── */
@@ -312,6 +327,7 @@ public class EmuConfigLayoutController {
 
 		// Idle behaviour
 		comboboxInactivityPolicy.setItems(FXCollections.observableArrayList(IdleBehaviorEnum.values()));
+		setTranslatedConverter(comboboxInactivityPolicy);
 		IdleBehaviorEnum savedIdle = IdleBehaviorEnum.fromString(
 				cfg.getOrDefault(ConfigurationKeyEnum.IDLE_BEHAVIOR_STRING.name(), "CLOSE_EMULATOR"));
 		comboboxInactivityPolicy.setValue(savedIdle);
@@ -338,6 +354,7 @@ public class EmuConfigLayoutController {
 	private void configureStopBehaviorDropdowns(Map<String, String> cfg) {
 		// Changed by pernerch | Date: 2026-07-04 | Why: persist independent stop policies for GUI and Telegram stop flows.
 		comboboxStopBehavior.setItems(FXCollections.observableArrayList(StopBehaviorEnum.values()));
+		setTranslatedConverter(comboboxStopBehavior);
 		StopBehaviorEnum savedStopBehavior = StopBehaviorEnum.parse(
 				cfg.getOrDefault(
 						ConfigurationKeyEnum.STOP_BEHAVIOR_STRING.name(),
@@ -354,6 +371,7 @@ public class EmuConfigLayoutController {
 		});
 
 		comboboxStopBehaviorTelegram.setItems(FXCollections.observableArrayList(StopBehaviorEnum.values()));
+		setTranslatedConverter(comboboxStopBehaviorTelegram);
 		StopBehaviorEnum savedTelegramStopBehavior = StopBehaviorEnum.parse(
 				cfg.getOrDefault(
 						ConfigurationKeyEnum.STOP_BEHAVIOR_TELEGRAM_STRING.name(),
@@ -385,6 +403,7 @@ public class EmuConfigLayoutController {
 
 		// Mode dropdown
 		comboboxAutoStartMode.setItems(FXCollections.observableArrayList("Continuous", "Startup Only"));
+		setTranslatedConverter(comboboxAutoStartMode);
 		String savedMode = cfg.getOrDefault(
 				ConfigurationKeyEnum.AUTO_START_MODE_STRING.name(), "Continuous");
 		if (!comboboxAutoStartMode.getItems().contains(savedMode)) {

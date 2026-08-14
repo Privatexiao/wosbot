@@ -35,10 +35,12 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 
+import dev.frostguard.app.i18n.I18nService;
+
 public class ConsoleLogLayoutController implements ProfileDataChangeListener {
 
-	private static final String ALL_PROFILES = "All profiles";
-	private static final String ALL_LEVELS = "All levels";
+	private final String ALL_PROFILES = I18nService.tr("All profiles");
+	private final String ALL_LEVELS = I18nService.tr("All levels");
 	private static final int MAX_LOG_ROWS = 600;
 	private static final DateTimeFormatter LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
 
@@ -143,7 +145,7 @@ public class ConsoleLogLayoutController implements ProfileDataChangeListener {
 
 		columnMessage.setCellFactory(column -> wrappingMessageCell());
 		columnLevel.setCellFactory(column -> levelCell());
-		columnTask.setCellFactory(column -> styledTextCell("log-module-text"));
+		columnTask.setCellFactory(column -> translatedStyledTextCell("log-module-text"));
 		columnProfile.setCellFactory(column -> styledTextCell("log-module-text"));
 	}
 
@@ -197,6 +199,22 @@ public class ConsoleLogLayoutController implements ProfileDataChangeListener {
 					return;
 				}
 				setText(item);
+				getStyleClass().add(styleClass);
+			}
+		};
+	}
+
+	private TableCell<LogMessageAux, String> translatedStyledTextCell(String styleClass) {
+		return new TableCell<>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+				getStyleClass().remove(styleClass);
+				if (empty || item == null) {
+					setText(null);
+					return;
+				}
+				setText(I18nService.tr(item));
 				getStyleClass().add(styleClass);
 			}
 		};

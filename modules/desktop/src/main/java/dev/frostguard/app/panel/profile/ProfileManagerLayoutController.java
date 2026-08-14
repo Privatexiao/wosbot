@@ -66,13 +66,15 @@ import javafx.stage.Popup;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
+import dev.frostguard.app.i18n.I18nService;
+
 public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
-	private static final String SORT_NAME = "Name";
-	private static final String SORT_PRIORITY = "Priority";
-	private static final String SORT_STATUS = "Status";
-	private static final String SORT_EMULATOR = "Emulator";
-	private static final String ALL_PROFILES_VIEW = "All profiles";
+	private final String SORT_NAME = I18nService.tr("Name");
+	private final String SORT_PRIORITY = I18nService.tr("Priority");
+	private final String SORT_STATUS = I18nService.tr("Status");
+	private final String SORT_EMULATOR = I18nService.tr("Emulator");
+	private final String ALL_PROFILES_VIEW = I18nService.tr("All profiles");
 
 	private final ExecutorService profileQueueExecutor = Executors.newSingleThreadExecutor();
 	private final Map<ProfileSettingKey, String> pendingProfileSettings = new ConcurrentHashMap<>();
@@ -469,14 +471,17 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	}
 
 	private Comparator<ProfileAux> comparatorFor(String sortBy) {
-		return switch (sortBy) {
-			case SORT_PRIORITY -> Comparator.comparingLong(profile ->
+		if (SORT_PRIORITY.equals(sortBy)) {
+			return Comparator.comparingLong(profile ->
 					profile.getPriority() == null ? Long.MAX_VALUE : profile.getPriority());
-			case SORT_STATUS -> Comparator.comparing(profile -> profile.getStatus() == null ? "" : profile.getStatus());
-			case SORT_EMULATOR -> Comparator.comparing(profile ->
+		} else if (SORT_STATUS.equals(sortBy)) {
+			return Comparator.comparing(profile -> profile.getStatus() == null ? "" : profile.getStatus());
+		} else if (SORT_EMULATOR.equals(sortBy)) {
+			return Comparator.comparing(profile ->
 					profile.getEmulatorNumber() == null ? "" : String.valueOf(profile.getEmulatorNumber()));
-			default -> Comparator.comparing(profile -> profile.getName() == null ? "" : profile.getName());
-		};
+		} else {
+			return Comparator.comparing(profile -> profile.getName() == null ? "" : profile.getName());
+		}
 	}
 
 	private void bindToTableComparator() {

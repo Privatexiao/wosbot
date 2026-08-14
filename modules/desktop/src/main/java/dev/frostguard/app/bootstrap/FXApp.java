@@ -75,6 +75,7 @@ public class FXApp extends Application {
         Scene scene = new Scene(root, DEFAULT_W, DEFAULT_H);
         scene.setFill(Color.web("#12161f"));
         scene.getStylesheets().add(ILauncherConstants.getCssPath());
+        dev.frostguard.app.i18n.I18nService.registerAutoTranslation(scene);
         return scene;
     }
 
