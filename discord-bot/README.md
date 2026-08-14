@@ -24,12 +24,10 @@ merging anything, e.g.:
 ```
 
 This directory contains the Discord half; the build half lives in
-[`setup/github-workflows/pr-test-build.yml`](../setup/github-workflows/pr-test-build.yml)
-(run `bash setup/install-workflows.sh` once to copy the workflows into
-`.github/workflows/` — required because workflow files cannot be pushed by
-tokens without the `workflows` permission).
+the canonical [`pr-test-build.yml`](../.github/workflows/pr-test-build.yml).
 The Discord command is optional: the same feature works today from the
-GitHub **Actions tab → PR Test Build → Run workflow** with `prs: 47,48,49,65`.
+GitHub **Actions tab → PR Build — Create Test Release → Run workflow** with
+`prs: 47,48,49,65`.
 
 ## How a request flows
 
@@ -123,9 +121,9 @@ Wrangler prints the worker URL, e.g.
 `https://frostguard-build-pr.<your-subdomain>.workers.dev`.
 
 For repeatable deployments, add `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets, then run **Deploy Discord
-Build PR Worker** from the Actions tab. Existing Worker secrets remain stored
-at Cloudflare and are not committed or printed by the workflow.
+`CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets, then run **Discord —
+Deploy /build-pr Worker** from the Actions tab. Existing Worker secrets remain
+stored at Cloudflare and are not committed or printed by the workflow.
 
 ### 4. Point Discord at the worker
 
@@ -147,7 +145,7 @@ leaves one guild copy of each command instead of duplicate global and guild
 entries.
 
 Alternatively, store the client secret as the GitHub repository secret
-`DISCORD_CLIENT_SECRET` and run **Sync Discord Build PR Command** from the
+`DISCORD_CLIENT_SECRET` and run **Discord — Sync /build-pr Command** from the
 Actions tab. The script requests a short-lived OAuth2 client-credentials token;
 the secret and access token are never printed.
 
@@ -170,7 +168,7 @@ requester and includes an **Open the original request** link instead.
 
 1. In the allowed channel run `/build-pr prs: <an open PR number>`.
 2. Check the plan shows the pinned SHA, press **Build**.
-3. Watch the run under Actions → *PR Test Build*.
+3. Watch the run under Actions → *PR Build — Create Test Release*.
 4. The result arrives in the same channel, mentions only the requester and
    links the original status message.
 
@@ -188,8 +186,8 @@ only needs to:
    read back from GitHub afterward.
 2. Confirm the existing Cloudflare Worker still has `DISCORD_PUBLIC_KEY` and
    its fine-grained `GITHUB_TOKEN` Worker secrets.
-3. Run **Deploy Discord Build PR Worker**.
-4. Run **Sync Discord Build PR Command**.
+3. Run **Discord — Deploy /build-pr Worker**.
+4. Run **Discord — Sync /build-pr Command**.
 5. Test `/build-pr` in `#request-a-build` with a non-admin account.
 
 ## Configuration reference
@@ -213,6 +211,6 @@ only needs to:
 
 ```bash
 node discord-bot/test_worker.mjs      # worker helpers
-python3 ci/test_pr_build_plan.py      # planner (real git repos)
-python3 ci/test_pr_test_notify.py     # Discord result messages
+python3 build-support/release/test_pr_build_plan.py       # planner (real git repos)
+python3 build-support/notifications/test_pr_test_notify.py # Discord result messages
 ```

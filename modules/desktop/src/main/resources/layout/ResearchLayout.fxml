@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import dev.frostguard.app.shared.PriorityListView?>
+
+<!-- Research — AnchorPane root with FlowPane research categories -->
+<AnchorPane maxHeight="Infinity" maxWidth="Infinity"
+            HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                styleClass="task-page-scroll"
+                AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+                AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+        <VBox spacing="14" styleClass="task-page-root" maxWidth="Infinity">
+
+            <VBox styleClass="content-card">
+                <HBox alignment="CENTER_LEFT" maxWidth="Infinity" styleClass="header-green">
+                    <Label text="Enable Research" />
+                </HBox>
+                <VBox spacing="10" styleClass="task-section-inner">
+                    <Label styleClass="task-card-description"
+                           text="Automates research technology in your city" wrapText="true" />
+                    <Separator style="-fx-opacity: 0.25;" />
+                    <CheckBox fx:id="checkBoxEnableResearch" mnemonicParsing="false"
+                              text="Enable Research" />
+
+                    <Separator style="-fx-opacity: 0.25;" />
+
+                    <Label text="Research Priorities"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #9eaab6;" />
+
+                    <dev.frostguard.app.shared.PriorityListView fx:id="researchPriorities"
+                                                                 prefHeight="160"
+                                                                 maxWidth="Infinity" />
+                </VBox>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+</AnchorPane>
