@@ -230,8 +230,8 @@ private void setAutoJoinQueuesFlow(int count) {
 
 			boolean isCurrentlyChecked = false;
 			try {
-				RawImageData rawImage = emuManager.captureScreen(EMULATOR_NUMBER);
-				BufferedImage img = TesseractOcrProvider.toBufferedImage(rawImage);
+				RawImageData frame = emuManager.captureScreen(EMULATOR_NUMBER);
+				BufferedImage img = dev.frostguard.vision.convert.ImageConverter.toBufferedImage(frame);
 				Color golden = new Color(0xFF, 0xC3, 0x33);
 				int goldenCount = PixelStats.count(img, checkboxArea, PixelStats.near(golden, 40));
 				if (goldenCount > 10) {

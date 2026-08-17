@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sqlite-frostguard-db": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "--db-path",
+        "C:\\Users\\z\\.frostguard\\workspaces\\stable\\default\\frostguard.db"
+      ],
+      "disabled": true,
+      "comment": "Enable this MCP server to allow direct inspection and querying of the local Frostguard SQLite profile database."
+    }
+  }
+}
