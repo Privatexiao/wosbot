@@ -114,6 +114,7 @@ public class GatherRoutine extends DelayedTask {
     // ========== State & Configuration ==========
     private int activeQueues;
     private boolean removeHeroes;
+    private boolean noHeroFallback;
     private boolean intelSmart;
     private boolean intelRecall;
     private boolean intelEnabled;
@@ -260,6 +261,7 @@ public class GatherRoutine extends DelayedTask {
         this.activeQueues = GatherQueuePolicy.resolveActiveQueueLimit(
                 get(ConfigurationKeyEnum.GATHER_ACTIVE_MARCH_QUEUE_INT, DEFAULT_QUEUES));
         this.removeHeroes = get(ConfigurationKeyEnum.GATHER_REMOVE_HEROS_BOOL, DEFAULT_REMOVE_HEROES);
+        this.noHeroFallback = get(ConfigurationKeyEnum.GATHER_NO_HERO_FALLBACK_BOOL, false);
         this.intelSmart = get(ConfigurationKeyEnum.INTEL_SMART_PROCESSING_BOOL, DEFAULT_INTEL_SMART);
         this.intelRecall = get(ConfigurationKeyEnum.INTEL_RECALL_GATHER_TROOPS_BOOL, false);
         this.intelEnabled = get(ConfigurationKeyEnum.INTEL_BOOL, false);
@@ -788,12 +790,14 @@ public class GatherRoutine extends DelayedTask {
         ImageSearchResultData hero = templateSearchHelper.locatePattern(type.preferredHero,
                 SearchConfig.builder().withCoordinates(new PointData(51, 231), new PointData(295, 649)).build());
 
-        if (!hero.isFound()) {
+        if (!hero.isFound() && !noHeroFallback) {
             logDebug("Preferred hero not found for " + type + ". Proceeding with default march.");
         }
-
-        if (removeHeroes)
-            removeDefaultHeroes();
+        GatherHeroSelectionPolicy.Action heroAction = GatherHeroSelectionPolicy.select(
+                hero.isFound(), removeHeroes, noHeroFallback);
+        if (!applyHeroSelection(type, heroAction)) {
+            return GatherDeployResult.BLOCKED;
+        }
 
         if (deploymentHelper.hasNoDeployableTroops()) {
             logInfo("No deployable troops found on gather formation screen.");
@@ -833,10 +837,47 @@ public class GatherRoutine extends DelayedTask {
         return readNumberValue(LEVEL_DISPLAY_TL, LEVEL_DISPLAY_BR, s);
     }
 
-    private void removeDefaultHeroes() {
-        List<ImageSearchResultData> btns = templateSearchHelper.locateAllPatterns(
+    private boolean applyHeroSelection(GatherType type, GatherHeroSelectionPolicy.Action action) {
+        return switch (action) {
+            case KEEP_DEFAULT -> true;
+            case REMOVE_ADDITIONAL -> {
+                removeDefaultHeroes();
+                yield true;
+            }
+            case REMOVE_ALL -> removeAllHeroes(type);
+        };
+    }
+
+    private boolean removeAllHeroes(GatherType type) {
+        List<ImageSearchResultData> buttons = locateSelectedHeroRemoveButtons();
+        if (buttons.isEmpty()) {
+            logWarning("Preferred hero not found for " + type
+                    + ", but selected heroes could not be identified. Cancelling gather deployment.");
+            return false;
+        }
+
+        buttons.sort(Comparator.comparingInt(result -> result.getPoint().getX()));
+        tapInside(buttons.getFirst());
+        sleepTask(500);
+
+        if (!locateSelectedHeroRemoveButtons().isEmpty()) {
+            logWarning("Preferred hero not found for " + type
+                    + ", but the hero selection did not clear. Cancelling gather deployment.");
+            return false;
+        }
+
+        logInfo("Preferred hero not found for " + type + ". Deploying gather march without heroes.");
+        return true;
+    }
+
+    private List<ImageSearchResultData> locateSelectedHeroRemoveButtons() {
+        return templateSearchHelper.locateAllPatterns(
                 TemplatesEnum.RALLY_REMOVE_HERO_BUTTON,
                 SearchConfig.builder().withThreshold(90).withMaxResults(3).build());
+    }
+
+    private void removeDefaultHeroes() {
+        List<ImageSearchResultData> btns = locateSelectedHeroRemoveButtons();
 
         if (btns.isEmpty())
             return;
