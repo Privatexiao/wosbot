@@ -58,19 +58,22 @@ public class MarchHelper {
     private final String device;
     private final TapInteractionService taps;
     private final ResilientOcrExecutor<String> ocrStrings;
+    private final TemplateSearchHelper templateSearchHelper;
     private final ProfileContextLogger log;
 
     public MarchHelper(EmulatorController emuManager, String emulatorNumber,
-                       ResilientOcrExecutor<String> stringHelper, AccountDescriptor profile) {
+                       ResilientOcrExecutor<String> stringHelper, TemplateSearchHelper templateSearchHelper,
+                       AccountDescriptor profile) {
         this.emu = emuManager;
         this.device = emulatorNumber;
         this.taps = TapInteractionService.forController(emuManager, emulatorNumber);
         this.ocrStrings = stringHelper;
+        this.templateSearchHelper = templateSearchHelper;
         this.log = new ProfileContextLogger(MarchHelper.class, profile);
     }
 
     public boolean checkMarchesAvailable() {
-        boolean anyIdle = readMarchQueue().stream().anyMatch(MarchSlotState::isIdle);
+        boolean anyIdle = readMarchQueueSinglePass().stream().anyMatch(MarchSlotState::isIdle);
         if (!anyIdle) {
             log.info("No idle march slot");
         }
@@ -94,6 +97,15 @@ public class MarchHelper {
      * for flows that already normalize their world state and do not need legacy multi-tap recovery.
      */
     public List<MarchSlotState> readMarchQueueSinglePass() {
+        ImageSearchResultData cityTab = templateSearchHelper.locatePattern(
+                TemplatesEnum.LEFT_MENU_CITY_TAB,
+                dev.frostguard.engine.nav.SearchConfigConstants.DEFAULT_SINGLE);
+        if (cityTab.isFound()) {
+            log.info("Left menu is already open. Closing it before single-pass read.");
+            emu.pressBack(device);
+            interruptibleWait(500);
+        }
+
         openLeftMenuCitySectionOnce(false);
         try {
             return readVisibleMarchQueue();

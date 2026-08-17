@@ -53,6 +53,12 @@ public final class CommonOCRSettings {
             buildLstmConfig("SpecialRewardsleft0123456789() ", true,
                     255, 255, 255, PageAnalysis.SINGLE_LINE);
 
+    public static final TesseractSettingsData AUTOJOIN_REWARD_SETTINGS =
+            TesseractSettingsData.builder()
+                    .pageAnalysis(PageAnalysis.SPARSE)
+                    .recognitionEngine(RecognitionEngine.LSTM_ONLY)
+                    .build();
+
     // extraction pattern for pulling first integer from noisy OCR text
     public static final Pattern NUMBER_PATTERN = Pattern.compile(".*?(\\d+).*");
 

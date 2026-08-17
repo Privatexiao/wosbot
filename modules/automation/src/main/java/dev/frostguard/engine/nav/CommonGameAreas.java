@@ -114,6 +114,7 @@ public final class CommonGameAreas {
     // A newly revealed section heading enters this strip before more reward rows are swiped into view.
     public static final AreaData POLAR_SPECIAL_REWARDS_HEADER = region(35, 1090, 685, 1185);
     public static final PointData POLAR_REWARD_DETAILS_CLOSE = point(665, 195);
+    public static final AreaData AUTOJOIN_LIST_AREA = region(40, 500, 700, 1050);
 
     // ── stamina "Obtain more" dialog ─────────────────────────────────
     //

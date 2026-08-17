@@ -174,7 +174,7 @@ private record RallyLaunchResult(RallyLaunchOutcome outcome, String detail) {
             if (!staminaCouldSupportRally())
                 return;
 
-            List<MarchSlotState> marchQueue = marchHelper.readMarchQueue();
+            List<MarchSlotState> marchQueue = marchHelper.readMarchQueueSinglePass();
             if (marchQueue.stream().noneMatch(MarchSlotState::isIdle)) {
                 LocalDateTime retryAt = resolveNoSlotRetry(marchQueue);
                 logInfo(routineLogPolarTerrorHuntingLine(String.format(

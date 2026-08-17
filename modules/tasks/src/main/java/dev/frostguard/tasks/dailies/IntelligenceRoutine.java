@@ -409,7 +409,7 @@ private boolean seekAndProcessGrayscale(TemplatesEnum template, Consumer<ImageSe
 	}
 
 private MarchesAvailable resolveMarchesAvailable() {
-		List<MarchSlotState> slots = marchHelper.readMarchQueue();
+		List<MarchSlotState> slots = marchHelper.readMarchQueueSinglePass();
 		IntelMarchAvailabilityPolicy.Decision decision = IntelMarchAvailabilityPolicy.assess(slots);
 		if (slots.isEmpty()) {
 			logWarning(routineLogIntelligenceLine(
@@ -808,7 +808,7 @@ private boolean recallGatherMarchByQueueFlow(int queueIndex) {
 	}
 
 private int countIdleMarchesFlow() {
-		List<MarchSlotState> slots = marchHelper.readMarchQueue();
+		List<MarchSlotState> slots = marchHelper.readMarchQueueSinglePass();
 		if (slots.isEmpty()) {
 			logWarning(routineLogIntelligenceLine("Could not classify march slots while counting idle capacity."));
 			return 0;
