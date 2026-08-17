@@ -22,7 +22,9 @@ it inside the shared header region. The Events calendar fixture under
 matches in the header but cannot be selected from the repeated calendar artwork below it. A live
 MuMu slot 1 run confirmed Alliance Mobilization through its selected header and Bank through its
 active-deposit control. Remaining rotating targets still require representative saved frames and
-live-log confirmation before merge readiness.
+live-log confirmation before merge readiness. Alliance Championship has current saved-frame proof
+for both its unselected header tab and registered destination screen, but not yet a live navigator
+log on this branch.
 
 The in-game calendar is not part of this navigation contract. Its truncated labels and differently
 scaled artwork require separate evidence. It may later supply availability or schedule hints, but
