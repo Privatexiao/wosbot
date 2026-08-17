@@ -9,12 +9,16 @@ import dev.frostguard.api.domain.PointData;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
-import dev.frostguard.engine.service.ExceptionScreenshotService;
+import dev.frostguard.tasks.city.hospital.HealBatchCalculator;
+import dev.frostguard.tasks.city.hospital.HospitalHealState;
+import dev.frostguard.vision.convert.GameTimeUtils;
+import java.time.Duration;
 import static dev.frostguard.api.configs.ConfigurationKeyEnum.*;
 import static dev.frostguard.api.configs.TemplatesEnum.*;
 
 /**
  * Hospital Healing routine for automating troop recovery via Field shortcut or City building.
+ * Refactored to support state machine and batched healing calculations.
  */
 public class HospitalHealRoutine extends DelayedTask {
 
@@ -22,46 +26,269 @@ public class HospitalHealRoutine extends DelayedTask {
         super(profile, taskType);
     }
 
-    private static final PointData FIELD_HOSPITAL_ICON_POINT = new PointData(650, 850);
-    private static final PointData HEAL_BUTTON_POINT = new PointData(500, 1000);
-    private static final PointData HELP_BUTTON_POINT = new PointData(600, 1000);
-
     public enum EntryResult {
         ENTERED,
         NOT_AVAILABLE,
         FAILED
     }
 
+    private HospitalHealState state = HospitalHealState.DISCOVER_ENTRY;
+    private int batchedAmountToHeal = -1;
+    private boolean useFieldEntry = true;
+    private boolean useCityEntry = false;
+    
+    private int totalWounded = 0;
+    private long healTimeSec = 0;
+    private long singleTroopTimeSec = 0;
+    private long currentEstimatedHelpsSec = -1;
+    private PointData lastHealBtnPos = null;
+
+    private static final PointData TROOP_1_INPUT_BOX_CENTER = new PointData(590, 390);
+    private static final PointData TROOP_1_INPUT_BOX_TL = new PointData(540, 360);
+    private static final PointData TROOP_1_INPUT_BOX_BR = new PointData(640, 420);
+
+    private static final PointData HEAL_TIME_TL = new PointData(510, 660);
+    private static final PointData HEAL_TIME_BR = new PointData(640, 695);
+
+    private boolean resolveConfigBoolean(ConfigurationKeyEnum key, boolean defaultValue) {
+        if (profile == null) return defaultValue;
+        Boolean val = profile.getConfig(key, Boolean.class);
+        return val != null ? val : defaultValue;
+    }
+
+    private int resolveConfigInt(ConfigurationKeyEnum key, int defaultValue) {
+        if (profile == null) return defaultValue;
+        Integer val = profile.getConfig(key, Integer.class);
+        return val != null ? val : defaultValue;
+    }
+
     @Override
     protected void execute() {
-        Boolean enabled = profile.getConfig(HOSPITAL_HEAL_ENABLED_BOOL, Boolean.class);
-        if (!Boolean.TRUE.equals(enabled)) {
-            logInfo(routineLogHospitalLine("Hospital Heal Routine disabled in configuration; skipping execution in 0.1s without screen interaction."));
+        if (!resolveConfigBoolean(HOSPITAL_HEAL_ENABLED_BOOL, false)) {
+            logInfo(routineLogHospitalLine("Hospital Heal Routine disabled in configuration; skipping execution."));
+            return;
+        }
+
+        useFieldEntry = resolveConfigBoolean(HOSPITAL_HEAL_FIELD_ENABLED_BOOL, true);
+        useCityEntry = resolveConfigBoolean(HOSPITAL_HEAL_CITY_ENABLED_BOOL, false);
+
+        if (!useFieldEntry && !useCityEntry) {
+            logWarning(routineLogHospitalLine("Both field and city hospital entry options are disabled; exiting."));
             return;
         }
 
         logInfo(routineLogHospitalLine("Starting Hospital Heal Routine execution flow..."));
 
-        Boolean fieldEnabled = profile.getConfig(HOSPITAL_HEAL_FIELD_ENABLED_BOOL, Boolean.class);
-        Boolean cityEnabled = profile.getConfig(HOSPITAL_HEAL_CITY_ENABLED_BOOL, Boolean.class);
+        state = HospitalHealState.DISCOVER_ENTRY;
+        int safetyCounter = 0;
 
-        if (!Boolean.TRUE.equals(fieldEnabled) && !Boolean.TRUE.equals(cityEnabled)) {
-            logWarning(routineLogHospitalLine("Both field and city hospital entry options are disabled; exiting."));
-            return;
+        while (state != HospitalHealState.COMPLETE && state != HospitalHealState.ABORT && safetyCounter < 20) {
+            checkPreemption();
+            safetyCounter++;
+            processState();
         }
 
-        EntryResult entry = tryFieldHospitalEntry();
-        if (entry != EntryResult.ENTERED && Boolean.TRUE.equals(cityEnabled)) {
-            entry = tryCityHospitalEntry();
+        if (safetyCounter >= 20) {
+            logWarning(routineLogHospitalLine("State machine aborted due to infinite loop prevention."));
         }
+        
+        navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
+    }
 
-        if (entry != EntryResult.ENTERED) {
-            logInfo(routineLogHospitalLine("No wounded troops or hospital entry icon present. Exiting routine."));
-            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
-            return;
+    private void processState() {
+        logInfo(routineLogHospitalLine("Processing state: " + state));
+        switch (state) {
+            case DISCOVER_ENTRY:
+                if (useFieldEntry) {
+                    state = HospitalHealState.ENTER_FIELD;
+                } else {
+                    state = HospitalHealState.ENTER_CITY;
+                }
+                break;
+
+            case ENTER_FIELD:
+                EntryResult fieldResult = tryFieldHospitalEntry();
+                if (fieldResult == EntryResult.ENTERED) {
+                    state = HospitalHealState.CONFIRM_HEAL_SCREEN;
+                } else if (useCityEntry) {
+                    state = HospitalHealState.ENTER_CITY;
+                } else {
+                    logInfo(routineLogHospitalLine("Field entry not available and city entry disabled."));
+                    state = HospitalHealState.COMPLETE;
+                }
+                break;
+
+            case ENTER_CITY:
+                EntryResult cityResult = tryCityHospitalEntry();
+                if (cityResult == EntryResult.ENTERED) {
+                    state = HospitalHealState.CONFIRM_HEAL_SCREEN;
+                } else {
+                    logInfo(routineLogHospitalLine("City entry not available."));
+                    state = HospitalHealState.COMPLETE;
+                }
+                break;
+
+            case CONFIRM_HEAL_SCREEN:
+                logInfo(routineLogHospitalLine("Waiting for hospital popup to fully open..."));
+                sleepTask(2500);
+                // Write 1 to ensure the button is active (blue)
+                tapInside(TROOP_1_INPUT_BOX_CENTER, TROOP_1_INPUT_BOX_CENTER, 1, 1500);
+                emuManager.clearText(EMULATOR_NUMBER, 6);
+                emuManager.writeText(EMULATOR_NUMBER, "1\n");
+                sleepTask(1000); // wait for UI to update
+                // hide keyboard by clicking empty area inside popup (e.g. title area above the list)
+                tapInside(new PointData(360, 320), new PointData(360, 320), 1, 500);
+
+
+                ImageSearchResultData healBtn = templateSearchHelper.locatePattern(
+                        HOSPITAL_HEAL_BUTTON,
+                        SearchConfig.builder().withThreshold(70).withMaxAttempts(6).build());
+                if (healBtn.isFound()) {
+                    lastHealBtnPos = healBtn.getPoint();
+                    state = HospitalHealState.READ;
+                } else {
+                    logInfo(routineLogHospitalLine("Heal button not found even after inputting 1, maybe no wounded troops."));
+                    state = HospitalHealState.COMPLETE;
+                }
+                break;
+
+            case SELECT_TIER:
+                state = HospitalHealState.READ;
+                break;
+
+            case READ:
+                logInfo(routineLogHospitalLine("Reading single troop time..."));
+                
+                PointData ocrTl = HEAL_TIME_TL;
+                PointData ocrBr = HEAL_TIME_BR;
+                if (lastHealBtnPos != null) {
+                    ocrTl = new PointData(Math.max(0, lastHealBtnPos.getX() - 120), Math.max(0, lastHealBtnPos.getY() - 60));
+                    ocrBr = new PointData(lastHealBtnPos.getX() + 120, lastHealBtnPos.getY() + 60);
+                }
+
+                Duration duration = durationHelper.attemptRecognition(
+                    ocrTl,
+                    ocrBr,
+                    3,
+                    200L,
+                    null,
+                    GameTimeUtils::isAcceptedFormat,
+                    GameTimeUtils::parseDuration
+                );
+                
+                if (duration == null || duration.getSeconds() <= 0) {
+                    logWarning(routineLogHospitalLine("Failed to read heal time for 1 troop."));
+                    state = HospitalHealState.ABORT;
+                    break;
+                }
+                singleTroopTimeSec = duration.getSeconds();
+                logInfo(routineLogHospitalLine("Read single troop time: " + singleTroopTimeSec + "s"));
+                state = HospitalHealState.CALCULATE;
+                break;
+
+            case CALCULATE:
+                if (currentEstimatedHelpsSec < 0) {
+                    int helpCount = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_MAX_COUNT_INT, 15);
+                    int reductionSec = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_TIME_REDUCTION_SEC_INT, 210);
+                    currentEstimatedHelpsSec = (long) helpCount * reductionSec;
+                }
+
+                batchedAmountToHeal = (int) (currentEstimatedHelpsSec / singleTroopTimeSec);
+                if (batchedAmountToHeal <= 0) batchedAmountToHeal = 1;
+
+                logInfo(routineLogHospitalLine("Calculated batch size: " + batchedAmountToHeal + " (Target heal time: " + currentEstimatedHelpsSec + "s)"));
+                state = HospitalHealState.INPUT;
+                break;
+
+            case INPUT:
+                logInfo(routineLogHospitalLine("Inputting batch amount: " + batchedAmountToHeal));
+                tapInside(TROOP_1_INPUT_BOX_CENTER, TROOP_1_INPUT_BOX_CENTER, 1, 1500);
+                emuManager.clearText(EMULATOR_NUMBER, 6);
+                emuManager.writeText(EMULATOR_NUMBER, String.valueOf(batchedAmountToHeal));
+                sleepTask(1000);
+                // hide keyboard by clicking empty area inside popup
+                tapInside(new PointData(360, 320), new PointData(360, 320), 1, 500);
+                state = HospitalHealState.START;
+                break;
+
+            case START:
+                ImageSearchResultData btn = templateSearchHelper.locatePattern(
+                        HOSPITAL_HEAL_BUTTON,
+                        SearchConfig.builder().withThreshold(70).withMaxAttempts(4).build());
+                if (btn.isFound()) {
+                    tapInside(btn);
+                    sleepTask(1000);
+                    state = HospitalHealState.REQUEST_HELP;
+                } else {
+                    logInfo(routineLogHospitalLine("Heal button not found at START."));
+                    state = HospitalHealState.ABORT;
+                }
+                break;
+
+            case REQUEST_HELP:
+                ImageSearchResultData helpBtn = templateSearchHelper.locatePattern(
+                        HOSPITAL_HELP_BUTTON,
+                        SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
+                if (helpBtn.isFound()) {
+                    logInfo(routineLogHospitalLine("Requesting alliance help..."));
+                    tapInside(helpBtn);
+                    sleepTask(1000);
+                }
+                state = HospitalHealState.MONITOR;
+                break;
+                
+            case MONITOR:
+                logInfo(routineLogHospitalLine("Waiting 30 seconds for alliance helps to apply..."));
+                sleepTask(30000);
+                
+                PointData monitorTl = new PointData(100, 800); // Bottom half of screen
+                PointData monitorBr = new PointData(620, 1200);
+                
+                Duration remaining = durationHelper.attemptRecognition(
+                    monitorTl,
+                    monitorBr,
+                    3,
+                    500L,
+                    null,
+                    GameTimeUtils::isAcceptedFormat,
+                    GameTimeUtils::parseDuration
+                );
+                
+                int configuredMaxWait = resolveConfigInt(ConfigurationKeyEnum.HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT, 30);
+                
+                if (remaining != null) {
+                    long remainingSec = remaining.getSeconds();
+                    logInfo(routineLogHospitalLine("Remaining heal time after helps: " + remainingSec + "s"));
+                    if (remainingSec > configuredMaxWait * 60) {
+                        logInfo(routineLogHospitalLine("Exceeded max wait time! Canceling heal to readjust..."));
+                        ImageSearchResultData cancelBtn = templateSearchHelper.locatePattern(
+                                HOSPITAL_CANCEL_BUTTON,
+                                SearchConfig.builder().withThreshold(75).withMaxAttempts(2).build());
+                        if (cancelBtn.isFound()) {
+                            tapInside(cancelBtn);
+                            sleepTask(1000);
+                        } else {
+                            // Fallback to text based or arbitrary coord if no template is saved yet
+                            logWarning(routineLogHospitalLine("HOSPITAL_CANCEL_BUTTON not found, attempting OCR fallback..."));
+                            // Assuming typical cancel button position or just fail
+                        }
+                        
+                        // Reduce estimate and try again
+                        currentEstimatedHelpsSec = (long) (currentEstimatedHelpsSec * 0.9);
+                        state = HospitalHealState.CALCULATE;
+                    } else {
+                        state = HospitalHealState.COMPLETE;
+                    }
+                } else {
+                    logInfo(routineLogHospitalLine("Could not read remaining time, assuming success."));
+                    state = HospitalHealState.COMPLETE;
+                }
+                break;
+                
+            default:
+                state = HospitalHealState.ABORT;
+                break;
         }
-
-        processHealingScreenFlow();
     }
 
     private EntryResult tryFieldHospitalEntry() {
@@ -73,8 +300,7 @@ public class HospitalHealRoutine extends DelayedTask {
         if (!fieldIcon.isFound()) {
             return EntryResult.NOT_AVAILABLE;
         }
-
-        logInfo(routineLogHospitalLine("Field hospital shortcut icon detected. Entering field hospital..."));
+        logInfo(routineLogHospitalLine("Field hospital shortcut detected."));
         tapInside(fieldIcon.getPoint(), fieldIcon.getPoint(), 1, 100);
         sleepTask(1200);
         return EntryResult.ENTERED;
@@ -89,42 +315,10 @@ public class HospitalHealRoutine extends DelayedTask {
         if (!cityBuilding.isFound()) {
             return EntryResult.NOT_AVAILABLE;
         }
-
-        logInfo(routineLogHospitalLine("City hospital building detected. Entering city hospital..."));
+        logInfo(routineLogHospitalLine("City hospital detected."));
         tapInside(cityBuilding.getPoint(), cityBuilding.getPoint(), 1, 100);
         sleepTask(1200);
         return EntryResult.ENTERED;
-    }
-
-    private void processHealingScreenFlow() {
-        logInfo(routineLogHospitalLine("Processing hospital healing screen..."));
-        ImageSearchResultData healBtn = templateSearchHelper.locatePattern(
-                HOSPITAL_HEAL_BUTTON,
-                SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
-
-        if (healBtn.isFound()) {
-            logInfo(routineLogHospitalLine("Heal button found. Tapping Heal..."));
-            tapInside(healBtn);
-            sleepTask(1000);
-
-            requestAllianceHelpFlow();
-        } else {
-            logInfo(routineLogHospitalLine("No active heal button found (zero wounded or already healing)."));
-        }
-
-        navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
-    }
-
-    private void requestAllianceHelpFlow() {
-        ImageSearchResultData helpBtn = templateSearchHelper.locatePattern(
-                HOSPITAL_HELP_BUTTON,
-                SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
-
-        if (helpBtn.isFound()) {
-            logInfo(routineLogHospitalLine("Requesting alliance help for healing..."));
-            tapInside(helpBtn);
-            sleepTask(500);
-        }
     }
 
     private String routineLogHospitalLine(String msg) {
