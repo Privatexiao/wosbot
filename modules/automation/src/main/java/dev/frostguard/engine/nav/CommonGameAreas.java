@@ -56,6 +56,15 @@ public final class CommonGameAreas {
     public static final PointData SIDEBAR_SCROLL_FROM = point(360, 800);
     public static final PointData SIDEBAR_SCROLL_TO = point(360, 350);
 
+    // Events and Deals share the same horizontal carousel geometry. Restricting tab matching to
+    // this strip prevents event artwork in the body from becoming a clickable navigation target.
+    public static final AreaData ROTATING_MENU_HEADER = region(0, 80, 720, 210);
+    public static final PointData ROTATING_MENU_RESET_FROM = point(80, 120);
+    public static final PointData ROTATING_MENU_RESET_TO = point(578, 130);
+    public static final PointData ROTATING_MENU_SCAN_FROM = point(630, 143);
+    public static final PointData ROTATING_MENU_SCAN_TO = point(400, 128);
+    public static final AreaData ROTATING_MENU_HEADER_BACKGROUND = region(529, 27, 635, 63);
+
     public static AreaData sidebarTab(SidebarSection section) {
         return switch (section) {
             case CITY -> LEFT_MENU_CITY_TAB;

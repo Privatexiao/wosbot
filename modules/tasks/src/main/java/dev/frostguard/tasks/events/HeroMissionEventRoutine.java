@@ -19,7 +19,7 @@ import dev.frostguard.api.domain.OcrSettingsData;
 import dev.frostguard.engine.service.TaskManagementService;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
-import dev.frostguard.engine.helper.NavigationHelper.EventMenu;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 import dev.frostguard.engine.helper.DeploymentHelper;
 
@@ -97,7 +97,7 @@ public class HeroMissionEventRoutine extends DelayedTask {
     private boolean navigateToEventScreen() {
         logInfo("Navigating to Hero's Mission event...");
 
-        boolean success = navigationHelper.navigateToEventMenu(EventMenu.HERO_MISSION);
+        boolean success = navigationHelper.navigateToRotatingMenu(RotatingMenuTarget.HERO_MISSION);
 
         if (!success) {
             logWarning("Failed to navigate to Hero's Mission event");

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.frostguard.vision.convert.GameTimeUtils;
-import dev.frostguard.vision.convert.GameTimeUtils;
 import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.configs.TemplatesEnum;
 import dev.frostguard.api.configs.TpDailyTaskEnum;
@@ -20,6 +19,7 @@ import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.engine.nav.SearchConfigConstants;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 
 public class TundraTruckEventRoutine extends DelayedTask {
@@ -241,13 +241,13 @@ public class TundraTruckEventRoutine extends DelayedTask {
 	 * Navigate to Tundra Truck event section
 	 * 
 	 * <p>
-	 * Uses the generic NavigationHelper.navigateToEventMenu() method.
+	 * Uses the shared, destination-verified rotating-menu navigator.
 	 */
 	private TundraNavigationResult navigateToTundraEvent() {
 		logInfo("Navigating to Tundra Truck event");
 
-		boolean success = navigationHelper.navigateToEventMenu(
-				dev.frostguard.engine.helper.NavigationHelper.EventMenu.TUNDRA_TRUCK);
+		boolean success = navigationHelper.navigateToRotatingMenu(
+				RotatingMenuTarget.TUNDRA_TRUCK);
 
 		if (!success) {
 			logWarning("Failed to navigate to Tundra Truck event");

@@ -9,6 +9,7 @@ import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.PointData;
 import dev.frostguard.api.domain.OcrSettingsData;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.engine.service.BotOcrEngine;
@@ -547,8 +548,8 @@ private int scanTaskAvailabilityTimers() {
 private boolean reachAllianceMobilization() {
         logInfo(routineLogAllianceMobilizationLine("Moving to Alliance Mobilization..."));
 
-        boolean success = navigationHelper.navigateToEventMenu(
-                dev.frostguard.engine.helper.NavigationHelper.EventMenu.ALLIANCE_MOBILIZATION);
+        boolean success = navigationHelper.navigateToRotatingMenu(
+                RotatingMenuTarget.ALLIANCE_MOBILIZATION);
 
         if (!success) {
             logWarning(routineLogAllianceMobilizationLine("Could not navigate to Alliance Mobilization event"));

@@ -12,6 +12,7 @@ import dev.frostguard.engine.error.ProfileInReconnectStateException;
 import dev.frostguard.engine.input.TapInteractionService;
 import dev.frostguard.engine.nav.ButtonConstants;
 import dev.frostguard.engine.nav.CommonGameAreas;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.nav.SearchConfigConstants;
 import dev.frostguard.engine.nav.SidebarDestination;
 import dev.frostguard.engine.nav.SidebarSection;
@@ -23,15 +24,6 @@ import dev.frostguard.vision.logging.ProfileContextLogger;
 // primary game views and auxiliary menus.
 public class NavigationHelper {
 
-    private static final PointData EVENT_TAB_SEARCH_TOP_LEFT = new PointData(0, 80);
-    private static final PointData EVENT_TAB_SEARCH_BOTTOM_RIGHT = new PointData(720, 210);
-    private static final PointData EVENT_TAB_RESET_FROM = new PointData(80, 120);
-    private static final PointData EVENT_TAB_RESET_TO = new PointData(578, 130);
-    private static final PointData EVENT_TAB_SCAN_FROM = new PointData(630, 143);
-    private static final PointData EVENT_TAB_SCAN_TO = new PointData(400, 128);
-    private static final int EVENT_TAB_RESET_SWIPES = 3;
-    private static final int EVENT_TAB_SCAN_SWIPES = 7;
-    private static final long EVENT_TAB_SETTLE_MS = 1000L;
     private static final AreaData LABYRINTH_LEADERBOARD = area(646, 185, 704, 264);
     private static final AreaData LABYRINTH_CATEGORY = area(90, 190, 320, 450);
     private static final AreaData ALLIANCE_POWER_RANKINGS = area(80, 1035, 290, 1100);
@@ -49,6 +41,7 @@ public class NavigationHelper {
     private final String accountName;
     private final LoggingService logs;
     private final SidebarNavigator sidebar;
+    private final RotatingMenuNavigator rotatingMenus;
 
     public NavigationHelper(EmulatorController emuManager, String emulatorNumber,
                             AccountDescriptor profile) {
@@ -60,6 +53,10 @@ public class NavigationHelper {
         this.accountName = profile.getName();
         this.logs = LoggingService.obtain();
         this.sidebar = new SidebarNavigator(emuManager, emulatorNumber, profile);
+        this.rotatingMenus = new RotatingMenuNavigator(emuManager, emulatorNumber, profile, () -> {
+            ensureCorrectScreenLocation(LaunchPoint.HOME);
+            return true;
+        });
     }
 
     // ── alliance menu ────────────────────────────────────────────────
@@ -157,77 +154,12 @@ public class NavigationHelper {
 
     // ── event menu ───────────────────────────────────────────────────
 
-    public boolean navigateToEventMenu(EventMenu event) {
-        broadcastInfo("Navigating to " + event.name());
-
-        // open the events panel
-        ImageSearchResultData evtBtn = searcher.locatePattern(
-                TemplatesEnum.HOME_EVENTS_BUTTON, SearchConfigConstants.SINGLE_WITH_RETRIES);
-        if (!evtBtn.isFound()) {
-            broadcastWarn("Events panel missed");
-            return false;
-        }
-        taps.tapInside(evtBtn);
-        interruptibleWait(2000);
-
-        // clear existing selection
-        taps.tapInside(new AreaData(new PointData(529, 27), new PointData(635, 63)), 5, 300);
-        interruptibleWait(300);
-
-        TemplatesEnum tpl = switch (event) {
-            case HERO_MISSION -> TemplatesEnum.HERO_MISSION_EVENT_TAB;
-            case MERCENARY -> TemplatesEnum.MERCENARY_EVENT_TAB;
-            case ALLIANCE_CHAMPIONSHIP -> TemplatesEnum.ALLIANCE_CHAMPIONSHIP_TAB;
-            case ALLIANCE_MOBILIZATION -> TemplatesEnum.ALLIANCE_MOBILIZATION_TAB;
-            case TUNDRA_TRUCK -> TemplatesEnum.TUNDRA_TRUCK_TAB;
-        };
-
-        // The horizontal event strip continues moving after the swipe gesture returns. Searching during
-        // that animation can miss even a 97% match, so settle fully and inspect only the header strip.
-        ImageSearchResultData tab = locateEventTab(tpl);
-        if (!tab.isFound()) {
-            for (int i = 0; i < EVENT_TAB_RESET_SWIPES && !tab.isFound(); i++) {
-                emu.swipeScreen(device, EVENT_TAB_RESET_FROM, EVENT_TAB_RESET_TO);
-                interruptibleWait(EVENT_TAB_SETTLE_MS);
-                tab = locateEventTab(tpl);
-            }
-
-            for (int i = 0; i < EVENT_TAB_SCAN_SWIPES && !tab.isFound(); i++) {
-                emu.swipeScreen(device, EVENT_TAB_SCAN_FROM, EVENT_TAB_SCAN_TO);
-                interruptibleWait(EVENT_TAB_SETTLE_MS);
-                tab = locateEventTab(tpl);
-            }
-        }
-
-        // fallback for mobilization unselected variant
-        if (!tab.isFound() && event == EventMenu.ALLIANCE_MOBILIZATION) {
-            broadcastDebug("Trying unselected mobilization tab");
-            tab = searcher.locatePattern(TemplatesEnum.ALLIANCE_MOBILIZATION_UNSELECTED_TAB,
-                    SearchConfigConstants.DEFAULT_SINGLE);
-        }
-
-        if (!tab.isFound()) {
-            broadcastWarn("Tab not found: " + event);
-            return false;
-        }
-
-        taps.tapInside(tab);
-        interruptibleWait(1000);
-        broadcastInfo("Reached " + event.name());
-        return true;
-    }
-
-    private ImageSearchResultData locateEventTab(TemplatesEnum template) {
-        return searcher.locatePattern(template,
-                TemplateSearchHelper.SearchConfig.builder()
-                        .withMaxAttempts(1)
-                        .withThreshold(90)
-                        .withCoordinates(EVENT_TAB_SEARCH_TOP_LEFT, EVENT_TAB_SEARCH_BOTTOM_RIGHT)
-                        .build());
+    public boolean navigateToRotatingMenu(RotatingMenuTarget target) {
+        return rotatingMenus.navigateTo(target);
     }
 
     public void clearEventTabSelection() {
-        taps.tapInside(new AreaData(new PointData(529, 27), new PointData(635, 63)), 5, 300);
+        taps.tapInside(CommonGameAreas.ROTATING_MENU_HEADER_BACKGROUND, 5, 300);
         interruptibleWait(300);
     }
 
@@ -315,5 +247,4 @@ public class NavigationHelper {
 
     private enum ScreenState { HOME, WORLD, RECONNECT, UNKNOWN }
     public enum AllianceMenu { WAR, CHESTS, TERRITORY, SHOP, TECH, HELP, TRIUMPH }
-    public enum EventMenu { HERO_MISSION, MERCENARY, ALLIANCE_CHAMPIONSHIP, ALLIANCE_MOBILIZATION, TUNDRA_TRUCK }
 }

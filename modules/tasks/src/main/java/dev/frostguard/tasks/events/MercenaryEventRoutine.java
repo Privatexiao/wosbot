@@ -16,7 +16,7 @@ import dev.frostguard.engine.service.StaminaService;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.engine.nav.SearchConfigConstants;
-import dev.frostguard.engine.helper.NavigationHelper.EventMenu;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.helper.DeploymentHelper;
 import java.awt.Color;
 
@@ -239,7 +239,7 @@ public class MercenaryEventRoutine extends DelayedTask {
     private boolean navigateToEventScreen() {
         logInfo("Navigating to Mercenary event...");
 
-        boolean success = navigationHelper.navigateToEventMenu(EventMenu.MERCENARY);
+        boolean success = navigationHelper.navigateToRotatingMenu(RotatingMenuTarget.MERCENARY);
 
         if (!success) {
             logWarning("Failed to navigate to Mercenary event");
