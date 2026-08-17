@@ -38,6 +38,9 @@
 ### 2.1 野外与城镇双入口支持 (`HOSPITAL_HEAL_FIELD_ENABLED_BOOL` / `HOSPITAL_HEAL_CITY_ENABLED_BOOL`)
 - **优化实现**：支持从大地图快捷野外医院图标（WORLD）与城内医院建筑（HOME）自动进入，检测伤兵并进行安全批量治疗与联盟求助。
 
+### 2.2 医院治疗图像匹配模板修复 (Hospital Heal Image Templates Fix)
+- **修复实现**：补充了原提交缺失的 `HOSPITAL_FIELD_ICON`、`HOSPITAL_HEAL_BUTTON` 图像识别基准模板并完成属性映射，彻底解决机器人因“睁眼瞎”导致跳过治疗任务的问题。
+
 ---
 
 ## 3. 运行时异常取证与有界恢复 (Exception Evidence Service)
@@ -107,6 +110,12 @@
 
 ### 6.1 控制台开关动态感知与关停退出
 - **优化实现**：在 `execute()` 入口加入 `ALLIANCE_AUTOJOIN_BOOL` 前置校验，运行中在控制台关闭自动集结后，任务直接退出，不再强制打开联盟战争界面。
+
+### 6.2 基于 OCR 的 Auto-Join 目标智能勾选
+- **优化实现**：
+  - 在 UI 中新增**极地恶魔 (Polar Terror)**、**吉娜的复仇 (Gina's Revenge)** 和 **佣兵荣耀 (Mercenary Prestige)** 的目标自动加入勾选项。
+  - 在进入 Auto-Join 设置面板后，采用多片段纵向切片进行 OCR（`processOcrSlice`），精准解析列表中的活动名称及其进度（如 `50/50`）。
+  - 若用户配置了加入该目标，且进度未满（如不是 `50/50`），则自动根据切片坐标（`Y` 轴）点击复选框；若已达上限，则保证不加入，节省队列与体力。
 
 ---
 
