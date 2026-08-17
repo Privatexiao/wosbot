@@ -30,6 +30,12 @@ class VerifyAppImageTest(unittest.TestCase):
             "app/lib/tess4j-5.14.0.jar",
             "app/lib/javafx-graphics-23.0.1-win.jar",
             "app/templates/home/world.png",
+            "app/custom_tasks/templates/deals/deadshot/event_tab.png",
+            "app/custom_tasks/README.md",
+            "app/custom_tasks/dead_shot.json",
+            "app/custom_tasks/dead_shot.txt",
+            "app/custom_tasks/expert_idle_exploration.json",
+            "app/custom_tasks/expert_idle_exploration.txt",
             "app/custom_tasks/shield.java",
         ] + [f"app/lib/runtime-{index}.jar" for index in range(60)]
         for relative in files:
