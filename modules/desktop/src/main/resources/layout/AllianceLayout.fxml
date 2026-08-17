@@ -86,6 +86,28 @@
                                                 </VBox>
                                             </children>
                                         </HBox>
+
+                                        <HBox spacing="18" alignment="TOP_LEFT">
+                                            <children>
+                                                <VBox spacing="10" styleClass="task-subsection" HBox.hgrow="ALWAYS">
+                                                    <children>
+                                                        <Label styleClass="task-subsection-title" text="Autojoin Targets" />
+                                                        <HBox spacing="15">
+                                                            <children>
+                                                                <CheckBox fx:id="checkBoxAutojoinPolarTerror" mnemonicParsing="false" text="Polar Terror" />
+                                                                <CheckBox fx:id="checkBoxAutojoinGinasRevenge" mnemonicParsing="false" text="Gina's Revenge" />
+                                                                <CheckBox fx:id="checkBoxAutojoinMercenaryPrestige" mnemonicParsing="false" text="Mercenary Prestige" />
+                                                            </children>
+                                                        </HBox>
+                                                        <HBox spacing="15">
+                                                            <children>
+                                                                <CheckBox fx:id="checkBoxAutojoinSkipMaxed" mnemonicParsing="false" text="Skip maxed out targets" />
+                                                            </children>
+                                                        </HBox>
+                                                    </children>
+                                                </VBox>
+                                            </children>
+                                        </HBox>
                                     </children>
                                 </VBox>
                             </children>

@@ -21,7 +21,9 @@ public class AllianceLayoutController extends AbstractProfileController {
     private CheckBox checkBoxAutojoin, checkBoxChests,
         checkBoxTechContribution, checkBoxHelpRequests,
         checkBoxTriumph, checkBoxAlliesEssence,
-        checkBoxHonorChest;
+        checkBoxHonorChest, checkBoxAutojoinPolarTerror,
+        checkBoxAutojoinGinasRevenge, checkBoxAutojoinMercenaryPrestige,
+        checkBoxAutojoinSkipMaxed;
 
     @FXML
     private TextField textfieldAutojoinQueues, textfieldChestOffset,
@@ -47,6 +49,10 @@ public class AllianceLayoutController extends AbstractProfileController {
     private List<ToggleBinding> taskToggles() {
         return List.of(
             new ToggleBinding(checkBoxAutojoin, ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_BOOL),
+            new ToggleBinding(checkBoxAutojoinPolarTerror, ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_POLAR_TERROR_BOOL),
+            new ToggleBinding(checkBoxAutojoinGinasRevenge, ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_GINAS_REVENGE_BOOL),
+            new ToggleBinding(checkBoxAutojoinMercenaryPrestige, ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_MERCENARY_PRESTIGE_BOOL),
+            new ToggleBinding(checkBoxAutojoinSkipMaxed, ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_SKIP_MAXED_BOOL),
             new ToggleBinding(checkBoxTechContribution, ConfigurationKeyEnum.ALLIANCE_TECH_BOOL),
             new ToggleBinding(checkBoxChests, ConfigurationKeyEnum.ALLIANCE_CHESTS_BOOL),
             new ToggleBinding(checkBoxHonorChest, ConfigurationKeyEnum.ALLIANCE_HONOR_CHEST_BOOL),

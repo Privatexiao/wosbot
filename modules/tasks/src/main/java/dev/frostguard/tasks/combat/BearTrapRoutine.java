@@ -966,31 +966,34 @@ private boolean hasInsideWindow() {
         return result.getState() == BearTrapHelper.WindowState.INSIDE;
     }
 
-private List<Integer> decodeJoinFlags() {
-        String flagConfig = profile.getConfig(BEAR_TRAP_JOIN_FLAG_INT, String.class);
+    private List<Integer> decodeJoinFlags() {
         List<Integer> flags = new ArrayList<>();
+        ConfigurationKeyEnum[] flagKeys = {
+            BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING,
+            BEAR_TRAP_JOIN_MARCH_2_FLAG_STRING,
+            BEAR_TRAP_JOIN_MARCH_3_FLAG_STRING,
+            BEAR_TRAP_JOIN_MARCH_4_FLAG_STRING,
+            BEAR_TRAP_JOIN_MARCH_5_FLAG_STRING,
+            BEAR_TRAP_JOIN_MARCH_6_FLAG_STRING
+        };
 
-        if (flagConfig != null && !flagConfig.trim().isEmpty()) {
-            String[] parts = flagConfig.split(",");
-            for (String part : parts) {
+        for (ConfigurationKeyEnum key : flagKeys) {
+            String flagStr = profile.getConfig(key, String.class);
+            if (flagStr != null && !flagStr.equals("No Flag") && !flagStr.trim().isEmpty()) {
                 try {
-                    int flag = Integer.parseInt(part.trim());
+                    int flag = Integer.parseInt(flagStr.trim());
                     if (FormationSlots.supports(flag)) {
                         flags.add(flag);
                     }
                 } catch (NumberFormatException e) {
-                    logWarning(routineLogBearTrapLine("Invalid join flag value: " + part));
+                    logWarning(routineLogBearTrapLine("Invalid join flag value: " + flagStr));
                 }
             }
         }
 
-
         if (flags.isEmpty()) {
             flags.add(DEFAULT_JOIN_RALLY_FLAG_VALUE);
         }
-
-
-        flags.sort(Integer::compareTo);
 
         return flags;
     }

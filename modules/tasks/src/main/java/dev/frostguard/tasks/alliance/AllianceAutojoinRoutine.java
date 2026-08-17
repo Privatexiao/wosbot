@@ -9,6 +9,11 @@ import dev.frostguard.engine.helper.NavigationHelper;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import java.time.LocalDateTime;
+import dev.frostguard.api.domain.RawImageData;
+import dev.frostguard.vision.color.PixelStats;
+import dev.frostguard.vision.ocr.TesseractOcrProvider;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 
 public class AllianceAutojoinRoutine extends DelayedTask {
 
@@ -74,6 +79,8 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 			manageTaskFailure("Failed to open auto-join ocrPreset");
 			return;
 		}
+
+		scanAndConfigureTargetsFlow(profile);
 
 		configureTroopSelectionFlow();
 		setAutoJoinQueuesFlow(queueCount);
@@ -141,6 +148,110 @@ private void setAutoJoinQueuesFlow(int count) {
 		}
 
 		logDebug(routineLogAllianceAutojoinLine("Queue count set to " + count));
+	}
+
+	private void scanAndConfigureTargetsFlow(AccountDescriptor profile) {
+		logInfo(routineLogAllianceAutojoinLine("Starting to scan Auto-Join targets..."));
+
+		boolean polarTerrorEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_POLAR_TERROR_BOOL, Boolean.class);
+		boolean ginasRevengeEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_GINAS_REVENGE_BOOL, Boolean.class);
+		boolean mercenaryPrestigeEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_MERCENARY_PRESTIGE_BOOL, Boolean.class);
+		boolean skipMaxedEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_SKIP_MAXED_BOOL, Boolean.class);
+
+		for (int swipe = 0; swipe < 2; swipe++) {
+			boolean foundAny = false;
+			int LIST_START_Y = 500;
+			int SLICE_HEIGHT = 135;
+			int SLICE_COUNT = 4;
+
+			for (int i = 0; i < SLICE_COUNT; i++) {
+				int startY = LIST_START_Y + (i * SLICE_HEIGHT);
+				int endY = startY + SLICE_HEIGHT;
+				PointData tl = new PointData(40, startY);
+				PointData br = new PointData(700, endY);
+				String text = readStringValue(tl, br, dev.frostguard.engine.nav.CommonOCRSettings.AUTOJOIN_REWARD_SETTINGS);
+
+				if (text != null && !text.trim().isEmpty()) {
+					boolean processed = processOcrSlice(text, startY, endY, polarTerrorEnabled, ginasRevengeEnabled, mercenaryPrestigeEnabled, skipMaxedEnabled);
+					if (processed) foundAny = true;
+				}
+			}
+
+			if (!foundAny && swipe > 0) break;
+
+			swipe(new PointData(350, 950), new PointData(350, 500));
+			sleepTask(1500);
+		}
+	}
+
+	private boolean processOcrSlice(String text, int startY, int endY, boolean polarTerrorEnabled, boolean ginasRevengeEnabled, boolean mercenaryPrestigeEnabled, boolean skipMaxedEnabled) {
+		String lowerText = text.toLowerCase();
+		boolean isTarget = false;
+		boolean isConfiguredEnabled = false;
+		String targetName = "";
+
+		if (lowerText.contains("polar") || lowerText.contains("terror") || lowerText.contains("极地恶魔")) {
+			isTarget = true;
+			isConfiguredEnabled = polarTerrorEnabled;
+			targetName = "Polar Terror";
+		} else if (lowerText.contains("gina") || lowerText.contains("revenge") || lowerText.contains("吉娜")) {
+			isTarget = true;
+			isConfiguredEnabled = ginasRevengeEnabled;
+			targetName = "Gina's Revenge";
+		} else if (lowerText.contains("mercenary") || lowerText.contains("prestige") || lowerText.contains("佣兵")) {
+			isTarget = true;
+			isConfiguredEnabled = mercenaryPrestigeEnabled;
+			targetName = "Mercenary Prestige";
+		}
+
+		if (isTarget) {
+			java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*/\\s*(\\d+)").matcher(lowerText);
+			boolean isMaxed = false;
+			if (m.find()) {
+				int current = Integer.parseInt(m.group(1));
+				int max = Integer.parseInt(m.group(2));
+				if (current >= max) isMaxed = true;
+				logInfo(routineLogAllianceAutojoinLine("Found target " + targetName + " with progress " + current + "/" + max));
+			}
+
+			boolean shouldBeChecked;
+			if (skipMaxedEnabled && isMaxed) {
+				shouldBeChecked = false;
+				logInfo(routineLogAllianceAutojoinLine("Target " + targetName + " is maxed out and skip maxed is enabled. Will disable."));
+			} else {
+				shouldBeChecked = isConfiguredEnabled;
+			}
+			
+			int CHECKBOX_X_CENTER = 90;
+			int centerY = startY + (135 / 2);
+			PointData checkboxCenter = new PointData(CHECKBOX_X_CENTER, centerY);
+			AreaData checkboxArea = new AreaData(new PointData(checkboxCenter.getX() - 15, checkboxCenter.getY() - 15),
+					new PointData(checkboxCenter.getX() + 15, checkboxCenter.getY() + 15));
+
+			boolean isCurrentlyChecked = false;
+			try {
+				RawImageData rawImage = emuManager.captureScreen(EMULATOR_NUMBER);
+				BufferedImage img = TesseractOcrProvider.toBufferedImage(rawImage);
+				Color golden = new Color(0xFF, 0xC3, 0x33);
+				int goldenCount = PixelStats.count(img, checkboxArea, PixelStats.near(golden, 40));
+				if (goldenCount > 10) {
+					isCurrentlyChecked = true;
+				}
+			} catch (Exception e) {
+				logWarning(routineLogAllianceAutojoinLine("Color check failed for checkbox at " + checkboxCenter + ": " + e.getMessage()));
+			}
+
+			if (isCurrentlyChecked != shouldBeChecked) {
+				logInfo(routineLogAllianceAutojoinLine("Toggling target " + targetName + " from " + isCurrentlyChecked + " to " + shouldBeChecked));
+				tapNear(checkboxCenter);
+				sleepTask(500);
+			} else {
+				logInfo(routineLogAllianceAutojoinLine("Target " + targetName + " is already " + (shouldBeChecked ? "enabled" : "disabled") + ", no action needed."));
+			}
+
+			return true;
+		}
+		return false;
 	}
 
 private boolean openUpAllianceWarMenu() {

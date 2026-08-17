@@ -104,7 +104,7 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
 
                 if (validJoinPoint == null) {
                     logInfo(routineLogManualRallyJoinLine("Zero matching target and join button detected. Ending task."));
-                    reschedule(LocalDateTime.now().plusYears(100));
+                    reschedule(LocalDateTime.now().plusMinutes(3));
                     return;
                 }
 
@@ -119,7 +119,7 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
 
                 if (!deployBtn.isFound()) {
                     logError(routineLogManualRallyJoinLine("Deploy button not detected. Ending task."));
-                    reschedule(LocalDateTime.now().plusYears(100));
+                    reschedule(LocalDateTime.now().plusMinutes(3));
                     return;
                 }
 
@@ -225,7 +225,7 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
         }
 
 
-        reschedule(LocalDateTime.now().plusYears(100));
+        reschedule(LocalDateTime.now().plusMinutes(3));
     }
 
 private String routineLogManualRallyJoinLine(String note) {
