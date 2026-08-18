@@ -20,9 +20,9 @@
 
 | 领域 | 上游基线 | 本项目扩展 |
 | --- | --- | --- |
-| 打熊加入 | 按可用加入入口执行常规加入 | 六队列独立编队已保留；高级候选筛选、狂热和去重处于待真实帧恢复状态 |
+| 打熊加入 | 按可用加入入口执行常规加入 | 六队列独立编队已保留；高级候选模型、策略和分域 TTL 已完成纯逻辑，高级扫描仍待真实帧恢复 |
 | 手动集结加入 | 没有独立的目标筛选加入任务 | 按目标或全部目标扫描绿色 Join，并受出征数和编队配置约束 |
-| 医院治疗 | 没有本项目的医院任务 | 野外入口和状态机部分完成；城内入口、可靠批次、调度与加速仍在待办中 |
+| 医院治疗 | 没有本项目的医院任务 | 野外入口和状态机部分完成；批次止损与退出调度已接入，城内入口、伤兵读取、输入回读和加速仍在待办中 |
 | 情报任务 | 常规模板匹配和出征流程 | 关闭即零触屏、任务类型隔离、彩色/灰度双匹配和误触恢复 |
 | 极地恶魔/自动集结 | 常规导航与开关读取 | 搜索页签兜底、运行期开关熔断和目标 OCR 选择 |
 | 行军队列读取 | 多个流程可能反复开关面板读取 | 单次截图统一分类队列状态，并保证面板收尾 |
@@ -42,7 +42,7 @@
 3. `BEAR_TRAP_MIN_REMAINING_CAPACITY_INT`：最低剩余可加入兵量；
 4. 候选是否已被 `BearRallyDedupCache` 在 TTL 内处理，防止重复加入同一集结。
 
-数值解析器 [`CompactGameNumberParser.java`](../modules/vision/src/main/java/dev/frostguard/vision/convert/CompactGameNumberParser.java) 支持整数、千分位及 `K/M` 缩写，并对溢出做保护。策略层已修复为用“当前成员数”单独判断最低成员门槛，TTL 在精确到期时立即失效。
+数值解析器 [`CompactGameNumberParser.java`](../modules/vision/src/main/java/dev/frostguard/vision/convert/CompactGameNumberParser.java) 支持整数、千分位及 `K/M` 缩写，并对溢出做保护。候选模型已把成员人数、当前兵量、集结总容量和剩余容量拆成独立字段；策略会拒绝关键几何、发起人、采集时间或数值字段缺失及内部不一致的候选，并分别应用三个门槛。候选签名使用“采集时间＋剩余时间”推导的预计结束时间桶，避免剩余倒计时自然递减时绕过 TTL。TTL 按 profile 和活动实例隔离，具备 300 秒默认期限、精确边界失效、严格 256 条并发容量限制、活动范围清理和系统时钟回拨清空保护。
 
 启用 `BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL` 后，活动达到 `BEAR_TRAP_FRENZY_START_MINUTE_INT`（默认 22 分钟）会放宽成员数限制。`BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING` 至 `..._6_...` 可为六次加入分别选择 1～8 号保存编队或 `No Flag`；不可用编队不会被盲目点击。
 
@@ -59,11 +59,13 @@
 
 ## 3. 医院自动治疗
 
-相关实现：[`HospitalHealRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/HospitalHealRoutine.java)、[`HealBatchCalculator.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HealBatchCalculator.java) 和 [`HospitalHealState.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalHealState.java)。
+相关实现：[`HospitalHealRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/HospitalHealRoutine.java)、[`HealBatchCalculator.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HealBatchCalculator.java)、[`HospitalSchedulePolicy.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalSchedulePolicy.java) 和 [`HospitalHealState.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalHealState.java)。
 
 本项目新增医院任务及控制面板。入口由 `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` 和 `HOSPITAL_HEAL_CITY_ENABLED_BOOL` 控制：优先尝试野外快捷入口，失败后可回退到城内医院。两者都关闭时直接退出，不触屏。当前仓库只有野外快捷入口和治疗按钮的真实模板；城内医院模板缺失时会明确告警并跳过，绝不盲点固定坐标。补齐城内入口所需图片已登记在[同一待办](task/bear-rally-hospital-recovery-plan.md#当前待办事件等待真实画面素材)。
 
-当前代码采用显式状态机：发现入口 → 确认治疗页 → 读取单兵治疗时间 → 计算本批数量 → 治疗/联盟帮助 → 等待或结束。每轮执行会重置批次和 OCR 状态，联盟帮助复用现有模板，状态循环带 20 步安全上限。但伤兵总数、输入回读、`HealBatchCalculator` 运行时接入、明确重排策略、目标兵阶和加速分支尚未闭环，因此当前医院功能只能视为部分实现。
+当前代码采用显式状态机：发现入口 → 确认治疗页 → 读取单兵治疗时间 → 计算本批数量 → 治疗/联盟帮助 → 等待或结束。每轮执行会重置批次和 OCR 状态，联盟帮助复用现有模板，状态循环带 20 步安全上限。`HealBatchCalculator` 已接入运行路径；伤兵总数或联盟帮助参数不可用时会在点击治疗前停止，不再退化为“治疗全部”。退出调度会区分无入口、零伤兵、配置未支持、识别失败和治疗进行中，异常按退避重排，治疗中按剩余时间加缓冲重排。
+
+伤兵总数读取、数量输入 OCR 回读、目标兵阶和加速分支仍未闭环，因此当前医院功能只能视为部分实现。医院总开关、野外入口、城内入口和加速控件目前均在 UI 中禁用并显示原因；运行时也会拦截已有配置，确保完整保存帧校准前不会进入固定区域输入或点击。缺少保存帧时不会猜测入口坐标、ROI 或支付状态。
 
 本项目同时补齐 `HOSPITAL_FIELD_ICON`、`HOSPITAL_HEAL_BUTTON` 等模板映射及真实图片资源，否则任务虽存在但无法可靠找到入口和治疗按钮。
 
@@ -111,5 +113,5 @@
 
 - 使用 Temurin Java 21.0.12 对本次上游同步执行了 22 个相关测试类、81 个测试，结果为 0 失败、0 错误、0 跳过；覆盖新版侧边栏、行军分类与证据、情报容量、打熊策略与 TTL、手动集结、医院批次、打野限制、异常 PNG、FXML 装载及桌面运行时身份/版本。
 - 完整 `modules/tasks -am test` 已启动；截至超时可读取的报告合计 499 个测试且未记录失败，但因首次依赖下载和持久化层慢测试超过 5 分钟命令时限而未完整结束，因此不能据此声称全 Reactor 测试通过。
-- 医院批次计算工具虽有通过的纯逻辑测试，但尚未完整接入运行时；中文界面有通过的 FXML 可加载性测试覆盖基础装载。
+- 本轮新增并通过打熊候选策略、分域 TTL、医院批次和医院调度的定向纯逻辑测试；医院批次与调度已接入运行时安全路径。桌面 FXML 可加载性测试通过。
 - 视觉坐标、OCR 阈值、模板识别和真实账号行为仍需保存帧回归及实时账号日志确认；高级打熊卡片和城内医院入口在取得真实帧前保持安全停用。
