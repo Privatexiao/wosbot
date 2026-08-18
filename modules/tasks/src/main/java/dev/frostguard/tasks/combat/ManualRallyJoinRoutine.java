@@ -52,7 +52,7 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
                     + targetKey + ")"));
 
             Integer marchesConfig = profile.getConfig(ConfigurationKeyEnum.RALLY_MARCHES_INT, Integer.class);
-            int maxMarches = (marchesConfig != null) ? marchesConfig : 1;
+            int maxMarches = normalizeMarchLimit(marchesConfig);
             int deployedCount = ManualRallyJoinPreemptionRule.getActiveDeploymentsCount(profile.getId());
 
             logInfo(routineLogManualRallyJoinLine("Entering deploy loop - will deploy up to " + maxMarches + " marches..."));
@@ -206,6 +206,19 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
                 logInfo(routineLogManualRallyJoinLine("Pressing Deploy button."));
                 tapInside(deployBtn);
                 sleepTask(500);
+                if (deploymentHelper.isMarchQueueFull()) {
+                    logInfo(routineLogManualRallyJoinLine("March queue is full. Ending task without registering a deployment."));
+                    reschedule(LocalDateTime.now().plusMinutes(3));
+                    return;
+                }
+                if (deploymentHelper.isSameTargetDialog()) {
+                    logInfo(routineLogManualRallyJoinLine("A march is already targeting this rally. Cancelling duplicate deployment."));
+                    pressBack();
+                    sleepTask(300);
+                    pressBack();
+                    reschedule(LocalDateTime.now().plusMinutes(3));
+                    return;
+                }
                 ManualRallyJoinPreemptionRule.registerDeployment(profile.getId(), returnTime);
                 ManualRallyJoinPreemptionRule.incrementSessionJoinedCount(profile.getId());
                 deployedCount++;
@@ -246,6 +259,13 @@ private TemplatesEnum resolveTargetTemplateFlow(String key) {
         }
     }
 
+static int normalizeMarchLimit(Integer configured) {
+        if (configured == null) {
+            return 1;
+        }
+        return Math.max(1, Math.min(6, configured));
+    }
+
 private boolean hasJoinButtonGreen(PointData center) {
         try {
             RawImageData rawImage = emuManager.captureScreen(EMULATOR_NUMBER);
@@ -265,8 +285,8 @@ private boolean hasJoinButtonGreen(PointData center) {
             return false;
         } catch (Exception e) {
             logWarning(routineLogManualRallyJoinLine("Color check did not complete for join button at " + center + ": " + e.getMessage()
-                    + ". Allowing tap anyway."));
-            return true;
+                    + ". Skipping the unverified button."));
+            return false;
 
         }
     }

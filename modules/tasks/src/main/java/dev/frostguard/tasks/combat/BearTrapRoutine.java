@@ -4,7 +4,6 @@ import dev.frostguard.api.configs.ConfigurationKeyEnum;
 import dev.frostguard.api.configs.TemplatesEnum;
 import dev.frostguard.api.configs.TpDailyTaskEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
-import dev.frostguard.api.domain.AreaData;
 import dev.frostguard.api.domain.FormationSlots;
 import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.PointData;
@@ -767,8 +766,6 @@ private void handleJoinRallies2() {
         }
     }
 
-private final BearRallyDedupCache bearRallyDedupCache = new BearRallyDedupCache();
-
 private void manageJoinRallies(int freeMarches) {
         Boolean advancedEnabled = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, Boolean.class);
         if (Boolean.TRUE.equals(advancedEnabled)) {
@@ -823,64 +820,10 @@ private void manageJoinRallies(int freeMarches) {
     }
 
     private void manageAdvancedJoinRallies(int freeMarches) {
-        logInfo(routineLogBearTrapLine("Advanced rally join scanner active. Evaluating visible rally cards..."));
-        ImageSearchResultData plusIcon = templateSearchHelper.locatePattern(
-                BEAR_JOIN_PLUS_ICON,
-                SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
-
-        if (!plusIcon.isFound()) {
-            logInfo(routineLogBearTrapLine("No plus join icon visible during advanced scan."));
-            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
-            return;
-        }
-
-        BearRallyCandidate candidate = new BearRallyCandidate(
-                plusIcon.getPoint(),
-                new AreaData(new PointData(plusIcon.getPoint().getX() - 200, plusIcon.getPoint().getY() - 100),
-                             new PointData(plusIcon.getPoint().getX() + 50, plusIcon.getPoint().getY() + 50)),
-                "AllianceRallyHost",
-                1L, 6L, Duration.ofMinutes(4), true);
-
-        if (bearRallyDedupCache.isDuplicate(candidate.getCandidateKey())) {
-            logInfo(routineLogBearTrapLine("Candidate rally " + candidate.getCandidateKey() + " skipped (recently joined within TTL window)."));
-            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
-            return;
-        }
-
-        TrapTimingShape timing = computeTrapTiming();
-        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
-                candidate, profile, timing != null ? timing.activationTime : null, Clock.systemUTC());
-
-        if (decision.result() != BearRallyDecisionPolicy.DecisionResult.JOIN) {
-            logInfo(routineLogBearTrapLine("Rally candidate evaluated to SKIP: " + decision.reason()));
-            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
-            return;
-        }
-
-        logInfo(routineLogBearTrapLine("Rally candidate evaluated to JOIN (" + decision.reason() + "). Proceeding to join."));
-        int selectedFlag = resolveNextJoinFlag();
-        tapInside(plusIcon.getPoint(), plusIcon.getPoint(), 1, 100);
-        sleepTask(300);
-
-        if (!marchHelper.selectFlag(selectedFlag)) {
-            logWarning(routineLogBearTrapLine("Configured join formation #" + selectedFlag + " is unavailable; cancelling join"));
-            pressBack();
-            return;
-        }
-
-        ImageSearchResultData deploy = templateSearchHelper.locatePattern(
-                BEAR_DEPLOY_BUTTON,
-                SearchConfig.builder().withThreshold(90).withMaxAttempts(TEMPLATE_SEARCH_RETRIES_MAX_VALUE).build());
-
-        if (!deploy.isFound()) {
-            logWarning(routineLogBearTrapLine("Deploy button not detected after selecting flag in advanced mode."));
-        } else {
-            tapInside(deploy);
-            sleepTask(500);
-            bearRallyDedupCache.markJoined(candidate.getCandidateKey());
-            logInfo(routineLogBearTrapLine("Advanced rally join deployment succeeded for " + candidate.getCandidateKey()));
-        }
-
+        logWarning(routineLogBearTrapLine(
+                "Advanced rally join is paused because no saved-frame-calibrated card parser is available. "
+                        + "No rally will be joined from fabricated candidate values; disable Advanced Join "
+                        + "to use the standard upstream-compatible path."));
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
     }
 

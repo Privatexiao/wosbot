@@ -36,7 +36,7 @@ public class BearRallyDedupCache {
             return false;
         }
 
-        if (clock.instant().isAfter(expiry)) {
+        if (!clock.instant().isBefore(expiry)) {
             cache.remove(key);
             return false;
         }
@@ -58,6 +58,6 @@ public class BearRallyDedupCache {
 
     private void cleanExpired() {
         Instant now = clock.instant();
-        cache.entrySet().removeIf(entry -> now.isAfter(entry.getValue()));
+        cache.entrySet().removeIf(entry -> !now.isBefore(entry.getValue()));
     }
 }

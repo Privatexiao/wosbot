@@ -27,6 +27,7 @@ public class BeastSlayRoutine extends DelayedTask {
 	private final TaskManagementService taskManagementService = TaskManagementService.shared();
 
 	private int maxQueues;
+	private int maxAttacks;
 	private int beastLevel;
 	private int staminaReserve;
 
@@ -49,6 +50,8 @@ public class BeastSlayRoutine extends DelayedTask {
 		// Load configuration
 		Integer configMarches = profile.getConfig(ConfigurationKeyEnum.BEAST_HUNTING_MARCHES_INT, Integer.class);
 		this.maxQueues = (configMarches != null) ? configMarches : 3;
+		Integer configuredMaxAttacks = profile.getConfig(ConfigurationKeyEnum.BEAST_HUNTING_MAX_ATTACKS_INT, Integer.class);
+		this.maxAttacks = normalizeAttackLimit(configuredMaxAttacks);
 		Integer configLevel = profile.getConfig(ConfigurationKeyEnum.BEAST_HUNTING_LEVEL_INT, Integer.class);
 		this.beastLevel = (configLevel != null) ? configLevel : 30;
 		Integer configReserve = profile.getConfig(ConfigurationKeyEnum.STAMINA_RESERVE_INT, Integer.class);
@@ -71,13 +74,15 @@ public class BeastSlayRoutine extends DelayedTask {
 		}
 
 		int currentStamina = staminaHelper.getCurrentStamina();
+		int attackLimit = resolveAttackLimit(maxQueues, maxAttacks);
 		logInfo("Initiating beast attacks. Stamina: " + currentStamina + ", Reserve: " + staminaReserve
-				+ ", Max queues: " + maxQueues + ", Beast level: " + beastLevel);
+				+ ", Max queues: " + maxQueues + ", Max attacks: "
+				+ (maxAttacks == 0 ? "unlimited" : maxAttacks) + ", Beast level: " + beastLevel);
 
 		int attacksDone = 0;
 
 		// Fill available queues with beast attacks, never dipping below the reserve
-		while (currentStamina > staminaReserve && attacksDone < maxQueues) {
+		while (currentStamina > staminaReserve && attacksDone < attackLimit) {
 
 			sleepTask(6000);
 			// Open the creature search menu
@@ -147,6 +152,15 @@ public class BeastSlayRoutine extends DelayedTask {
 					break;
 				}
 
+				Integer formation = configuredFormation(attacksDone);
+				if (formation != null && !marchHelper.selectFlag(formation)) {
+					logWarning("Configured Beast Hunting formation #" + formation
+							+ " is unavailable; cancelling this deployment.");
+					pressBack();
+					updateReschedule(LocalDateTime.now().plusMinutes(5));
+					break;
+				}
+
 				ImageSearchResultData deploy = templateSearchHelper.locatePattern(
 						TemplatesEnum.DEPLOY_BUTTON, SearchConfigConstants.SINGLE_WITH_RETRIES);
 				if (!deploy.isFound()) {
@@ -197,6 +211,40 @@ public class BeastSlayRoutine extends DelayedTask {
 
 		// Finalize: reschedule to earliest beast return time (freeing the thread for other tasks)
 		finalizeReschedule();
+	}
+
+	static int normalizeAttackLimit(Integer configured) {
+		return configured == null ? 10 : Math.max(0, configured);
+	}
+
+	static int resolveAttackLimit(int queues, int attacks) {
+		int safeQueues = Math.max(0, queues);
+		return attacks == 0 ? safeQueues : Math.min(safeQueues, attacks);
+	}
+
+	private Integer configuredFormation(int attackIndex) {
+		ConfigurationKeyEnum[] keys = {
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_1_FLAG_STRING,
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_2_FLAG_STRING,
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_3_FLAG_STRING,
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_4_FLAG_STRING,
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_5_FLAG_STRING,
+				ConfigurationKeyEnum.BEAST_HUNTING_MARCH_6_FLAG_STRING
+		};
+		if (attackIndex < 0 || attackIndex >= keys.length) {
+			return null;
+		}
+		String configured = profile.getConfig(keys[attackIndex], String.class);
+		if (configured == null || configured.isBlank() || "No Flag".equalsIgnoreCase(configured.trim())) {
+			return null;
+		}
+		try {
+			int formation = Integer.parseInt(configured.trim());
+			return formation >= 1 && formation <= 8 ? formation : null;
+		} catch (NumberFormatException ex) {
+			logWarning("Invalid Beast Hunting formation for march " + (attackIndex + 1) + ": " + configured);
+			return null;
+		}
 	}
 
 	@Override

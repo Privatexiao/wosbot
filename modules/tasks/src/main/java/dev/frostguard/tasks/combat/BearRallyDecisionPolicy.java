@@ -59,7 +59,7 @@ public final class BearRallyDecisionPolicy {
         // Check 1: Minimum member count threshold
         Integer minMembers = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, Integer.class);
         if (minMembers != null && minMembers > 0) {
-            if (candidate.currentCount() < minMembers && candidate.maxCount() < minMembers) {
+            if (candidate.currentCount() < minMembers) {
                 return new Decision(DecisionResult.SKIP_MIN_MEMBERS_NOT_MET,
                         "Candidate count (" + candidate.currentCount() + "/" + candidate.maxCount() + ") below threshold " + minMembers, false);
             }

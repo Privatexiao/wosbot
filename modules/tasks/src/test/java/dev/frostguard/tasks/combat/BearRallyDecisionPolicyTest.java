@@ -52,4 +52,20 @@ public class BearRallyDecisionPolicyTest {
         assertEquals(BearRallyDecisionPolicy.DecisionResult.JOIN, decision.result());
         assertTrue(decision.frenzyActive());
     }
+
+    @Test
+    public void rejectsCandidateWhenCurrentMembersAreBelowThreshold() {
+        AccountDescriptor account = new AccountDescriptor(1L);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, 5);
+
+        BearRallyCandidate candidate = new BearRallyCandidate(
+                new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
+                "Host1", 1L, 6L, Duration.ofMinutes(4), true);
+
+        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, account, null, Clock.systemUTC());
+
+        assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_MIN_MEMBERS_NOT_MET, decision.result());
+    }
 }
