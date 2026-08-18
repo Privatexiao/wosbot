@@ -7,6 +7,7 @@ import dev.frostguard.app.shared.AbstractProfileController;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 
 public class HospitalLayoutController extends AbstractProfileController {
 
@@ -28,6 +29,7 @@ public class HospitalLayoutController extends AbstractProfileController {
     @FXML
     private void initialize() {
         registerHospitalControls();
+        applyUnsupportedFeatureGuards();
         initializeChangeEvents();
     }
 
@@ -41,5 +43,20 @@ public class HospitalLayoutController extends AbstractProfileController {
 
         Map.of(textFieldMaxWaitMinutes, ConfigurationKeyEnum.HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT)
                 .forEach(this::registerTextField);
+    }
+
+    private void applyUnsupportedFeatureGuards() {
+        checkBoxHospitalHeal.setDisable(true);
+        checkBoxHospitalHeal.setTooltip(new Tooltip(
+                "Hospital interaction requires full saved-frame calibration before it can be enabled."));
+        checkBoxFieldHospital.setDisable(true);
+        checkBoxFieldHospital.setTooltip(new Tooltip(
+                "Field hospital entry requires full-page saved-frame calibration before it can be enabled."));
+        checkBoxCityHospital.setDisable(true);
+        checkBoxCityHospital.setTooltip(new Tooltip(
+                "City hospital entry requires saved-frame calibration before it can be enabled."));
+        checkBoxUseSpeedup.setDisable(true);
+        checkBoxUseSpeedup.setTooltip(new Tooltip(
+                "Healing speedups remain disabled until item-only payment can be verified safely."));
     }
 }
