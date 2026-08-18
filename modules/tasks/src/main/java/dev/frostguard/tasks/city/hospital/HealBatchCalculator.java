@@ -49,4 +49,22 @@ public class HealBatchCalculator {
 
         return targetTroopCount.intValueExact();
     }
+
+    public static int calculateLegacyCompatibleBatchSize(
+            long singleTroopTimeSeconds, int allianceHelpCount, long reductionSecondsPerHelp) {
+        if (singleTroopTimeSeconds <= 0 || allianceHelpCount <= 0 || reductionSecondsPerHelp <= 0) {
+            return -1;
+        }
+        final long targetHealTimeSeconds;
+        try {
+            targetHealTimeSeconds = Math.multiplyExact((long) allianceHelpCount, reductionSecondsPerHelp);
+        } catch (ArithmeticException overflow) {
+            return -1;
+        }
+        long batchSize = targetHealTimeSeconds / singleTroopTimeSeconds;
+        if (batchSize < 1) {
+            return 1;
+        }
+        return batchSize > Integer.MAX_VALUE ? -1 : (int) batchSize;
+    }
 }

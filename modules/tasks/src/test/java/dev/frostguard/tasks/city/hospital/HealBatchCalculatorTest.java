@@ -56,4 +56,19 @@ class HealBatchCalculatorTest {
                 Integer.MAX_VALUE, Long.MAX_VALUE, 2, Long.MAX_VALUE / 4);
         assertEquals(1_073_741_823, calc.calculateBatchSize());
     }
+
+    @Test
+    void preservesLegacyFieldHospitalBatchCalculationWithoutWoundedCount() {
+        assertEquals(105, HealBatchCalculator.calculateLegacyCompatibleBatchSize(30, 15, 210));
+    }
+
+    @Test
+    void keepsLegacyMinimumBatchAtOne() {
+        assertEquals(1, HealBatchCalculator.calculateLegacyCompatibleBatchSize(1_000, 1, 200));
+    }
+
+    @Test
+    void rejectsInvalidLegacyCalibration() {
+        assertEquals(-1, HealBatchCalculator.calculateLegacyCompatibleBatchSize(30, 0, 210));
+    }
 }

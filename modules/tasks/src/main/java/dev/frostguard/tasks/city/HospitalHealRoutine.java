@@ -25,8 +25,6 @@ import static dev.frostguard.api.configs.TemplatesEnum.*;
  */
 public class HospitalHealRoutine extends DelayedTask {
 
-    private static final boolean SAVED_FRAME_CALIBRATION_VERIFIED = false;
-
     public HospitalHealRoutine(AccountDescriptor profile, TpDailyTaskEnum taskType) {
         super(profile, taskType);
     }
@@ -73,14 +71,6 @@ public class HospitalHealRoutine extends DelayedTask {
     protected void execute() {
         if (!resolveConfigBoolean(HOSPITAL_HEAL_ENABLED_BOOL, false)) {
             logInfo(routineLogHospitalLine("Hospital Heal Routine disabled in configuration; skipping execution."));
-            return;
-        }
-
-        if (!SAVED_FRAME_CALIBRATION_VERIFIED) {
-            logWarning(routineLogHospitalLine(
-                    "Hospital interaction is disabled until full saved-frame calibration is verified."));
-            reschedule(HospitalSchedulePolicy.nextRun(LocalDateTime.now(),
-                    HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED, null));
             return;
         }
 
@@ -227,17 +217,22 @@ public class HospitalHealRoutine extends DelayedTask {
                 int helpCount = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_MAX_COUNT_INT, 15);
                 int reductionSec = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_TIME_REDUCTION_SEC_INT, 210);
                 currentEstimatedHelpsSec = (long) helpCount * reductionSec;
-                long estimatedTotalTime;
-                try {
-                    estimatedTotalTime = Math.multiplyExact((long) totalWounded, singleTroopTimeSec);
-                } catch (ArithmeticException overflow) {
-                    estimatedTotalTime = -1;
+                if (totalWounded > 0) {
+                    long estimatedTotalTime;
+                    try {
+                        estimatedTotalTime = Math.multiplyExact((long) totalWounded, singleTroopTimeSec);
+                    } catch (ArithmeticException overflow) {
+                        estimatedTotalTime = -1;
+                    }
+                    batchedAmountToHeal = new HealBatchCalculator(
+                            totalWounded, estimatedTotalTime, helpCount, reductionSec).calculateBatchSize();
+                } else {
+                    batchedAmountToHeal = HealBatchCalculator.calculateLegacyCompatibleBatchSize(
+                            singleTroopTimeSec, helpCount, reductionSec);
                 }
-                batchedAmountToHeal = new HealBatchCalculator(
-                        totalWounded, estimatedTotalTime, helpCount, reductionSec).calculateBatchSize();
                 if (batchedAmountToHeal <= 0) {
                     logWarning(routineLogHospitalLine(
-                            "Wounded count or alliance-help calibration is unavailable; refusing to start treatment."));
+                            "Alliance-help calibration is unavailable; refusing to start treatment."));
                     runOutcome = HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED;
                     state = HospitalHealState.ABORT;
                     break;
