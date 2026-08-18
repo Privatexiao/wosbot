@@ -18,6 +18,7 @@ public final class BearRallyDecisionPolicy {
         SKIP_MIN_MEMBERS_NOT_MET,
         SKIP_MIN_RALLY_CAPACITY_NOT_MET,
         SKIP_MIN_REMAINING_CAPACITY_NOT_MET,
+        SKIP_INVALID_CANDIDATE,
         SKIP_ADVANCED_JOIN_DISABLED
     }
 
@@ -37,9 +38,14 @@ public final class BearRallyDecisionPolicy {
             return new Decision(DecisionResult.JOIN, "Advanced join policy disabled; using standard join path", false);
         }
 
+        if (!isCandidateValid(candidate)) {
+            return new Decision(DecisionResult.SKIP_INVALID_CANDIDATE,
+                    "Candidate fields are incomplete or internally inconsistent", false);
+        }
+
         Boolean frenzyEnabled = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL, Boolean.class);
         Integer frenzyStartMinute = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_FRENZY_START_MINUTE_INT, Integer.class);
-        if (frenzyStartMinute == null) {
+        if (frenzyStartMinute == null || frenzyStartMinute < 0 || frenzyStartMinute >= 30) {
             frenzyStartMinute = 22;
         }
 
@@ -59,31 +65,51 @@ public final class BearRallyDecisionPolicy {
         // Check 1: Minimum member count threshold
         Integer minMembers = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, Integer.class);
         if (minMembers != null && minMembers > 0) {
-            if (candidate.currentCount() < minMembers) {
+            if (candidate.currentMembers() < minMembers) {
                 return new Decision(DecisionResult.SKIP_MIN_MEMBERS_NOT_MET,
-                        "Candidate count (" + candidate.currentCount() + "/" + candidate.maxCount() + ") below threshold " + minMembers, false);
+                        "Candidate members (" + candidate.currentMembers() + "/" + candidate.maxMembers()
+                                + ") below threshold " + minMembers, false);
             }
         }
 
         // Check 2: Minimum total rally capacity threshold (别人最大集结量门槛)
         Integer minRallyCapacity = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_RALLY_CAPACITY_INT, Integer.class);
         if (minRallyCapacity != null && minRallyCapacity > 0) {
-            if (candidate.maxCount() < minRallyCapacity) {
+            if (candidate.rallyCapacity() < minRallyCapacity) {
                 return new Decision(DecisionResult.SKIP_MIN_RALLY_CAPACITY_NOT_MET,
-                        "Candidate max capacity (" + candidate.maxCount() + ") below threshold " + minRallyCapacity, false);
+                        "Candidate rally capacity (" + candidate.rallyCapacity() + ") below threshold " + minRallyCapacity, false);
             }
         }
 
         // Check 3: Minimum remaining capacity threshold (别人集结剩余可加入兵量门槛)
         Integer minRemainingCapacity = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_REMAINING_CAPACITY_INT, Integer.class);
         if (minRemainingCapacity != null && minRemainingCapacity > 0) {
-            long remaining = candidate.maxCount() - candidate.currentCount();
-            if (remaining < minRemainingCapacity) {
+            if (candidate.remainingCapacity() < minRemainingCapacity) {
                 return new Decision(DecisionResult.SKIP_MIN_REMAINING_CAPACITY_NOT_MET,
-                        "Candidate remaining capacity (" + remaining + ") below threshold " + minRemainingCapacity, false);
+                        "Candidate remaining capacity (" + candidate.remainingCapacity()
+                                + ") below threshold " + minRemainingCapacity, false);
             }
         }
 
         return new Decision(DecisionResult.JOIN, "Candidate met all threshold criteria", false);
+    }
+
+    private static boolean isCandidateValid(BearRallyCandidate candidate) {
+        return candidate.joinButtonPoint() != null
+                && candidate.cardArea() != null
+                && candidate.hostName() != null
+                && !candidate.hostName().isBlank()
+                && candidate.currentMembers() >= 0
+                && candidate.maxMembers() > 0
+                && candidate.currentMembers() <= candidate.maxMembers()
+                && candidate.currentTroops() >= 0
+                && candidate.rallyCapacity() > 0
+                && candidate.currentTroops() <= candidate.rallyCapacity()
+                && candidate.remainingCapacity() >= 0
+                && candidate.remainingCapacity() <= candidate.rallyCapacity()
+                && candidate.countdown() != null
+                && !candidate.countdown().isNegative()
+                && !candidate.countdown().isZero()
+                && candidate.observedAt() != null;
     }
 }

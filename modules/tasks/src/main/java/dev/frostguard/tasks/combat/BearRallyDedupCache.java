@@ -3,8 +3,9 @@ package dev.frostguard.tasks.combat;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Objects;
 
 /**
  * Thread-safe candidate deduplication TTL cache for Bear Trap rally join requests.
@@ -12,52 +13,100 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BearRallyDedupCache {
 
     private static final Duration DEFAULT_TTL = Duration.ofSeconds(300);
-    private final Map<String, Instant> cache = new ConcurrentHashMap<>();
+    private static final int DEFAULT_MAX_ENTRIES = 256;
+    private final Map<CacheKey, Instant> cache = new HashMap<>();
     private final Clock clock;
     private final Duration ttl;
+    private final int maxEntries;
+    private Instant lastObservedTime;
+
+    public record Scope(String profileId, String activityInstanceId) {
+        public Scope {
+            if (profileId == null || profileId.isBlank() || activityInstanceId == null || activityInstanceId.isBlank()) {
+                throw new IllegalArgumentException("Profile and activity instance are required");
+            }
+        }
+    }
+
+    private record CacheKey(Scope scope, String candidateKey) {}
 
     public BearRallyDedupCache() {
-        this(Clock.systemUTC(), DEFAULT_TTL);
+        this(Clock.systemUTC(), DEFAULT_TTL, DEFAULT_MAX_ENTRIES);
     }
 
     public BearRallyDedupCache(Clock clock, Duration ttl) {
-        this.clock = clock;
-        this.ttl = ttl;
+        this(clock, ttl, DEFAULT_MAX_ENTRIES);
     }
 
-    public boolean isDuplicate(String key) {
+    public BearRallyDedupCache(Clock clock, Duration ttl, int maxEntries) {
+        if (clock == null || ttl == null || ttl.isZero() || ttl.isNegative() || maxEntries <= 0) {
+            throw new IllegalArgumentException("Clock, positive TTL, and positive capacity are required");
+        }
+        this.clock = clock;
+        this.ttl = ttl;
+        this.maxEntries = maxEntries;
+        this.lastObservedTime = clock.instant();
+    }
+
+    public synchronized boolean isDuplicate(Scope scope, String key) {
+        Objects.requireNonNull(scope, "scope");
         if (key == null || key.isBlank()) {
             return false;
         }
 
-        cleanExpired();
-        Instant expiry = cache.get(key);
+        Instant now = observeTime();
+        cleanExpired(now);
+        CacheKey scopedKey = new CacheKey(scope, key);
+        Instant expiry = cache.get(scopedKey);
         if (expiry == null) {
             return false;
         }
 
-        if (!clock.instant().isBefore(expiry)) {
-            cache.remove(key);
+        if (!now.isBefore(expiry)) {
+            cache.remove(scopedKey);
             return false;
         }
 
         return true;
     }
 
-    public void markJoined(String key) {
+    public synchronized void markJoined(Scope scope, String key) {
+        Objects.requireNonNull(scope, "scope");
         if (key == null || key.isBlank()) {
             return;
         }
 
-        cache.put(key, clock.instant().plus(ttl));
+        Instant now = observeTime();
+        cleanExpired(now);
+        if (cache.size() >= maxEntries) {
+            cache.entrySet().stream().min(Map.Entry.comparingByValue()).ifPresent(entry -> cache.remove(entry.getKey()));
+        }
+        cache.put(new CacheKey(scope, key), now.plus(ttl));
     }
 
-    public void clear() {
+    public synchronized void clearScope(Scope scope) {
+        Objects.requireNonNull(scope, "scope");
+        cache.keySet().removeIf(key -> key.scope().equals(scope));
+    }
+
+    public synchronized void clear() {
         cache.clear();
     }
 
-    private void cleanExpired() {
+    synchronized int size() {
+        return cache.size();
+    }
+
+    private Instant observeTime() {
         Instant now = clock.instant();
+        if (now.isBefore(lastObservedTime)) {
+            cache.clear();
+        }
+        lastObservedTime = now;
+        return now;
+    }
+
+    private void cleanExpired(Instant now) {
         cache.entrySet().removeIf(entry -> !now.isBefore(entry.getValue()));
     }
 }

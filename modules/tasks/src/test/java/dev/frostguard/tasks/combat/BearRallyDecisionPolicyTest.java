@@ -21,7 +21,7 @@ public class BearRallyDecisionPolicyTest {
 
         BearRallyCandidate candidate = new BearRallyCandidate(
                 new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
-                "Host1", 1L, 6L, Duration.ofMinutes(4), true);
+                "Host1", 1, 6, 25_000L, 100_000L, 75_000L, Duration.ofMinutes(4), Instant.now(), true);
 
         BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
                 candidate, account, LocalDateTime.now(), Clock.systemUTC());
@@ -44,7 +44,7 @@ public class BearRallyDecisionPolicyTest {
 
         BearRallyCandidate candidate = new BearRallyCandidate(
                 new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
-                "Host1", 1L, 6L, Duration.ofMinutes(4), true);
+                "Host1", 1, 6, 25_000L, 100_000L, 75_000L, Duration.ofMinutes(4), fixedNow, true);
 
         BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
                 candidate, account, trapStartTime, fixedClock);
@@ -61,11 +61,43 @@ public class BearRallyDecisionPolicyTest {
 
         BearRallyCandidate candidate = new BearRallyCandidate(
                 new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
-                "Host1", 1L, 6L, Duration.ofMinutes(4), true);
+                "Host1", 1, 6, 25_000L, 100_000L, 75_000L, Duration.ofMinutes(4), Instant.now(), true);
 
         BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
                 candidate, account, null, Clock.systemUTC());
 
         assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_MIN_MEMBERS_NOT_MET, decision.result());
+    }
+
+    @Test
+    void evaluatesTroopCapacityIndependentlyFromMemberCount() {
+        AccountDescriptor account = new AccountDescriptor(1L);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, 2);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_RALLY_CAPACITY_INT, 90_000);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_REMAINING_CAPACITY_INT, 40_000);
+
+        BearRallyCandidate candidate = new BearRallyCandidate(
+                new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
+                "Host1", 3, 6, 80_000L, 100_000L, 20_000L, Duration.ofMinutes(4), Instant.now(), true);
+
+        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, account, null, Clock.systemUTC());
+
+        assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_MIN_REMAINING_CAPACITY_NOT_MET, decision.result());
+    }
+
+    @Test
+    void rejectsInternallyInconsistentCandidate() {
+        AccountDescriptor account = new AccountDescriptor(1L);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);
+        BearRallyCandidate candidate = new BearRallyCandidate(
+                new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
+                "Host1", 7, 6, 120_000L, 100_000L, -20_000L, Duration.ofMinutes(4), Instant.now(), true);
+
+        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, account, null, Clock.systemUTC());
+
+        assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_INVALID_CANDIDATE, decision.result());
     }
 }
