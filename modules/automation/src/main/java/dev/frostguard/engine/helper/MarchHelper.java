@@ -6,6 +6,7 @@ import dev.frostguard.api.domain.AreaData;
 import dev.frostguard.api.domain.FormationSlots;
 import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.MarchResourceType;
+import dev.frostguard.api.domain.MarchSlotAvailability;
 import dev.frostguard.api.domain.MarchSlotState;
 import dev.frostguard.api.domain.PointData;
 import dev.frostguard.api.domain.RawImageData;
@@ -15,6 +16,7 @@ import dev.frostguard.engine.input.TapJitterPolicy;
 import dev.frostguard.engine.nav.CommonGameAreas;
 import dev.frostguard.engine.nav.CommonOCRSettings;
 import dev.frostguard.engine.nav.RallyFlagCoordinates;
+import dev.frostguard.engine.nav.SidebarSection;
 import dev.frostguard.vision.color.GameColors;
 import dev.frostguard.vision.color.PixelStats;
 import dev.frostguard.vision.convert.GameTimeUtils;
@@ -58,18 +60,17 @@ public class MarchHelper {
     private final String device;
     private final TapInteractionService taps;
     private final ResilientOcrExecutor<String> ocrStrings;
-    private final TemplateSearchHelper templateSearchHelper;
     private final ProfileContextLogger log;
+    private final SidebarNavigator sidebar;
 
     public MarchHelper(EmulatorController emuManager, String emulatorNumber,
-                       ResilientOcrExecutor<String> stringHelper, TemplateSearchHelper templateSearchHelper,
-                       AccountDescriptor profile) {
+                       ResilientOcrExecutor<String> stringHelper, AccountDescriptor profile) {
         this.emu = emuManager;
         this.device = emulatorNumber;
         this.taps = TapInteractionService.forController(emuManager, emulatorNumber);
         this.ocrStrings = stringHelper;
-        this.templateSearchHelper = templateSearchHelper;
         this.log = new ProfileContextLogger(MarchHelper.class, profile);
+        this.sidebar = new SidebarNavigator(emuManager, emulatorNumber, profile);
     }
 
     public boolean checkMarchesAvailable() {
@@ -84,7 +85,7 @@ public class MarchHelper {
     // line is classified by colour (white "Idle", orange "Unlock", red "Unavailable", nothing at all
     // for stationed troops) and the activity by its icon. Only the countdown needs OCR.
     public List<MarchSlotState> readMarchQueue() {
-        openLeftMenuCitySection(false);
+        openLeftMenuSection(false);
         try {
             return readVisibleMarchQueue();
         } finally {
@@ -97,16 +98,7 @@ public class MarchHelper {
      * for flows that already normalize their world state and do not need legacy multi-tap recovery.
      */
     public List<MarchSlotState> readMarchQueueSinglePass() {
-        ImageSearchResultData cityTab = templateSearchHelper.locatePattern(
-                TemplatesEnum.LEFT_MENU_CITY_TAB,
-                dev.frostguard.engine.nav.SearchConfigConstants.DEFAULT_SINGLE);
-        if (cityTab.isFound()) {
-            log.info("Left menu is already open. Closing it before single-pass read.");
-            emu.pressBack(device);
-            interruptibleWait(500);
-        }
-
-        openLeftMenuCitySectionOnce(false);
+        openLeftMenuSection(false);
         try {
             return readVisibleMarchQueue();
         } finally {
@@ -115,10 +107,27 @@ public class MarchHelper {
     }
 
     /**
-     * Reads the already-open wilderness March Queue panel without changing its state. This is for
-     * workflows such as Intel recall that must inspect rows and then interact with the same panel.
+     * Reads the already-open wilderness March Queue panel. A reset is used only when every row lacks
+     * queue evidence, which indicates that the preserved scroll position cannot be trusted.
      */
     public List<MarchSlotState> readVisibleMarchQueue() {
+        List<MarchSlotState> slots = readVisibleMarchQueueOnce();
+        if (hasReliableQueueEvidence(slots)) {
+            return slots;
+        }
+
+        log.warn("March Queue rows were not visible at the preserved position; resetting Wilderness once");
+        if (!sidebar.openSectionAtTop(SidebarSection.WILDERNESS)) {
+            return List.of();
+        }
+        return readVisibleMarchQueueOnce();
+    }
+
+    static boolean hasReliableQueueEvidence(List<MarchSlotState> slots) {
+        return slots.stream().anyMatch(slot -> slot.availability() != MarchSlotAvailability.UNKNOWN);
+    }
+
+    private List<MarchSlotState> readVisibleMarchQueueOnce() {
         try {
             RawImageData frame = emu.captureScreen(device);
             BufferedImage image = dev.frostguard.vision.convert.ImageConverter.toBufferedImage(frame);
@@ -320,43 +329,28 @@ public class MarchHelper {
     }
 
     public void openLeftMenuCitySection(boolean cityTab) {
-        log.debug("Left menu — " + (cityTab ? "city" : "wilderness"));
-        taps.tapInside(CommonGameAreas.LEFT_MENU_TRIGGER, 3, 400);
-        if (cityTab) {
-            taps.tapInside(CommonGameAreas.LEFT_MENU_CITY_TAB, 3, 100);
-        } else {
-            taps.tapInside(CommonGameAreas.LEFT_MENU_WILDERNESS_TAB, 3, 100);
+        log.debug("Left menu at top - " + (cityTab ? "city" : "wilderness"));
+        if (!sidebar.openSectionAtTop(cityTab ? SidebarSection.CITY : SidebarSection.WILDERNESS)) {
+            throw new IllegalStateException("Could not open the requested sidebar section");
         }
     }
 
-    // Closes the left panel via two sequential touch points.
+    // Closes the left panel only after the selected tab proves that it is open.
     public void closeLeftMenu() {
         dismissLeftPanel();
     }
 
-    /**
-     * Opens the left panel with one deliberate tap per control. Callers should use this only when
-     * they own the panel lifecycle and guarantee a matching {@link #closeLeftMenu()} in a finally
-     * block; it avoids the legacy blind multi-tap sequence toggling a responsive panel repeatedly.
-     */
-    public void openLeftMenuCitySectionOnce(boolean cityTab) {
-        log.debug("Left menu single-pass - " + (cityTab ? "city" : "wilderness"));
-        openLeftMenuCitySectionOnce(taps, cityTab);
-    }
-
-    static void openLeftMenuCitySectionOnce(TapInteractionService taps, boolean cityTab) {
-        taps.tapInside(CommonGameAreas.LEFT_MENU_TRIGGER, 1, 400);
-        taps.tapInside(cityTab
-                ? CommonGameAreas.LEFT_MENU_CITY_TAB
-                : CommonGameAreas.LEFT_MENU_WILDERNESS_TAB, 1, 300);
+    /** Opens or reuses the requested section without changing its current scroll position. */
+    public void openLeftMenuSection(boolean cityTab) {
+        log.debug("Left menu without scroll reset - " + (cityTab ? "city" : "wilderness"));
+        if (!sidebar.openSection(cityTab ? SidebarSection.CITY : SidebarSection.WILDERNESS)) {
+            throw new IllegalStateException("Could not open the requested sidebar section");
+        }
     }
 
     private void dismissLeftPanel() {
         log.debug("Closing left menu");
-        taps.tapNear(CommonGameAreas.LEFT_MENU_CLOSE_CITY, TapJitterPolicy.DEFAULT_POINT_JITTER_RADIUS);
-        interruptibleWait(500);
-        taps.tapNear(CommonGameAreas.LEFT_MENU_CLOSE_OUTSIDE, TapJitterPolicy.DEFAULT_POINT_JITTER_RADIUS);
-        interruptibleWait(500);
+        sidebar.close();
     }
 
     private void interruptibleWait(long ms) {
