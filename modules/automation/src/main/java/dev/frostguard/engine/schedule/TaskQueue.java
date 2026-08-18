@@ -41,6 +41,7 @@ import dev.frostguard.engine.schedule.priority.DefaultTaskPriorityProvider;
 import dev.frostguard.engine.schedule.priority.TaskPriorityProvider;
 import dev.frostguard.engine.service.AnalyticsService;
 import dev.frostguard.engine.service.ConfigService;
+import dev.frostguard.engine.service.ExceptionScreenshotService;
 import dev.frostguard.engine.service.LoggingService;
 import dev.frostguard.engine.service.ProfileService;
 import dev.frostguard.engine.service.ScheduleService;
@@ -534,6 +535,9 @@ public class TaskQueue {
                 emitInfo("Task interrupted during shutdown: " + task.getTaskName());
                 ok = false;
             } else {
+                if (!(ex instanceof StopExecutionException stop && stop.isCancellation())) {
+                    captureTaskFailureEvidence(task, ex);
+                }
                 routeError(task, ex);
                 AnalyticsService.getInstance().trackTaskCompleted(task.getTaskName(), "failed", (System.currentTimeMillis()-t0)/1000);
                 ok = false;
@@ -546,6 +550,19 @@ public class TaskQueue {
             }
         }
         return ok;
+    }
+
+    private void captureTaskFailureEvidence(DelayedTask task, Exception failure) {
+        try {
+            boolean saved = ExceptionScreenshotService.saveExceptionEvidence(
+                    deviceBridge.captureScreen(profile.getEmulatorNumber()), profile,
+                    task.getTaskName(), failure.getClass().getSimpleName() + ": " + failure.getMessage());
+            if (!saved) {
+                emitWarnTask(task, "Could not save task failure screenshot.");
+            }
+        } catch (Exception captureFailure) {
+            emitWarnTask(task, "Could not capture task failure evidence: " + captureFailure.getMessage());
+        }
     }
 
     private boolean deferForBearTrapProtection(DelayedTask task) {
