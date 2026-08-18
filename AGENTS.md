@@ -65,9 +65,46 @@ changes.
 - Keep agent-facing documentation concise. Preserve constraints, decisions,
   evidence, fragile assumptions, fallbacks, and unsupported states; do not
   restate information that is clear from code and tests.
-- **Custom Features Documentation**: Treat `docs/custom-features.md` as the source of truth for behavior that differs from upstream (`Shederator/wosbot`). Whenever adding, modifying, removing, or fixing custom behavior in this repository (`Privatexiao/wosbot`), update that document in the same change. Record the upstream behavior, custom control flow, configuration and fallback boundaries, and actual verification evidence. During upstream merges, review every listed item and do not silently drop custom behavior; remove or mark an item as upstreamed only after verifying equivalent upstream implementation.
+- **Custom Features Documentation**: Treat `docs/custom-features.md` as the source of truth for behavior that differs from the configured upstream repository. Whenever adding, modifying, removing, or fixing custom behavior in this fork, update that document in the same change. Record the upstream behavior, custom control flow, configuration and fallback boundaries, and actual verification evidence. During upstream merges, review every listed item and do not silently drop custom behavior; remove or mark an item as upstreamed only after verifying equivalent upstream implementation.
 - **Custom Feature Integrity During Upstream Merges**: Preserving every custom feature listed in `docs/custom-features.md` is a mandatory merge acceptance criterion. When upstream changes conflict with custom code, do not resolve the conflict by blindly choosing either side or by deleting the custom implementation. First understand the upstream design change, then port and integrate the custom behavior into the new structure while retaining its configuration keys, UI entry points, templates/assets, persistence, scheduling and preemption behavior, fallbacks, logs, and tests. Before declaring the merge complete, compare the result against every inventory item, run relevant verification, and report any behavior that remains unverified. A custom feature may be removed or replaced only with the user's explicit authorization, or after verified upstream equivalence that preserves the same user-visible behavior and safety guarantees.
 - **Batch Scripts Sync**: Whenever modifying the project's version, build structure, packaging paths, or Java execution arguments, ensure that `一键启动挂机脚本.bat` at the repository root is also updated synchronously to reflect the changes.
+
+## Privacy And Repository Hygiene
+
+- Never commit credentials or personal data, including API keys, access tokens,
+  passwords, private keys, personal email addresses, phone numbers, player or
+  alliance names, chat content, device identifiers, emulator serials, private
+  IP addresses, user-home paths, account databases, raw logs, or unredacted
+  screenshots. Treat examples, fixtures, metadata, filenames, and commit
+  messages as part of the same privacy boundary.
+- Saved frames and OCR fixtures must contain only evidence required for the
+  test. Redact player, alliance, chat, account, and device information before
+  adding them, without obscuring the visual region being tested. Never commit
+  live workspace data from `.frostguard-dev`, `logs/`, or account profiles.
+- Before every commit or push, inspect staged, unstaged, and untracked files and
+  the complete outgoing commit range, including Author and Committer metadata.
+  A clean working tree alone does not prove that the commits being pushed are
+  free of private information.
+- Configure this repository on every computer with an intentionally public Git
+  identity, preferably a hosting-provider `noreply` address, and set
+  repository-local `user.useConfigOnly=true`; do not use a personal mailbox.
+  Verify the effective identity with
+  `git config --show-origin` and `git var GIT_AUTHOR_IDENT` before committing.
+- After remote history has been rewritten to remove private information, an old
+  clone must not push, merge, or rebase its previous history back into the new
+  branch. Preserve any unique work separately, fetch the rewritten branch, and
+  migrate only the required changes onto a clean base. Never delete local work,
+  branches, tags, or stashes without explicit authorization.
+- If private information reaches Git history, stop normal pushes and report the
+  affected files, commits, branches, tags, and stashes without repeating secret
+  values unnecessarily. History rewriting and remote replacement require the
+  user's explicit approval, a clean workspace, a current remote reference, and
+  `--force-with-lease`; plain `--force` is forbidden. Verify that file trees are
+  unchanged and the sensitive value is absent from reachable remote history.
+- Do not claim that a force-push immediately removes data from forks, existing
+  clones, caches, pull-request refs, or hosting-provider object storage. Report
+  these residual limits and recommend credential rotation or provider support
+  when the exposed value requires it.
 
 ## Logging And Verification
 
