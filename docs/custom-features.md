@@ -1,137 +1,108 @@
-# Frostguard / wosbot 本项目对比原作者库（Shederator/wosbot）专属新增功能与优化清单
+# 本项目相对上游的自定义功能
 
-本文档详细记录了本项目仓库（`Privatexiao/wosbot`）相比于原作者仓库（`Shederator/wosbot`）所独有、新增、重构或修补的所有功能与特性。
+本文记录 `Privatexiao/wosbot` 相对原作者仓库 `Shederator/wosbot` 保留的功能扩展和行为修复。它既是用户功能说明，也是以后同步上游代码时的保留清单。
 
-> [!IMPORTANT]
-> **维护规则**：每次在本项目中新增、修改或修复任何相比原作者库独有的功能时，必须同步更新本文档，确保清单的完整与准确。
+## 维护口径
 
----
+- “上游行为”指最近一次合入的 `Shederator/wosbot` 基线；不能仅凭提交标题判断，更新前应核对实际代码差异。
+- 新增、修改或修复自定义功能时，必须在同一批修改中更新本文，写清上游行为、本项目逻辑、配置项、失败边界和验证证据。
+- 上游已经实现等价能力时，应把条目标记为“已上游化”或删除，并说明迁移依据，避免长期把上游功能误记为本项目专属。
+- 合并上游时应逐项回归本文清单；不能静默丢失配置、界面入口、模板、调度规则或安全兜底。
 
-## 1. 打熊高级候选筛选与狂热模式 (Bear Trap Advanced Rally Join)
+## 差异总览
 
-文件位置：[BearTrapRoutine.java](file:///E:/MeComputer/Desktop/wosbot/modules/tasks/src/main/java/dev/frostguard/tasks/combat/BearTrapRoutine.java)
+| 领域 | 上游基线 | 本项目扩展 |
+| --- | --- | --- |
+| 打熊加入 | 按可用加入入口执行常规加入 | 可选高级候选筛选、狂热模式、去重和六队列独立编队 |
+| 手动集结加入 | 没有独立的目标筛选加入任务 | 按目标或全部目标扫描绿色 Join，并受出征数和编队配置约束 |
+| 医院治疗 | 没有本项目的完整双入口治疗状态机 | 野外/城内入口、批次计算、联盟帮助等待和有界退出 |
+| 情报任务 | 常规模板匹配和出征流程 | 关闭即零触屏、任务类型隔离、彩色/灰度双匹配和误触恢复 |
+| 极地恶魔/自动集结 | 常规导航与开关读取 | 搜索页签兜底、运行期开关熔断和目标 OCR 选择 |
+| 行军队列读取 | 多个流程可能反复开关面板读取 | 单次截图统一分类队列状态，并保证面板收尾 |
+| 桌面界面 | 英文界面 | 内置简体中文词典和动态 JavaFX 节点翻译 |
+| 异常排查 | 主要依赖运行日志 | 可保存异常帧及脱敏元数据 |
 
-### 1.1 高级筛选开关与多维度容量/门槛筛选 (`BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL` 等)
-- **变更背景**：原作者打熊加入逻辑只抓取第一个集结 Plus 图标即盲目出征，无法根据成员人数、车头总容量、剩余空位兵量、剩余倒计时或重复发起的集结进行智能甄别。
-- **优化实现**：
-  - 引入 `BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL` 主开关，勾选后展开专属配置子面板 `vBoxAdvancedJoinOptions`；
-  - 恢复 `textFieldMinMemberCount`（`BEAR_TRAP_MIN_MEMBER_COUNT_INT`，最少队伍人数门槛，如 `4` 人才加入，`0` 表示不限制）；
-  - 新增 `textFieldMinRallyCapacity`（`BEAR_TRAP_MIN_RALLY_CAPACITY_INT`，别人最大集结量门槛，别人集结总容量需达到该值才加入）；
-  - 新增 `textFieldMinRemainingCapacity`（`BEAR_TRAP_MIN_REMAINING_CAPACITY_INT`，最少剩余可加入兵量门槛，别人集结还能加入的兵量需达到该值才加入）；
-  - 开关关闭时 **100% 保持原作者稳定加入逻辑**；开启时智能调用候选卡片评估器 `BearRallyDecisionPolicy` 与 TTL 去重缓存 `BearRallyDedupCache`。
+## 1. 打熊高级加入
 
-### 1.2 K/M 数值解析扩展 (`CompactGameNumberParser`)
-- **优化实现**：新增 `CompactGameNumberParser.java`，完美支持 `1200`、`1,200`、`1.2K`、`1.5M` 等卡片数值的精准解析与防溢出转换。
+相关实现：[`BearTrapRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/combat/BearTrapRoutine.java)、[`BearRallyDecisionPolicy.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/combat/BearRallyDecisionPolicy.java)、[`BearRallyDedupCache.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/combat/BearRallyDedupCache.java)。
 
-### 1.3 狂热模式 (Frenzy Mode)
-- **优化实现**：支持设置活动后半段（如活动第 22 分钟后）自动激活狂热模式，放宽对队伍人数的限制，最大化打熊收益与满车率。
+上游的常规模式优先保证“发现可加入集结后直接加入”。本项目在其外增加可关闭的高级决策层；`BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL=false` 时仍走兼容路径，避免高级识别失败影响原有稳定行为。
 
-### 1.4 六出征队列独立旗帜选择 (`BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING` ~ `BEAR_TRAP_JOIN_MARCH_6_FLAG_STRING`)
-- **优化实现**：在 UI 集结设置中恢复了【编队 1】至【编队 6】独立下拉框选择，可为每次出征队伍指定对应的英雄队列旗帜（1~8 或 No Flag），并在 `BearTrapRoutine` 中轮询匹配生效。
+高级模式读取候选卡片的成员数、集结总容量、剩余容量和倒计时，通过 `BearRallyDecisionPolicy` 依次检查：
 
----
+1. `BEAR_TRAP_MIN_MEMBER_COUNT_INT`：最低已有成员数；
+2. `BEAR_TRAP_MIN_RALLY_CAPACITY_INT`：最低集结总容量；
+3. `BEAR_TRAP_MIN_REMAINING_CAPACITY_INT`：最低剩余可加入兵量；
+4. 候选是否已被 `BearRallyDedupCache` 在 TTL 内处理，防止重复加入同一集结。
 
-## 2. 医院治疗自动化任务 (Hospital Heal Routine)
+数值解析器 [`CompactGameNumberParser.java`](../modules/vision/src/main/java/dev/frostguard/vision/convert/CompactGameNumberParser.java) 支持整数、千分位及 `K/M` 缩写，并对溢出做保护。策略层已修复为用“当前成员数”单独判断最低成员门槛，TTL 在精确到期时立即失效。
 
-文件位置：[HospitalHealRoutine.java](file:///E:/MeComputer/Desktop/wosbot/modules/tasks/src/main/java/dev/frostguard/tasks/city/HospitalHealRoutine.java)
+启用 `BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL` 后，活动达到 `BEAR_TRAP_FRENZY_START_MINUTE_INT`（默认 22 分钟）会放宽成员数限制。`BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING` 至 `..._6_...` 可为六次加入分别选择 1～8 号保存编队或 `No Flag`；不可用编队不会被盲目点击。
 
-### 2.1 野外与城镇双入口支持 (`HOSPITAL_HEAL_FIELD_ENABLED_BOOL` / `HOSPITAL_HEAL_CITY_ENABLED_BOOL`)
-- **优化实现**：支持从大地图快捷野外医院图标（WORLD）与城内医院建筑（HOME）自动进入，检测伤兵并进行安全批量治疗与联盟求助。
+> [!WARNING]
+> 当前仓库没有可由真实保存帧证明的集结卡片 ROI 和字段解析器。旧实现曾用固定 `1/6`、固定主车名和固定倒计时代替真实识别，现已移除。高级开关开启时任务会明确告警并停止高级加入，不再使用伪造数据做出征决策；关闭高级开关仍可使用上游兼容路径。恢复高级筛选需要提供 `720x1280` 原始集结列表帧并补充保存帧测试。
 
-### 2.2 医院治疗图像匹配模板修复 (Hospital Heal Image Templates Fix)
-- **修复实现**：补充了原提交缺失的 `HOSPITAL_FIELD_ICON`、`HOSPITAL_HEAL_BUTTON` 图像识别基准模板并完成属性映射，彻底解决机器人因“睁眼瞎”导致跳过治疗任务的问题。
+## 2. 手动集结加入任务
 
----
+相关实现：[`ManualRallyJoinRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/combat/ManualRallyJoinRoutine.java) 和 `ManualRallyJoinPreemptionRule`。
 
-## 3. 运行时异常取证与有界恢复 (Exception Evidence Service)
+该任务是独立于上游自动加入流程的主动扫描能力：检测联盟集结提示后打开列表，根据 `RALLY_TARGET_STRING` 选择指定目标，或在 `everything` 模式下接受任意目标。它只点击像素检测为绿色的可用 Join 按钮，灰色禁用按钮会跳过；颜色检测失败时也保守跳过，不再把未知状态当成绿色。指定目标时还要求目标模板与 Join 按钮处于同一行。
 
-文件位置：[ExceptionScreenshotService.java](file:///E:/MeComputer/Desktop/wosbot/modules/automation/src/main/java/dev/frostguard/engine/service/ExceptionScreenshotService.java)
+任务最多维持 `RALLY_MARCHES_INT` 个本任务出征，异常配置会限制在 1～6。每一路可通过 `RALLY_MARCH_1_FLAG_STRING` 至 `..._6_...` 指定保存编队；未指定时尝试 Equalize。出征前读取行军时间，按往返时间加缓冲登记预计归队时间；OCR 失败时使用 7 分钟回退。点击 Deploy 后会先排除队列已满和同目标重复出征弹窗，再登记成功；失败时不会虚增活动出征数。
 
-### 3.1 异常帧截屏与元数据自动落盘
-- **优化实现**：当界面发生未知遮罩、弹窗或任务卡死时，自动将当前 RawImageData 截屏与脱敏元数据存储至 `logs/screenshots/` 目录，供后续排查与真实帧测试回归。
+## 3. 医院自动治疗
 
----
+相关实现：[`HospitalHealRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/HospitalHealRoutine.java)、[`HealBatchCalculator.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HealBatchCalculator.java) 和 [`HospitalHealState.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalHealState.java)。
 
-## 4. 情报任务 (Intelligence Routine)
+本项目新增医院任务及控制面板。入口由 `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` 和 `HOSPITAL_HEAL_CITY_ENABLED_BOOL` 控制：优先尝试野外快捷入口，失败后可回退到城内医院。两者都关闭时直接退出，不触屏。当前仓库只有野外快捷入口和治疗按钮的真实模板；城内医院模板缺失时会明确告警并跳过，绝不盲点固定坐标。
 
-文件位置：[IntelligenceRoutine.java](file:///E:/MeComputer/Desktop/wosbot/modules/tasks/src/main/java/dev/frostguard/tasks/dailies/IntelligenceRoutine.java)
+治疗采用显式状态机：发现入口 → 确认治疗页 → 读取单兵治疗时间 → 计算本批数量 → 治疗/联盟帮助 → 等待或结束。每轮执行都会重置批次和 OCR 状态，避免上一次调度的校准残留。联盟帮助复用已存在的联盟帮助模板；剩余时间超过 `HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT` 时保留当前治疗并退出，不使用缺失的取消模板在未知页面继续输入。速度道具默认不启用，状态循环带 20 步安全上限。
 
-### 4.1 精确 Y 坐标与按键匹配 (`Y = 930`)
-- **变更背景**：在 720x1280 分辨率下，原作者代码在未匹配到 View 模板时采用 `Y = 730` 或区域中点进行兜底点击。但在实际游戏中，`Y = 730` 正好处于情报卡片中间的**奖励物品图标框（Activity Triumph Points / 火晶 / 英雄碎片）**，导致点击后弹出物品详解 Tooltip 遮罩，阻止后续出征。
-- **优化实现**：
-  - 将蓝底 **View（前往）** 按钮默认点击目标点修正为 `(360, 930)`（位于蓝色按钮中心）；
-  - 将模板匹配检索区域收窄为 `(200, 850)` 到 `(520, 1000)`，提高识别准确率。
+本项目同时补齐 `HOSPITAL_FIELD_ICON`、`HOSPITAL_HEAL_BUTTON` 等模板映射及真实图片资源，否则任务虽存在但无法可靠找到入口和治疗按钮。
 
-### 4.2 遮罩弹窗自动消除与二次重试
-- **优化实现**：点击 View 按钮后，增加二次卡片残留检查。若检测到情报卡片因误触物品 Tooltip 仍处于打开状态，自动调用 `pressBack()` 消除遮罩，并重新精确点击 `(360, 930)`。
+## 4. 情报任务稳定性与安全熔断
 
-### 4.3 地图平移与面板滑动动画延迟平滑
-- **优化实现**：
-  - 点击 View 按钮后 sleep `2500ms`，充分等待大地图镜头平移和目标面板上滑动画；
-  - `clickMapActionOrView` 增加 `1200ms` 前置延迟与 `1500ms` 后置延迟；
-  - `deployIntelMarch` 增加 `1000ms` 出征前置延迟，确保出征按钮完全加载。
+相关实现：[`IntelligenceRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/dailies/IntelligenceRoutine.java)。
 
-### 4.4 控制台关停“0 秒零触屏”前置熔断防护
-- **变更背景**：原作者代码在检查情报任务可用性 `hasAnyIntelMissionAvailableFlow()` 的第一行直接调用了 `intelScreenHelper.ensureOnIntelScreen()`（强制打开情报界面）。导致即便用户在 GUI 控制台取消勾选【开启情报任务】，脚本在执行时仍会先去点开游戏内的情报页面。
-- **优化实现**：
-  - 在 `execute()` 顶部及 `hasAnyIntelMissionAvailableFlow()` 第一行，优先读取 `INTEL_BOOL` 配置；
-  - 一旦配置为 `false`，立刻输出日志并 `return false` 退出，**做到 0 秒零触屏防护，绝对不再强制打开情报界面**。
+- **零触屏关停**：进入流程和循环期间都重新读取 `INTEL_BOOL`。主开关关闭，或野兽、火晶野怪、幸存者、探索等子类型全部关闭时，在打开情报页之前退出。
+- **类型隔离**：普通野怪与火晶野怪使用独立模板集合；未启用火晶野怪时不会把 `INTEL_BEAST_GRAYSCALE_FC*` 混入普通野怪识别。
+- **双模式匹配**：任务卡检测同时使用彩色和灰度模板，提高不同渲染状态下的识别容错。
+- **View 点击修复**：模板搜索限制在按钮区域，兜底点改为 `(360, 930)`，避免点击 `Y=730` 附近的奖励图标。若误触后卡片仍残留，会返回关闭遮罩并重试。
+- **动画等待**：打开目标、地图平移和出征前增加有界等待，避免在按钮尚未完成动画时继续点击。
 
-### 4.5 全子任务关闭自动拦截
-- **优化实现**：当用户开启情报主开关，但取消勾选了所有情报子类型（野兽、火晶野怪、幸存者、探索）时，前置拦截，不触摸屏幕，不打开情报界面。
+## 5. 极地恶魔与联盟自动集结修复
 
-### 4.6 火晶野怪（火晶巨兽/Master Bounty）与普通野怪独立解耦
-- **变更背景**：原作者逻辑将火晶野怪模板（`INTEL_BEAST_GRAYSCALE_FC`）与普通野怪放在同一个数组中。当用户只勾选普通野怪、未勾选火晶野怪时，依然会匹配并打击火晶野兽。
-- **优化实现**：
-  - 彻底拆分 `fireBeastTemplates`（火晶野怪）与 `beastTemplates`（普通野怪）；
-  - 当 `fireBeastsEnabled` 为 `false` 时，完全屏蔽 `INTEL_BEAST_GRAYSCALE_FC` 和 `INTEL_BEAST_GRAYSCALE_FC1` 模板；
-  - 只有当剩余任务全部为未勾选类型时，情报任务能正常识别并优雅进入冷却。
+相关实现：[`PolarTerrorHuntingRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/combat/PolarTerrorHuntingRoutine.java) 和 [`AllianceAutojoinRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/alliance/AllianceAutojoinRoutine.java)。
 
-### 4.7 运行期配置动态感知 (Dynamic Config Re-hydration)
-- **优化实现**：在 `while (processingTask)` 循环内加入 `hydrateConfiguration()` 与 `INTEL_BOOL` 校验，如果在脚本运行过程中用户在控制台取消勾选情报，循环将在 `0.1s` 内感知并立即退出。
+极地恶魔搜索模板未命中时，本项目用 `(260, 913)` 点击搜索页签并等待 800ms，再继续等级选择，避免一次视觉波动直接进入长失败冷却。
 
----
+联盟自动集结在执行入口重新读取 `ALLIANCE_AUTOJOIN_BOOL`，运行中关闭后不再强制打开联盟战争页。控制面板还可选择极地恶魔、吉娜的复仇和佣兵荣耀；任务按纵向切片 OCR 识别活动名及类似 `50/50` 的进度，只勾选用户启用且未达上限的目标。
 
-## 5. 极地恶魔任务 (Polar Terror Hunting Routine)
+## 6. 行军队列单次快照
 
-文件位置：[PolarTerrorHuntingRoutine.java](file:///E:/MeComputer/Desktop/wosbot/modules/tasks/src/main/java/dev/frostguard/tasks/combat/PolarTerrorHuntingRoutine.java)
+相关实现：[`MarchHelper.java`](../modules/automation/src/main/java/dev/frostguard/engine/helper/MarchHelper.java)、`CommonGameAreas` 和 `CommonOCRSettings`。
 
-### 5.1 搜寻 Tab 坐标 `(260, 913)` 强力兜底
-- **变更背景**：在切页搜寻极地恶魔时，若大地图 Search 图标或 `POLAR_TERROR_SEARCH_ICON` 模板未被准确识别，旧代码直接抛出失败，导致任务异常终止并莫名进入 `30 分钟` 的长失败冷却。
-- **优化实现**：
-  - 在 `openUpPolarsMenu` 中，若模板未检索到极地恶魔图标，自动执行兜底坐标点击 `(260, 913)`（极地恶魔搜寻 Tab 索引位置）；
-  - 点击后 sleep `800ms` 继续后续等级选择与打怪，大幅降低极地恶魔搜寻失败率。
+`readMarchQueueSinglePass()` 只打开一次左侧行军面板、截取一次画面、读取全部槽位，并在 `finally` 中关闭面板。每个槽位综合颜色像素、状态/标题模板、活动图标、资源图标和倒计时 OCR，分类为空闲、锁定、不可用、采集、集结、攻击、驻扎或返回等状态。情报、极地恶魔等流程复用同一份结构化结果，减少多次开关面板造成的状态漂移和误触。
 
----
+## 7. 简体中文界面本地化
 
-## 6. 自动集结任务 (Alliance Autojoin Routine)
+相关实现：[`I18nService.java`](../modules/desktop/src/main/java/dev/frostguard/app/i18n/I18nService.java) 和 [`messages_zh_CN.properties`](../modules/desktop/src/main/resources/i18n/messages_zh_CN.properties)。
 
-文件位置：[AllianceAutojoinRoutine.java](file:///E:/MeComputer/Desktop/wosbot/modules/tasks/src/main/java/dev/frostguard/tasks/alliance/AllianceAutojoinRoutine.java)
+上游界面以英文为主。本项目启动时加载 UTF-8 中文词典，优先精确匹配，再处理大小写和部分带动态参数的状态文本。服务遍历 JavaFX 场景树，并监听后续动态加入的节点，对标签、按钮、Tab、表格列、对话框和菜单等进行一次性翻译；控制台、模拟器、账号、任务管理和启动器中的运行期文本也显式调用翻译入口。未命中的文本保留英文，不阻断界面加载。
 
-### 6.1 控制台开关动态感知与关停退出
-- **优化实现**：在 `execute()` 入口加入 `ALLIANCE_AUTOJOIN_BOOL` 前置校验，运行中在控制台关闭自动集结后，任务直接退出，不再强制打开联盟战争界面。
+## 8. 异常画面取证
 
-### 6.2 基于 OCR 的 Auto-Join 目标智能勾选
-- **优化实现**：
-  - 在 UI 中新增**极地恶魔 (Polar Terror)**、**吉娜的复仇 (Gina's Revenge)** 和 **佣兵荣耀 (Mercenary Prestige)** 的目标自动加入勾选项。
-  - 在进入 Auto-Join 设置面板后，采用多片段纵向切片进行 OCR（`processOcrSlice`），精准解析列表中的活动名称及其进度（如 `50/50`）。
-  - 若用户配置了加入该目标，且进度未满（如不是 `50/50`），则自动根据切片坐标（`Y` 轴）点击复选框；若已达上限，则保证不加入，节省队列与体力。
+相关实现：[`ExceptionScreenshotService.java`](../modules/automation/src/main/java/dev/frostguard/engine/service/ExceptionScreenshotService.java)。
 
----
+任务队列遇到非用户取消的执行异常时，会捕获当前帧并保存到所选工作区的 `logs/screenshots/`，同时写入时间、匿名化配置 ID、任务名、原因和分辨率。原始帧先转换为标准 PNG，不再把像素缓冲区伪装成 `.png`。文件名会清洗任务名，不写账号名称或凭据；截图、转换或写入失败只记录警告，不能掩盖原任务异常。
 
-## 7. 打野怪独立队列与最大攻击次数限制 (Beast Hunting Presets & Max Attacks)
+## 9. 打野配置补充
 
-文件位置：[BeastHuntingLayoutController.java](file:///E:/MeComputer/Desktop/wosbot/modules/desktop/src/main/java/dev/frostguard/app/panel/combat/BeastHuntingLayoutController.java) / [BeastHuntingLayout.fxml](file:///E:/MeComputer/Desktop/wosbot/modules/desktop/src/main/resources/layout/BeastHuntingLayout.fxml)
+打野界面保留六个独立保存编队配置 `BEAST_HUNTING_MARCH_1_FLAG_STRING` 至 `..._6_...`，并通过 `BEAST_HUNTING_MAX_ATTACKS_INT` 限制单轮攻击次数；当前默认值为 10，`0` 表示仅受可用队列数限制。任务现已在每次部署前按攻击序号读取并验证对应保存编队，而不是只保存 UI 配置却不执行。`No Flag` 表示不强制选择保存编队。
 
-### 7.1 队列 1 ~ 6 独立英雄队伍旗帜配置 (`BEAST_HUNTING_MARCH_1_FLAG_STRING` ~ `BEAST_HUNTING_MARCH_6_FLAG_STRING`)
-- **优化实现**：在 UI 界面中保留【March 1】至【March 6】的 6 个独立出征队列旗帜选择下拉框，可为每次出征队伍指定对应的英雄队列旗帜（1~8 或 No Flag），避免盲目使用默认队伍出征。
+## 当前验证证据
 
-### 7.2 最大攻击次数限制 (`BEAST_HUNTING_MAX_ATTACKS_INT`)
-- **优化实现**：在 UI 界面中保留最大攻击次数设置输入框（`0` 表示不限制），精准控制体力消耗与刷野上限。
-
----
-
-## 8. 构建与工程规范 (Build & Engineering Rules)
-
-- **手动 Git 提交机制**：除非用户明确发出 `提交推送git` 指令，否则所有本地代码修改与打包测试**严禁自动运行 `git push`**。
-- **完整 Reactor 编译验证**：每次修改或同步上游代码后，必须通过 `mvn.cmd compile -DskipTests` 或 `tools/setup_env_and_build.ps1` 验证全 10 模块 `BUILD SUCCESS`。
+- 打熊候选决策、TTL、紧凑数值解析、医院批次计算、手动集结边界、打野次数限制和异常 PNG 落盘已有自动化单元测试源码。
+- 中文界面有 FXML 可加载性测试覆盖基础装载。
+- 当前执行环境没有可用 JDK，因此本轮新增测试尚未实际运行；不能声称测试通过。
+- 视觉坐标、OCR 阈值、模板识别和真实账号行为仍需保存帧回归及实时账号日志确认；高级打熊卡片和城内医院入口在取得真实帧前保持安全停用。

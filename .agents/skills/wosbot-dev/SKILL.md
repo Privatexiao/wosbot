@@ -42,6 +42,13 @@ description: Frostguard (wosbot) project development, reactor compilation, packa
 ## 3. 专属功能同步更新铁律
 
 每次修改或新增 `Privatexiao/wosbot` 专属功能时：
-1. 必须同步修改 [docs/custom-features.md](file:///E:/MeComputer/Desktop/wosbot/docs/custom-features.md)；
+1. 必须同步修改 [`docs/custom-features.md`](../../../docs/custom-features.md)；
 2. 保持日志前缀规范（如 `routineLogIntelligenceLine`）；
 3. 任何代码改动除非用户显式要求 `提交推送git`，否则禁止自动运行 `git push`。
+
+### 与上游合并时的完整性要求
+
+1. `docs/custom-features.md` 中每一项功能都必须保留，功能完整性是合并完成的硬性验收条件；
+2. 冲突时禁止直接选择 `ours`、`theirs` 或删除本项目实现，必须理解上游新结构后，把本项目的配置、UI、模板、持久化、调度、安全兜底、日志和测试迁移进去；
+3. 合并后逐项对照清单检查并执行相关验证，只有编译通过不足以证明功能完整；未完成的真实画面或实机日志验证必须明确报告；
+4. 未经用户明确授权，不得移除、禁用、缩减或替换本项目功能。仅当确认上游实现具备等价能力、配置兼容性和相同安全保证时，才可替换并在清单中标记为已上游化。
