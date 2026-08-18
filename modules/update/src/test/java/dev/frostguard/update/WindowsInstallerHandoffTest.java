@@ -37,7 +37,6 @@ class WindowsInstallerHandoffTest {
         InstallerHandoff.HandoffSession session = handoff.stage(
                 installer, 4242L, launcher, workspace);
 
-        assertTrue(command.get().contains("Hidden"));
         assertTrue(command.get().contains("-EncodedCommand"));
         String script = decodeScript(command.get());
         assertTrue(script.contains("Get-Process -Id $targetPid"));

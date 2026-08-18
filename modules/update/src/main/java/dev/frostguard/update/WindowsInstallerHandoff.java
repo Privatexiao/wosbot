@@ -200,7 +200,7 @@ public final class WindowsInstallerHandoff implements InstallerHandoff {
         String encodedScript = Base64.getEncoder().encodeToString(
                 script.getBytes(StandardCharsets.UTF_16LE));
         return List.of(
-                "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+                "powershell.exe", "-NoProfile", "-NonInteractive",
                 "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedScript);
     }
 
