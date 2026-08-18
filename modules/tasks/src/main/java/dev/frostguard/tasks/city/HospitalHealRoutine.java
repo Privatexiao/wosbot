@@ -80,6 +80,12 @@ public class HospitalHealRoutine extends DelayedTask {
         logInfo(routineLogHospitalLine("Starting Hospital Heal Routine execution flow..."));
 
         state = HospitalHealState.DISCOVER_ENTRY;
+        batchedAmountToHeal = -1;
+        totalWounded = 0;
+        healTimeSec = 0;
+        singleTroopTimeSec = 0;
+        currentEstimatedHelpsSec = -1;
+        lastHealBtnPos = null;
         int safetyCounter = 0;
 
         while (state != HospitalHealState.COMPLETE && state != HospitalHealState.ABORT && safetyCounter < 20) {
@@ -227,7 +233,7 @@ public class HospitalHealRoutine extends DelayedTask {
 
             case REQUEST_HELP:
                 ImageSearchResultData helpBtn = templateSearchHelper.locatePattern(
-                        HOSPITAL_HELP_BUTTON,
+                        ALLIANCE_HELP_BUTTON,
                         SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
                 if (helpBtn.isFound()) {
                     logInfo(routineLogHospitalLine("Requesting alliance help..."));
@@ -260,22 +266,9 @@ public class HospitalHealRoutine extends DelayedTask {
                     long remainingSec = remaining.getSeconds();
                     logInfo(routineLogHospitalLine("Remaining heal time after helps: " + remainingSec + "s"));
                     if (remainingSec > configuredMaxWait * 60) {
-                        logInfo(routineLogHospitalLine("Exceeded max wait time! Canceling heal to readjust..."));
-                        ImageSearchResultData cancelBtn = templateSearchHelper.locatePattern(
-                                HOSPITAL_CANCEL_BUTTON,
-                                SearchConfig.builder().withThreshold(75).withMaxAttempts(2).build());
-                        if (cancelBtn.isFound()) {
-                            tapInside(cancelBtn);
-                            sleepTask(1000);
-                        } else {
-                            // Fallback to text based or arbitrary coord if no template is saved yet
-                            logWarning(routineLogHospitalLine("HOSPITAL_CANCEL_BUTTON not found, attempting OCR fallback..."));
-                            // Assuming typical cancel button position or just fail
-                        }
-                        
-                        // Reduce estimate and try again
-                        currentEstimatedHelpsSec = (long) (currentEstimatedHelpsSec * 0.9);
-                        state = HospitalHealState.CALCULATE;
+                        logWarning(routineLogHospitalLine(
+                                "Remaining heal time exceeds the configured wait limit; leaving the active heal untouched."));
+                        state = HospitalHealState.COMPLETE;
                     } else {
                         state = HospitalHealState.COMPLETE;
                     }
@@ -308,6 +301,11 @@ public class HospitalHealRoutine extends DelayedTask {
 
     private EntryResult tryCityHospitalEntry() {
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.HOME);
+        if (!HOSPITAL_CITY_BUILDING.existsAtPath()) {
+            logWarning(routineLogHospitalLine(
+                    "City hospital template is unavailable; skipping city entry without a blind tap."));
+            return EntryResult.FAILED;
+        }
         ImageSearchResultData cityBuilding = templateSearchHelper.locatePattern(
                 HOSPITAL_CITY_BUILDING,
                 SearchConfig.builder().withThreshold(85).withMaxAttempts(2).build());
