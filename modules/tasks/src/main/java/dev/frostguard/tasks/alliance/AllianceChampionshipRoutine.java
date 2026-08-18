@@ -9,7 +9,7 @@ import dev.frostguard.api.domain.FormationSlots;
 import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.PointData;
 import dev.frostguard.engine.helper.AllianceChampionshipHelper;
-import dev.frostguard.engine.helper.NavigationHelper.EventMenu;
+import dev.frostguard.engine.nav.RotatingMenuTarget;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 import dev.frostguard.engine.helper.TimeWindowHelper;
 import dev.frostguard.engine.schedule.DelayedTask;
@@ -356,7 +356,7 @@ private void setTroopPercentageFlow(PointData topLeft, PointData bottomRight, in
 private boolean reachChampionshipEvent() {
         logInfo(routineLogAllianceChampionshipLine("Moving to Alliance Championship event..."));
 
-        boolean success = navigationHelper.navigateToEventMenu(EventMenu.ALLIANCE_CHAMPIONSHIP);
+        boolean success = navigationHelper.navigateToRotatingMenu(RotatingMenuTarget.ALLIANCE_CHAMPIONSHIP);
 
         if (!success) {
             logWarning(routineLogAllianceChampionshipLine("Could not navigate to Alliance Championship event"));

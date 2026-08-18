@@ -48,6 +48,36 @@ class AllianceChampionshipTabPatternEvidenceTest {
         assertEquals(new PointData(401, 137), hit.getPoint());
     }
 
+    @Test
+    void currentUnselectedChampionshipTabMatchesInsideEventHeader() throws IOException {
+        byte[] frame = resource("/alliance/championship-tab-unselected-20260818.png");
+
+        ImageSearchResultData hit = OpenCvPatternLocator.locatePattern(
+                frame,
+                "/templates/alliance/championshipTab.png",
+                HEADER_TOP_LEFT,
+                HEADER_BOTTOM_RIGHT,
+                90);
+
+        assertTrue(hit.isFound(), "Current unselected Championship tab should be detected: " + hit);
+        assertTrue(hit.getMatchScore() >= 95, "Championship tab should match strongly: " + hit);
+    }
+
+    @Test
+    void registeredChampionshipDestinationShowsTroopsEvidence() throws IOException {
+        byte[] frame = resource("/alliance/championship-destination-registered-20260818.png");
+
+        ImageSearchResultData hit = OpenCvPatternLocator.locatePattern(
+                frame,
+                "/templates/alliance/championshipTroopsButton.png",
+                new PointData(0, 0),
+                new PointData(720, 1280),
+                90);
+
+        assertTrue(hit.isFound(), "Registered Championship screen should show destination evidence: " + hit);
+        assertTrue(hit.getMatchScore() >= 95, "Troops destination evidence should match strongly: " + hit);
+    }
+
     private static byte[] resource(String path) throws IOException {
         try (var stream = AllianceChampionshipTabPatternEvidenceTest.class.getResourceAsStream(path)) {
             return Objects.requireNonNull(stream, "Missing test resource: " + path).readAllBytes();
