@@ -819,11 +819,60 @@ private void manageJoinRallies(int freeMarches) {
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
     }
 
+    private BearRallyDedupCache dedupCache = new BearRallyDedupCache();
+
     private void manageAdvancedJoinRallies(int freeMarches) {
-        logWarning(routineLogBearTrapLine(
-                "Advanced rally join is paused because no saved-frame-calibrated card parser is available. "
-                        + "No rally will be joined from fabricated candidate values; disable Advanced Join "
-                        + "to use the standard upstream-compatible path."));
+        logInfo(routineLogBearTrapLine("Scanning for joinable Bear Rally candidates (Advanced Mode)..."));
+        
+        BotOcrEngine ocrProvider = new BotOcrEngine(emuManager, EMULATOR_NUMBER);
+        BearRallyScanner scanner = new BearRallyScanner(this.emuManager, ocrProvider, this.templateSearchHelper);
+        
+        List<BearRallyCandidate> candidates = scanner.scanCandidates(Instant.now());
+        if (candidates.isEmpty()) {
+            logWarning(routineLogBearTrapLine("Zero joinable rallies detected (advanced scan)"));
+            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
+            return;
+        }
+        
+        BearRallyDedupCache.Scope scope = new BearRallyDedupCache.Scope(profile.getId().toString(), String.valueOf(this.trapNumber));
+        Clock clock = Clock.systemUTC();
+        
+        // Ensure candidates are sorted: usually top-down or by lowest remaining capacity.
+        candidates.sort(java.util.Comparator.comparingLong(BearRallyCandidate::remainingCapacity));
+        
+        for (BearRallyCandidate candidate : candidates) {
+            String key = candidate.getCandidateKey();
+            if (dedupCache.isDuplicate(scope, key)) {
+                logDebug(routineLogBearTrapLine("Skipping duplicate candidate: " + key));
+                continue;
+            }
+            
+            BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, profile, this.referenceTrapTime, clock
+            );
+            
+            if (decision.result() == BearRallyDecisionPolicy.DecisionResult.JOIN) {
+                int selectedFlag = resolveNextJoinFlag();
+                logInfo(routineLogBearTrapLine("Joining candidate " + key + " with flag #" + selectedFlag + (decision.frenzyActive() ? " (Frenzy Active)" : "")));
+                
+                tapInside(candidate.joinButtonPoint(), candidate.joinButtonPoint(), 1, 100);
+                sleepTask(500);
+                
+                if (!marchHelper.selectFlag(selectedFlag)) {
+                    logWarning(routineLogBearTrapLine("Configured join formation #" + selectedFlag + " is unavailable; cancelling this join"));
+                    pressBack();
+                    continue; // try next candidate if any, or wait for next iteration
+                }
+                
+                dedupCache.markJoined(scope, key);
+                logInfo(routineLogBearTrapLine("Deployment successful."));
+                navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
+                return; // Only join one per iteration to avoid spamming and UI states
+            } else {
+                logDebug(routineLogBearTrapLine("Skipping candidate " + key + " due to: " + decision.reason()));
+            }
+        }
+        
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
     }
 
