@@ -157,6 +157,31 @@ public class HospitalHealRoutine extends DelayedTask {
             case CONFIRM_HEAL_SCREEN:
                 logInfo(routineLogHospitalLine("Waiting for hospital popup to fully open..."));
                 sleepTask(2500);
+
+                logInfo(routineLogHospitalLine("Ensuring all troops are unselected by checking Heal button state..."));
+                boolean isZeroedOut = false;
+                for (int attempts = 0; attempts < 3; attempts++) {
+                    ImageSearchResultData healBtnCheck = templateSearchHelper.locatePattern(
+                            HOSPITAL_HEAL_BUTTON,
+                            SearchConfig.builder().withThreshold(70).withMaxAttempts(1).build());
+                    
+                    if (!healBtnCheck.isFound()) {
+                        logInfo(routineLogHospitalLine("Heal button is gray (not found). Selections are cleared."));
+                        isZeroedOut = true;
+                        break;
+                    }
+                    
+                    logInfo(routineLogHospitalLine("Heal button is colored. Tapping Quick Select to toggle..."));
+                    tapInside(new PointData(134, 852), new PointData(134, 852), 1, 100);
+                    sleepTask(1500); // Wait for the UI to update
+                }
+
+                if (!isZeroedOut) {
+                    logInfo(routineLogHospitalLine("Failed to clear troop selections. Aborting to be safe."));
+                    state = HospitalHealState.ABORT;
+                    break;
+                }
+
                 // Write 1 to ensure the button is active (blue)
                 tapInside(TROOP_1_INPUT_BOX_CENTER, TROOP_1_INPUT_BOX_CENTER, 1, 1500);
                 emuManager.clearText(EMULATOR_NUMBER, 6);
@@ -184,7 +209,24 @@ public class HospitalHealRoutine extends DelayedTask {
                 break;
 
             case READ:
-                logInfo(routineLogHospitalLine("Reading single troop time..."));
+                logInfo(routineLogHospitalLine("Reading total wounded and single troop time..."));
+                
+                // Read total wounded count
+                dev.frostguard.api.domain.AreaData woundedArea = dev.frostguard.engine.nav.CommonGameAreas.HOSPITAL_WOUNDED_COUNT_OCR_AREA;
+                String woundedRaw = null;
+                try {
+                    woundedRaw = provider.extractText(null, woundedArea.topLeft(), woundedArea.bottomRight());
+                } catch (Exception e) {
+                    logWarning(routineLogHospitalLine("Exception while reading wounded count OCR: " + e.getMessage()));
+                }
+                if (woundedRaw != null && woundedRaw.contains("/")) {
+                    String[] parts = woundedRaw.split("/", 2);
+                    totalWounded = (int) dev.frostguard.vision.convert.CompactGameNumberParser.parseCompactNumber(parts[0]);
+                    logInfo(routineLogHospitalLine("Read total wounded count: " + totalWounded));
+                } else {
+                    totalWounded = 0;
+                    logInfo(routineLogHospitalLine("Failed to read total wounded count accurately. Proceeding with legacy compatible path."));
+                }
                 
                 PointData ocrTl = HEAL_TIME_TL;
                 PointData ocrBr = HEAL_TIME_BR;

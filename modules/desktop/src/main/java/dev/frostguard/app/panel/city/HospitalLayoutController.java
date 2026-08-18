@@ -46,9 +46,6 @@ public class HospitalLayoutController extends AbstractProfileController {
     }
 
     private void applyUnsupportedFeatureGuards() {
-        checkBoxCityHospital.setDisable(true);
-        checkBoxCityHospital.setTooltip(new Tooltip(
-                "City hospital entry requires saved-frame calibration before it can be enabled."));
         checkBoxUseSpeedup.setDisable(true);
         checkBoxUseSpeedup.setTooltip(new Tooltip(
                 "Healing speedups remain disabled until item-only payment can be verified safely."));
