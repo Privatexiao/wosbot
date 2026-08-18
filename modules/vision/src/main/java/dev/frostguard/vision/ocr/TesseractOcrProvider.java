@@ -145,7 +145,11 @@ public final class TesseractOcrProvider implements OcrProvider {
             for (Path candidate : candidatePaths()) {
                 File dir = candidate.toFile();
                 if (containsTrainedModels(dir)) {
-                    resolvedTessdataDir = dir.getAbsolutePath();
+                    String path = dir.getAbsolutePath();
+                    if (containsNonAscii(path)) {
+                        path = ensureAsciiTessdataCopy(dir);
+                    }
+                    resolvedTessdataDir = path;
                     log.info("Tessdata located at {}", resolvedTessdataDir);
                     return resolvedTessdataDir;
                 }
@@ -153,6 +157,35 @@ public final class TesseractOcrProvider implements OcrProvider {
             throw new IllegalStateException(
                     "No tessdata directory found — expected .traineddata files under lib/tesseract.");
         }
+    }
+
+    private static boolean containsNonAscii(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) > 127) return true;
+        }
+        return false;
+    }
+
+    private static String ensureAsciiTessdataCopy(File srcDir) {
+        File targetDir = new File(System.getProperty("java.io.tmpdir"), "frostguard-tessdata");
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            log.warn("Failed to create ASCII tessdata temp dir: {}", targetDir);
+            return srcDir.getAbsolutePath();
+        }
+        File[] files = srcDir.listFiles(f -> f.getName().endsWith(".traineddata"));
+        if (files != null) {
+            for (File file : files) {
+                File dest = new File(targetDir, file.getName());
+                if (!dest.exists() || dest.length() != file.length()) {
+                    try {
+                        java.nio.file.Files.copy(file.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        log.warn("Failed to copy tessdata file {} to {}: {}", file.getName(), dest, e.getMessage());
+                    }
+                }
+            }
+        }
+        return targetDir.getAbsolutePath();
     }
 
     private static List<Path> candidatePaths() {
