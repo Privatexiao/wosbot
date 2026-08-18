@@ -1,5 +1,7 @@
 package dev.frostguard.tasks.city.hospital;
 
+import java.math.BigInteger;
+
 public class HealBatchCalculator {
     private final int totalWoundedCount;
     private final long totalHealTimeSeconds;
@@ -23,28 +25,28 @@ public class HealBatchCalculator {
         }
 
         if (allianceHelpCount <= 0 || reductionSecondsPerHelp <= 0) {
-            return totalWoundedCount; // If no help available, just heal all at once (or base it on other rules).
-        }
-
-        long targetHealTimeSeconds = allianceHelpCount * reductionSecondsPerHelp;
-        
-        // Calculate average time per troop
-        double secondsPerTroop = (double) totalHealTimeSeconds / totalWoundedCount;
-        
-        if (secondsPerTroop <= 0) {
             return -1;
         }
 
-        int targetTroopCount = (int) Math.floor(targetHealTimeSeconds / secondsPerTroop);
+        final long targetHealTimeSeconds;
+        try {
+            targetHealTimeSeconds = Math.multiplyExact((long) allianceHelpCount, reductionSecondsPerHelp);
+        } catch (ArithmeticException overflow) {
+            return -1;
+        }
+
+        BigInteger numerator = BigInteger.valueOf(targetHealTimeSeconds)
+                .multiply(BigInteger.valueOf(totalWoundedCount));
+        BigInteger targetTroopCount = numerator.divide(BigInteger.valueOf(totalHealTimeSeconds));
 
         // Clamp between 1 and totalWoundedCount
-        if (targetTroopCount < 1) {
+        if (targetTroopCount.signum() < 1) {
             return 1;
         }
-        if (targetTroopCount > totalWoundedCount) {
+        if (targetTroopCount.compareTo(BigInteger.valueOf(totalWoundedCount)) > 0) {
             return totalWoundedCount;
         }
 
-        return targetTroopCount;
+        return targetTroopCount.intValueExact();
     }
 }

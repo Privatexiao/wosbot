@@ -6,13 +6,16 @@ import dev.frostguard.api.configs.TpDailyTaskEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ImageSearchResultData;
 import dev.frostguard.api.domain.PointData;
+import dev.frostguard.engine.error.TaskPreemptedException;
 import dev.frostguard.engine.helper.TemplateSearchHelper.SearchConfig;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.tasks.city.hospital.HealBatchCalculator;
 import dev.frostguard.tasks.city.hospital.HospitalHealState;
+import dev.frostguard.tasks.city.hospital.HospitalSchedulePolicy;
 import dev.frostguard.vision.convert.GameTimeUtils;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import static dev.frostguard.api.configs.ConfigurationKeyEnum.*;
 import static dev.frostguard.api.configs.TemplatesEnum.*;
 
@@ -21,6 +24,8 @@ import static dev.frostguard.api.configs.TemplatesEnum.*;
  * Refactored to support state machine and batched healing calculations.
  */
 public class HospitalHealRoutine extends DelayedTask {
+
+    private static final boolean SAVED_FRAME_CALIBRATION_VERIFIED = false;
 
     public HospitalHealRoutine(AccountDescriptor profile, TpDailyTaskEnum taskType) {
         super(profile, taskType);
@@ -42,6 +47,8 @@ public class HospitalHealRoutine extends DelayedTask {
     private long singleTroopTimeSec = 0;
     private long currentEstimatedHelpsSec = -1;
     private PointData lastHealBtnPos = null;
+    private HospitalSchedulePolicy.Outcome runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
+    private Duration remainingHealTime;
 
     private static final PointData TROOP_1_INPUT_BOX_CENTER = new PointData(590, 390);
     private static final PointData TROOP_1_INPUT_BOX_TL = new PointData(540, 360);
@@ -69,11 +76,21 @@ public class HospitalHealRoutine extends DelayedTask {
             return;
         }
 
+        if (!SAVED_FRAME_CALIBRATION_VERIFIED) {
+            logWarning(routineLogHospitalLine(
+                    "Hospital interaction is disabled until full saved-frame calibration is verified."));
+            reschedule(HospitalSchedulePolicy.nextRun(LocalDateTime.now(),
+                    HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED, null));
+            return;
+        }
+
         useFieldEntry = resolveConfigBoolean(HOSPITAL_HEAL_FIELD_ENABLED_BOOL, true);
         useCityEntry = resolveConfigBoolean(HOSPITAL_HEAL_CITY_ENABLED_BOOL, false);
 
         if (!useFieldEntry && !useCityEntry) {
             logWarning(routineLogHospitalLine("Both field and city hospital entry options are disabled; exiting."));
+            reschedule(HospitalSchedulePolicy.nextRun(LocalDateTime.now(),
+                    HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED, null));
             return;
         }
 
@@ -86,18 +103,29 @@ public class HospitalHealRoutine extends DelayedTask {
         singleTroopTimeSec = 0;
         currentEstimatedHelpsSec = -1;
         lastHealBtnPos = null;
+        runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
+        remainingHealTime = null;
         int safetyCounter = 0;
 
-        while (state != HospitalHealState.COMPLETE && state != HospitalHealState.ABORT && safetyCounter < 20) {
-            checkPreemption();
-            safetyCounter++;
-            processState();
+        try {
+            while (state != HospitalHealState.COMPLETE && state != HospitalHealState.ABORT && safetyCounter < 20) {
+                checkPreemption();
+                safetyCounter++;
+                processState();
+            }
+        } catch (TaskPreemptedException preempted) {
+            throw preempted;
+        } catch (RuntimeException failure) {
+            reschedule(HospitalSchedulePolicy.nextRun(LocalDateTime.now(),
+                    HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE, null));
+            throw failure;
         }
 
         if (safetyCounter >= 20) {
             logWarning(routineLogHospitalLine("State machine aborted due to infinite loop prevention."));
         }
-        
+
+        reschedule(HospitalSchedulePolicy.nextRun(LocalDateTime.now(), runOutcome, remainingHealTime));
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
     }
 
@@ -120,6 +148,7 @@ public class HospitalHealRoutine extends DelayedTask {
                     state = HospitalHealState.ENTER_CITY;
                 } else {
                     logInfo(routineLogHospitalLine("Field entry not available and city entry disabled."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.NO_ENTRY;
                     state = HospitalHealState.COMPLETE;
                 }
                 break;
@@ -130,6 +159,7 @@ public class HospitalHealRoutine extends DelayedTask {
                     state = HospitalHealState.CONFIRM_HEAL_SCREEN;
                 } else {
                     logInfo(routineLogHospitalLine("City entry not available."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.NO_ENTRY;
                     state = HospitalHealState.COMPLETE;
                 }
                 break;
@@ -154,6 +184,7 @@ public class HospitalHealRoutine extends DelayedTask {
                     state = HospitalHealState.READ;
                 } else {
                     logInfo(routineLogHospitalLine("Heal button not found even after inputting 1, maybe no wounded troops."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.NO_WOUNDED;
                     state = HospitalHealState.COMPLETE;
                 }
                 break;
@@ -193,14 +224,24 @@ public class HospitalHealRoutine extends DelayedTask {
                 break;
 
             case CALCULATE:
-                if (currentEstimatedHelpsSec < 0) {
-                    int helpCount = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_MAX_COUNT_INT, 15);
-                    int reductionSec = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_TIME_REDUCTION_SEC_INT, 210);
-                    currentEstimatedHelpsSec = (long) helpCount * reductionSec;
+                int helpCount = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_MAX_COUNT_INT, 15);
+                int reductionSec = resolveConfigInt(ConfigurationKeyEnum.ALLIANCE_HELP_TIME_REDUCTION_SEC_INT, 210);
+                currentEstimatedHelpsSec = (long) helpCount * reductionSec;
+                long estimatedTotalTime;
+                try {
+                    estimatedTotalTime = Math.multiplyExact((long) totalWounded, singleTroopTimeSec);
+                } catch (ArithmeticException overflow) {
+                    estimatedTotalTime = -1;
                 }
-
-                batchedAmountToHeal = (int) (currentEstimatedHelpsSec / singleTroopTimeSec);
-                if (batchedAmountToHeal <= 0) batchedAmountToHeal = 1;
+                batchedAmountToHeal = new HealBatchCalculator(
+                        totalWounded, estimatedTotalTime, helpCount, reductionSec).calculateBatchSize();
+                if (batchedAmountToHeal <= 0) {
+                    logWarning(routineLogHospitalLine(
+                            "Wounded count or alliance-help calibration is unavailable; refusing to start treatment."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED;
+                    state = HospitalHealState.ABORT;
+                    break;
+                }
 
                 logInfo(routineLogHospitalLine("Calculated batch size: " + batchedAmountToHeal + " (Target heal time: " + currentEstimatedHelpsSec + "s)"));
                 state = HospitalHealState.INPUT;
@@ -264,6 +305,8 @@ public class HospitalHealRoutine extends DelayedTask {
                 
                 if (remaining != null) {
                     long remainingSec = remaining.getSeconds();
+                    remainingHealTime = remaining;
+                    runOutcome = HospitalSchedulePolicy.Outcome.ACTIVE_HEAL;
                     logInfo(routineLogHospitalLine("Remaining heal time after helps: " + remainingSec + "s"));
                     if (remainingSec > configuredMaxWait * 60) {
                         logWarning(routineLogHospitalLine(
@@ -273,8 +316,9 @@ public class HospitalHealRoutine extends DelayedTask {
                         state = HospitalHealState.COMPLETE;
                     }
                 } else {
-                    logInfo(routineLogHospitalLine("Could not read remaining time, assuming success."));
-                    state = HospitalHealState.COMPLETE;
+                    logWarning(routineLogHospitalLine("Could not read remaining time; scheduling a conservative retry."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
+                    state = HospitalHealState.ABORT;
                 }
                 break;
                 

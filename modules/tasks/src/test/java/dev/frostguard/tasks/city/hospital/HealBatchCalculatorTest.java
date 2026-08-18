@@ -46,8 +46,14 @@ class HealBatchCalculatorTest {
 
     @Test
     void testNoAllianceHelp() {
-        // Should return all troops if no alliance help
         HealBatchCalculator calc = new HealBatchCalculator(100, 1000L, 0, 0L);
-        assertEquals(100, calc.calculateBatchSize());
+        assertEquals(-1, calc.calculateBatchSize());
+    }
+
+    @Test
+    void calculatesLargeValuesWithoutFloatingPointRounding() {
+        HealBatchCalculator calc = new HealBatchCalculator(
+                Integer.MAX_VALUE, Long.MAX_VALUE, 2, Long.MAX_VALUE / 4);
+        assertEquals(1_073_741_823, calc.calculateBatchSize());
     }
 }
