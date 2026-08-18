@@ -46,12 +46,6 @@ public class HospitalLayoutController extends AbstractProfileController {
     }
 
     private void applyUnsupportedFeatureGuards() {
-        checkBoxHospitalHeal.setDisable(true);
-        checkBoxHospitalHeal.setTooltip(new Tooltip(
-                "Hospital interaction requires full saved-frame calibration before it can be enabled."));
-        checkBoxFieldHospital.setDisable(true);
-        checkBoxFieldHospital.setTooltip(new Tooltip(
-                "Field hospital entry requires full-page saved-frame calibration before it can be enabled."));
         checkBoxCityHospital.setDisable(true);
         checkBoxCityHospital.setTooltip(new Tooltip(
                 "City hospital entry requires saved-frame calibration before it can be enabled."));
