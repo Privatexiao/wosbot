@@ -1,277 +1,191 @@
 # 打熊筛选、医院治疗与运行时恢复完整实施计划
 
-## 当前待办事件：等待真实画面素材
+## 1. 计划概述与实施状态
 
-**状态**：等待用户提供图片，收到素材后继续实施；不得因等待上游合并或其他开发而删除本待办。
+本计划旨在 Frostguard 现有 Java 21/Maven 架构下完成三项核心能力升级：
+1. **打熊集结高级筛选与出征闭环**：基于同帧动态相对 ROI 的卡片识别、多维度条件决策策略、狂热放宽模式、实例级分域 TTL 去重缓存、以及严格的出征部署与弹窗安全检测。
+2. **医院智能批量治疗与防错回读**：支持野外快捷与城内建筑双入口、全选状态智能反转、伤兵总数读取、精确与兼容双模式批次计算、数量输入 OCR 回读校验、倒计时区域校准及有界调度重排。
+3. **运行时异常取证与有界恢复**：结构化异常帧截取脱敏保存、队列级状态恢复与退避熔断。
 
-### 用户需提供
+### 1.1 当前实施状态矩阵
 
-以下为启动实现所需的首批最小素材，不代表完整回归素材集：
-
-具体截图方法、隐私处理和文件命名参见[打熊与医院原始画面采集指南](bear-rally-hospital-screenshot-guide.md)。
-
-- [x] 一张 `720x1280` 未缩放原始 PNG：打熊联盟集结列表，最好同时显示两个以上可加入卡片，以及成员数、集结容量、剩余容量和倒计时。
-- [x] 一张 `720x1280` 未缩放原始 PNG：野外快捷医院图标可见的完整 WORLD 画面，用于复核现有入口模板和点击后页面转换。
-- [x] 一张 `720x1280` 未缩放原始 PNG：点击野外快捷医院图标后进入的完整治疗界面，用于确认入口结果及伤兵数、数量框和治疗时间区域。
-- [x] 一张 `720x1280` 未缩放原始 PNG：城内医院建筑可见的完整 HOME 画面。
-- [x] 一张 `720x1280` 未缩放原始 PNG：点击城内医院后进入的完整治疗界面。
-- [x] 一张 `720x1280` 未缩放原始 PNG：治疗开始并请求联盟帮助后的页面，需显示帮助状态或剩余倒计时。
-- [x] 说明游戏界面语言（中文或英文）。玩家名和联盟名可以脱敏，但不得裁剪、缩放或遮挡数值及按钮区域。
-
-### 收到素材后的实施任务
-
-- [x] 标注并验证打熊卡片 ROI，使用同一帧解析发起人、成员数、总容量、剩余容量和倒计时。
-- [x] 先确认卡片字段语义，分别建模当前成员数、最大成员数、当前兵量、集结总容量和剩余容量；禁止用一组 `current/max` 同时代表人数和兵量。
-- [x] 恢复高级候选扫描、候选排序及 TTL 运行时接入；候选模型、策略门槛、狂热决策和活动实例级 TTL 纯逻辑已完成，禁止回退到固定假数据。
-- [x] 裁取并登记城内医院稳定模板，补齐 `TemplatesEnum`、`templates.properties` 和入口状态确认。
-- [ ] 为打熊正反候选、城内医院存在/不存在及治疗页确认添加保存帧回归测试。
-- [x] 补齐医院任务重排策略，确保无入口、零伤兵、识别失败、治疗进行中和普通异常退出都不会立即重复执行；任务抢占仍交由调度器接管。
-- [x] 检查每个医院配置项均有运行时读取、范围校验、日志和测试；未实现的配置控件必须禁用并明确提示。
-- [x] 运行相关模块测试，并按自动测试、保存帧验证、实时账号日志三个证据等级记录结果。
-- [x] 同步更新 [`docs/custom-features.md`](../custom-features.md)，只有上述验收通过后才移除“安全停用”说明。
-
-### 当前安全边界
-
-在素材和保存帧测试完成前，高级打熊卡片解析、城内医院、精确伤兵批次、输入回读和加速分支保持安全停用。普通打熊兼容路径与已有野外医院基础流程必须保持可用；高级功能未完成、识别失败或配置缺失不得连带关闭、改写或缩减基础路径。
-
-### 当前实施状态
-
-| 能力 | 状态 | 当前证据与限制 |
+| 能力模块 | 实施状态 | 核心实现与验证证据 |
 | --- | --- | --- |
-| 普通打熊加入 | 已保留 | 继续使用上游兼容路径；本计划不得改变其默认行为 |
-| 高级打熊纯策略、紧凑数值解析 | 纯逻辑完成 | 候选字段已拆分，策略、狂热边界和紧凑数值解析已有自动测试 |
-| 高级打熊卡片扫描与 TTL 集成 | 已接入出征闭环 | 扫描器与字段提取逻辑已接入，补齐出征Deploy定位、队列满/同目标检测及成功后写入TTL；待实机实战验证 |
-| 手动集结安全检查 | 已修复，待实机确认 | 颜色识别失败会跳过，登记前检查队列满和同目标弹窗 |
-| 野外医院入口与治疗状态机 | 已接入输入回读闭环 | 野外/城内双入口、伤兵总数读取、输入OCR回读校验、退出调度已接入，待实机复核 |
-| 城内医院入口 | 模板已补充 | 补齐城内建筑模板与入口选择逻辑，待实机验证 |
-| 医院加速与目标兵阶 | 未完成 | 配置键存在但运行时未完整消费，完成前不得宣称可用 |
-| 异常 PNG 取证 | 已接入，待增强 | 写入工作区 `logs/screenshots/`；待补保留数量、总容量和恢复联动 |
-
-状态只能在代码、配置、UI、自动测试和所需视觉证据同步完成后提升；仅存在类、配置键或测试源码不代表功能完成。
-
-### 必须补齐的逻辑闭环
-
-#### 打熊候选与 TTL
-
-- 候选模型必须区分成员人数和兵量容量，并保存每个字段的 OCR 原文、解析值与置信度；关键字段缺失时跳过候选。
-- 候选签名至少包含 profile、活动实例、规范化发起人、稳定卡片字段，以及由采集时刻和剩余时间推导的预计结束时间桶；不得直接使用持续递减的剩余时间桶，否则会绕过 TTL。同名发起人的不同集结不得互相覆盖。
-- TTL 只在部署成功得到页面证据后写入，活动实例切换或结束时清空，并设置最大条目数及处理系统时钟回拨。
-- 部署前复用单次行军队列快照；部署后检查队列已满、同目标、Deploy 仍可见及页面转换，任何失败都不得计为成功。
-
-#### 医院计算与调度
-
-- 基础路径在伤兵总数不可用时保留原有“帮助总减免 ÷ 单兵耗时”算法；读取到可靠伤兵总数后，精确路径通过 `HealBatchCalculator` 将批次限制在 `[1, woundedCount]`。新增精确路径不得替换或阻断基础兼容路径。
-- 数量输入后必须 OCR 回读；回读不一致、时间格式有歧义或帮助减免参数不可信时不得点击治疗。
-- 为 `HOSPITAL_HEAL_TARGET_TIER_INT`、`HOSPITAL_HEAL_USE_SPEEDUP_BOOL` 和 `HOSPITAL_HEAL_MAX_SPEEDUP_MINUTES_INT` 建立完整运行路径；实现前 UI 必须显示未支持并禁止启用。
-- 每个结束状态必须明确调度结果：无入口/零伤兵走正常轮询，OCR 或页面异常采用退避，治疗中按剩余时间重排，禁止默认重排到当前时间形成热循环。
-- 监控倒计时使用保存帧校准的窄 ROI，不得在屏幕下半区进行无约束 OCR；长等待拆分并持续响应抢占。
-
-#### UI、素材与验证
-
-- 狂热开始分钟必须限制在活动窗口内；成员数和容量门槛必须非负且有合理业务上限。
-- 高级打熊关闭时不读取候选 OCR；医院总开关开启时必须至少选择一个已支持入口。
-- 正式回归素材还需覆盖灰色/不可加入、空列表、同名集结、整数与 `K/M`、滚动重叠、队列已满、重复目标、零伤兵、资源不足、帮助缺失、取消成功/失败和中途抢占。
-- 中文和英文界面若都要支持，应分别提供素材并维护独立模板/OCR 证据；不能用一套截图宣称双语言可用。
-- Java 21 和可写的项目内 Maven 缓存是自动测试前置条件；未实际运行测试时只能报告静态检查结果。
-
-## 1. 实施目标
-
-在 Frostguard 现有 Java 21/Maven 架构内完成三项增量能力：为当前正常工作的打熊任务补充可选的候选筛选和活动末段放宽、新增医院联盟帮助治疗、补充运行时异常取证与有界恢复。实现目标是可解释、可抢占、可止损、可用保存帧回归验证，不承诺“绝对防封”或 24 小时零故障。
-
-打熊现有功能是稳定基线，不属于本次重写范围。所有新增打熊能力必须由独立高级策略开关控制且默认关闭；开关关闭时继续执行现有加入流程，不改变现有配置、时间窗、页面操作、旗帜轮换、调度和日志语义。
-
-视觉自动化基线为 `720x1280`、`320 DPI`、关闭昼夜和雪景效果。英文和中文游戏界面必须分别用对应原始帧验证；当前只对获得完整证据的语言声明支持。未经真实截图确认的 ROI、模板、颜色和时间规则不得猜测落地。
-
-## 2. 本地代码审计结论
-
-### 2.1 打熊现状
-
-- `BearTrapRoutine` 已实现 UTC 双定时器、30 分钟活动窗口、图标兜底、准备阶段、宠物、采集召回、自建集结、加入集结、旗帜轮换、抢占检查和活动后重排任务。
-- 普通兼容加入流程只搜索第一个 `BEAR_JOIN_PLUS_ICON`，不读取卡片字段或使用 TTL；高级路径已有纯策略骨架，但真实卡片扫描当前安全停用，不能视为已实现高级筛选。
-- 当前 `inspectFreeMarches()` 读取顶部 `used/total`，OCR 失败时默认 6 个空闲队列。该回退不适合无人值守，必须先改成保守失败。
-- `MarchHelper.readMarchQueue()` 已能逐槽给出 `IDLE/OCCUPIED/LOCKED/UNKNOWN`，并有六组真实帧和分类测试；应作为是否允许上车的主要证据。
-- `DeploymentHelper` 已能识别队列满、无可部署部队、同目标弹窗并定位 Equalize，可复用于打熊部署止损。
-- `ManualRallyJoinRoutine` 已有同屏多目标/Join 按 Y 轴配对、Join 绿色状态检查和部署跟踪；颜色识别异常时现已保守跳过，并在登记成功前检查队列已满和同目标弹窗。
-
-### 2.2 OCR、输入与配置现状
-
-- OCR 基础设施是 `BotOcrEngine + ResilientOcrExecutor`；共享 ROI 和预设分别位于 `CommonGameAreas`、`CommonOCRSettings`。
-- `CompactGameNumberParser` 已支持整数、千分位和 `K/M`，但尚未接入真实打熊卡片扫描；`GameTimeUtils` 已支持多种倒计时，但两段式 `12:34` 同时可解释为小时分钟和分钟秒，治疗场景必须提供显式语义，不能继续依赖模糊推断。
-- `EmulatorController` 已提供 `writeText`、`clearText`、`pressBack`，底层统一处理 ADB 重试与转义。任务代码不得调用 `os.system` 或拼接裸 ADB。
-- 配置持久化通过 `ConfigurationKeyEnum` 和 `AbstractProfileController`；非负整数已有统一校验，但业务上限、字段联动和危险开关仍需控制器额外约束。
-
-### 2.3 任务与恢复现状
-
-- 医院任务已加入 `TpDailyTaskEnum` 并由 `TaskRegistrations` 创建；待办重点是补齐运行闭环、调度和证据，而不是重复注册任务。
-- 医院 FXML、控制器和 Launcher 入口已经存在；未实现的目标兵阶、加速和城内入口必须在 UI 中禁用或标注，打熊设置继续扩展已有 Bear Trap 页面。
-- `DelayedTask.run()` 已在任务前检查游戏进程和目标页面，任务后回到 HOME/WORLD；`sleepTask()` 支持抢占和注入，长等待不能使用裸 `Thread.sleep`。
-- `NavigationHelper` 已有 10 次返回恢复和重连识别；`TaskQueue` 将 `HomeNotFoundException`、ADB 异常路由到 `InitializeRoutine`。
-- `InitializeRoutine` 已负责启动模拟器、启动游戏、主页检测、ADB 健康检查和模拟器重启，但当前立即重试缺少跨轮退避/熔断。
-- `GlobalMonitorService` 每 5 秒复用一帧执行抢占和注入，当前不承担通用恢复。扩展时必须避免与正在交互的任务并发点击。
-- 通用异常截图已经接入 `TaskQueue`，有效 PNG 与脱敏元数据写入所选工作区的 `logs/screenshots/`；仍需补充数量/容量限制和异常恢复闭环。
-
-## 3. 设计边界与关键决定
-
-1. 不新增 Python 目录；游戏业务放 `modules/tasks`，共享交互放 `modules/automation`，低层解析和模板匹配放 `modules/vision`，契约和配置标识放 `modules/api`，JavaFX 配置放 `modules/desktop`。
-2. 不全局随机化 `sleepTask()`。区域点击已经由 `touchArea` 随机选点；等待时间由状态变化、超时和少量稳定抖动控制，抢占敏感窗口保持确定性。
-3. 新增 `BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL` 总开关，默认 `false`。容量筛选、已加入阈值、狂热模式和 TTL 仅在该开关开启时生效；关闭时不得调用新 OCR、候选扫描或去重逻辑。
-4. 打熊狂热计时以选中活动定时器的激活时间为基准。图标兜底启动时无法可靠知道已进行分钟数，因此该次保持常规策略，不伪造开始时间。
-5. 最低成员数、总容量和剩余容量配置键已经存在，但在截图确认字段语义前不得驱动真实出征；若实际界面字段含义不同，应设计兼容迁移，不能静默复用错误语义。
-6. TTL 是 profile + 活动实例级内存状态，不写数据库；只有高级策略确认部署成功后才写入，活动结束和任务清理时清空。
-7. TTL 键由可稳定读取的卡片证据组成。发起人名只能作为一部分；若部队类型在界面不可稳定识别，则使用发起人规范化文本、卡片字段、倒计时桶等组合，并记录同名冲突风险。
-8. 医院单兵试探不是只读操作。优先直接读取选择界面的单位/总耗时；只有真实帧证明无法读取时，才实现一次性单兵校准，并明确资源消耗和取消路径。
-9. `assist_count * 210 秒` 不作为默认公式。先实测联盟帮助次数、每次减免、科技/VIP 差异；代码使用可验证的校准输入，缺失时不开始批量治疗。
-10. 加速默认关闭。无法同时证明“剩余时间可靠、道具页正确、无需钻石”时直接取消，不自动更改用户持久化配置。
-11. 异常恢复只做已知状态白名单；未知弹窗不尝试盲点右上角，先截图、有限返回，再交给队列级初始化。
-12. 医院存在两种入口：城镇内医院建筑，以及伤兵达到游戏阈值后出现在野外界面的快捷医院图标。控制面板用两个独立勾选项控制，默认只勾选“处理野外医院”，不启用城镇医院。
-13. 野外快捷医院图标是条件性入口，未出现通常表示伤兵未达到显示阈值，不属于异常。两种入口只共享进入治疗页之后的流程，入口模板、ROI、点击和失败证据必须分开维护。
-
-## 4. 目标代码结构
-
-### 4.1 打熊
-
-- 保留 `modules/tasks/.../combat/BearTrapRoutine.java` 和现有加入方法作为默认执行路径。在现有加入入口只增加一次总开关分派：关闭走原方法，开启才委托高级候选扫描器；不顺带整理或改写旧流程。
-- 扩展现有 `BearRallyCandidate`、`BearRallyDecisionPolicy`、`BearRallyDedupCache`：候选模型分离人数与兵量，时间依赖通过 `Clock` 注入，TTL 增加 profile/活动实例边界和容量限制。
-- 共享缩写数值解析扩展到 `modules/vision/.../convert`，不塞进任务类；与卡片几何相关的 ROI 留在打熊扫描器，证明可复用后才上移 `CommonGameAreas`。
-- 部署前复用 `MarchHelper`，部署页复用 `DeploymentHelper` 和 `marchHelper.selectFlag()`；不再在打熊中重复实现旗帜锁定或队列满检测。
-
-### 4.2 医院
-
-- 继续完善现有 `modules/tasks/.../city/HospitalHealRoutine.java`，保持 `execute()` 只编排状态转换，并把入口、读取、输入确认和调度结果拆成可测试步骤。
-- 复用现有 `HospitalHealState` 和 `HealBatchCalculator`，补充 `HealCalibration`、`HealTimeoutDecision` 等纯模型；OCR/模板操作留在 routine 的意图方法或确认复用后抽入 `modules/automation/helper`。
-- 增加 `HospitalEntryStrategy` 接口及两个实现：`FieldHospitalEntryStrategy` 负责从 WORLD 识别条件性快捷图标，`CityHospitalEntryStrategy` 负责从 HOME 定位城镇医院。入口结果统一返回 `ENTERED/NOT_AVAILABLE/FAILED` 和视觉证据。
-- 入口由 `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` 和 `HOSPITAL_HEAL_CITY_ENABLED_BOOL` 分别控制。两者都启用时顺序为 `WORLD 快捷图标 → HOME 城镇医院`；野外入口返回 `NOT_AVAILABLE` 才正常尝试城镇入口，返回 `FAILED` 时先恢复并保存证据，避免在未知页面直接尝试城镇坐标。
-- 完善现有 `HospitalLayout.fxml`、`HospitalLayoutController` 和 Launcher 入口；医院不是现有 City Upgrades 页的附属开关。
-- 医院页面显示“处理野外医院”和“处理城镇医院”两个 CheckBox；前者默认开启、后者默认关闭。任务总开关开启但两个入口均未选中时显示校验提示，并禁用/拒绝保存无效运行状态。
-- 模板资源按 `hospital/field/`、`hospital/city/` 和 `hospital/common/` 分开，公共治疗页面模板才放 `common`；同步 `TemplatesEnum` 和 `templates.properties`。医院 ROI 在证实跨任务复用后加入 `CommonGameAreas`。
-
-### 4.3 恢复与取证
-
-- `modules/automation` 中的异常帧服务输入 `RawImageData + profile + task + reason`，输出到所选工作区的 `logs/screenshots/` 并写同名元数据；后续补充任务状态、文件保留数量、总容量和并发写入约束。
-- 扩展 `NavigationHelper` 返回结构化恢复结果；`TaskQueue` 负责升级为 Initialize，`InitializeRoutine` 负责进程/模拟器恢复，职责不交叉。
-- 通用弹窗探针作为白名单 helper，在任务入口或页面转换失败时调用；不包装每一个 OCR/点击，也不让 GlobalMonitor 直接点击。
-
-## 5. 分阶段实施顺序
-
-### 阶段 A：锁定现有打熊基线
-
-**状态：部分完成，需补默认路径特征测试和实机回归。**
-
-- 为现有打熊配置加载、活动窗口、加入开关、旗帜轮换和默认 Join/Deploy 顺序增加特征测试，先记录当前行为，不修改实现结果。
-- 增加高级策略总开关并验证默认值为 `false`；开关关闭时不得创建扫描器、执行额外 OCR、读取逐槽队列或改变旧日志/调度。
-- UI 先只增加总开关及说明，其余高级字段在后续阶段出现，并统一受总开关联动禁用。
-- 记录当前加入流程中已知风险，作为高级策略的改进目标，不在本阶段修复旧路径。
-
-验收：高级开关关闭时，现有正常打熊行为与变更前一致；测试能检测任何意外切换到高级路径。
-
-### 阶段 B：实现纯解析、策略与 TTL
-
-**状态：纯逻辑完成；等待阶段 C 的真实卡片扫描、部署证据和运行时接入。**
-
-- 扩展数值解析，支持 `1200`、`1,200`、`1.2K`、`1.2M`、大小写单位和空白；使用 `long/BigDecimal` 防溢出，拒绝负数、未知单位和多义 OCR。
-- 定义候选模型字段及置信度；策略输入为候选、配置、活动激活时间、当前时间，输出 `JOIN/SKIP` 和原因。
-- 常规模式分别应用已启用阈值；狂热模式只跳过候选阈值，不跳过队列、页面、部署和资源安全校验。
-- TTL 默认 300 秒并使用 `Clock` 测试；清理过期项，限制最大条目数，活动实例切换时清空。
-- 新增 `CompactGameNumberParserTest`、`BearRallyDecisionPolicyTest`、`BearRallyDedupCacheTest`。
-
-验收：纯测试覆盖边界值、K/M、同名复合键、活动切换、图标兜底、阈值为 0、狂热边界和时钟回拨。
-
-### 阶段 C：截图驱动的打熊卡片扫描与 UI
-
-**状态：等待真实画面素材。**
-
-- 用同一张 `RawImageData` 定位所有 Join 图标，以每个图标为锚点生成卡片局部 ROI，分别 OCR 发起人、当前/最大成员数、当前兵量、集结总容量、剩余容量和倒计时，避免扫描过程中多次截屏导致卡片错配。
-- 加入卡片边界检查、重叠去重、从上到下稳定排序；若需滚动，比较滚动前后卡片签名，无进展即停止。
-- 保留并校验配置键：狂热开关、狂热分钟，以及字段语义确认后的最低成员数、最低集结总容量、最低剩余容量三个阈值；默认狂热关闭、分钟 22、阈值 0。
-- 扩展 Bear Trap FXML/控制器，限制狂热分钟在活动窗口内，阈值非负，并随“加入集结”联动禁用。
-- 高级路径内部使用 `MarchHelper` 和 `DeploymentHelper` 做保守校验；这些改进不反向替换旧路径，避免新增功能影响当前稳定使用者。
-- 保存帧测试覆盖多卡片、K/M、同名、灰色/不可加入、滚动重叠和部署后页面。
-
-验收：每次日志包含活动经过时间、队列证据、候选原文/解析值、策略原因、TTL 命中及部署结果；真实账号确认 5 分钟内不重复加入。
-
-### 阶段 D：医院素材基线与纯计算
-
-**状态：等待完整原始帧；现有裁剪模板不足以证明页面状态。**
-
-- 分别收集并标注野外快捷医院图标“出现/未出现/被其他悬浮图标遮挡/点击后”的原图，以及城镇医院建筑“可见/不可见/点击后”的原图。
-- 确认两种入口最终是否落到完全相同的治疗页面；若页面布局或可用功能不同，入口结果需携带页面变体，后续 ROI 不得混用。
-- 现有 `ExpertsRomulusTagRoutine` 的固定医院坐标只能作为城镇相机定位线索，不能直接复用为治疗入口；野外快捷图标已有本地裁剪模板，但在完整正反原始帧验证前只能作为待校准证据，不能据此宣称入口可靠。
-- 收集并标注公共治疗页面的兵种/等级、数量框、伤兵数、治疗时间、帮助计数、治疗中倒计时、完成、取消、资源不足和加速页原图。
-- 为治疗倒计时增加显式格式解析模式，避免 `MM:SS` 与 `HH:MM` 歧义；不要顺便重构 `GameTimeUtils` 的其他遗留代码。
-- 实测单兵耗时和帮助减免规则，建立 `HealBatchCalculator`，计算结果夹在 `[1, woundedCount]`，任何输入为零、负数或低置信度都返回不可执行。
-- 新增纯单元测试覆盖取整、伤兵上限、零伤兵、超大值、校准过期和阈值边界。
-
-验收：形成可复现的规则表和 ROI 表；没有截图或规则证据时不进入医院交互实现。
-
-### 阶段 E：医院无加速最小闭环
-
-**状态：部分实现但不可宣称完成；批次止损与调度已完成，仍需伤兵读取、输入回读、页面证据和保存帧验证。**
-
-- 添加配置键：任务启用、处理野外医院、处理城镇医院、目标兵阶和等待阈值；野外入口默认 `true`，城镇入口默认 `false`，任务总开关默认 `false`。注册 `HOSPITAL_HEAL` 任务和独立配置页。
-- 状态机固定为：`DISCOVER_ENTRY → ENTER_FIELD/ENTER_CITY → CONFIRM_HEAL_SCREEN → SELECT_TIER → READ → CALCULATE → INPUT → START → REQUEST_HELP → MONITOR → COMPLETE/ABORT`。
-- 只勾选野外医院时，不执行任何城镇导航；快捷图标不存在则正常结束并按短周期重排。只勾选城镇医院时不扫描野外图标。两者都勾选时优先野外，只有野外入口不可用且页面状态安全时才尝试城镇医院。
-- 输入数量时点击输入框、`clearText`、`writeText`、收键盘，再 OCR 回读；回读不一致不得点击治疗。
-- 每个页面转换由模板/颜色/OCR 中至少一种正证据确认；风险点击使用两种证据。所有循环调用 `checkPreemption()`/`sleepTask()` 并有截止时间和重试上限。
-- 资源不足关闭弹窗并终止本轮；零伤兵正常结束；超时但可等待时按剩余时间分段等待并重读，不进行一次超长睡眠。
-- 超出等待阈值时执行一次可确认的取消；取消失败则保存异常帧并退出，不能重测死循环。
-
-验收：保存帧和测试覆盖正常完成、零伤兵、输入失败、资源不足、帮助不足、OCR 失败、取消成功/失败和中途抢占。
-
-### 阶段 F：加速安全分支
-
-**状态：未实现；配置存在不等于功能可用。**
-
-- 添加“允许使用加速”和最大加速分钟数，危险开关默认关闭并在 UI 明示可能消耗道具。
-- 进入加速页后重新读取剩余时间；仅在阈值内、智能使用按钮已确认、道具支付证据成立、钻石/价格危险证据不存在时确认。
-- 任何证据冲突或 OCR 失败都关闭弹窗并退回无加速止损路径；不自动修改配置开关。
-- 单独保存道具充足、道具不足、钻石支付、混合道具和确认后状态的真实帧测试。
-
-验收：负例数量不少于正例；没有真实账号日志确认前只能标记“保存帧验证”，不能宣称生产可用。
-
-### 阶段 G：恢复与异常取证
-
-**状态：异常 PNG 已接入，恢复退避、容量限制和白名单闭环待完成。**
-
-- 异常帧服务采用原子文件名、profile 脱敏标识、任务/状态/原因元数据；限制单 profile 数量和总容量，写入失败只记录警告。
-- 白名单弹窗关闭后必须确认弹窗消失；未知状态只保存一次截图并返回结构化失败。
-- `NavigationHelper` 继续有限 Back 恢复；失败由 `TaskQueue` 排入 Initialize。为 Initialize 增加按 profile 的连续失败计数、退避和熔断，避免无限重启模拟器。
-- 重连继续走 `ProfileInReconnectStateException → TaskQueue.attemptReconnect() → Initialize`，补充点击后主页确认和失败退避。
-- `GlobalMonitorService` 只检测并发送恢复请求，不直接与活动任务抢 UI；同一 profile 同时只允许一个恢复动作。
-
-验收：测试覆盖已知弹窗、重连成功/失败、游戏进程丢失、主页连续失败、ADB 恢复失败、熔断和恢复后计数清零。
-
-## 6. 截图最小集与自动补充策略
-
-开发启动时不要求一次性收集所有边界状态。用户只需优先提供以下无缩放原始 PNG：
-
-1. 一张打熊集结列表，尽量同时包含两个以上可加入卡片及普通或 K/M 数值。
-2. 一张野外快捷医院图标可见的 WORLD 页面。
-3. 一张点击野外医院图标后进入的完整治疗页面，需能看到伤兵数、数量区域和治疗时间。
-4. 一张治疗已开始并已请求联盟帮助后的页面，需能看到帮助计数或剩余倒计时。
-5. 仅在启用城镇医院时，再提供一张城镇医院建筑可见页面和一张点击后的治疗页面。
-6. 仅在开发加速功能时，再提供一张正常道具页和一张出现钻石/价格的危险页。
-
-其余空列表、零伤兵、不可加入、队列满、资源不足、断网、未知弹窗等属于补充回归素材，由调试版在对应分支自动保存异常帧和元数据；遇到自动截图仍无法确定 ROI 或状态语义时，再按具体问题向用户索取一张，不提前批量要求。
-
-截图需保持 `720x1280`、320 DPI、PNG 原图，并说明界面语言、截图前操作步骤及昼夜/雪景效果状态。玩家名、联盟名、聊天信息需先脱敏，但不得遮挡待识别区域。确认稳定的完整帧放受影响模块 `src/test/resources`；只有稳定视觉元素裁成 `modules/vision` 模板。
-
-## 7. 验证矩阵与完成定义
-
-- 纯逻辑：JUnit Jupiter 覆盖解析器、策略、TTL、治疗计算、双入口选择与回退、状态转换、恢复退避。
-- 视觉回归：真实保存帧验证 ROI、模板阈值、颜色与 OCR，正负样本都必须存在。
-- 模块验证：先准备 Java 21，并运行 `mvnw.cmd -pl modules/vision,modules/automation,modules/tasks,modules/desktop -am test`；跨模块行为稳定后再运行非 clean 的完整 reactor 测试。未经明确授权不执行打包。
-- 现场验证：先在高级策略关闭时确认现有打熊回归正常，再依次启用高级筛选、狂热、医院无加速、医院加速，每次只改变一个风险变量。
-- 日志验收：记录 profile 上下文、原始证据、解析结果、决策原因、动作结果、重试/退出和下次调度，不在热循环刷屏。
-- 完成报告分别标注：自动测试、保存真实帧验证、真实账号日志确认。缺少哪一级就明确写“尚未验证”，不得用“无人值守可用”替代证据。
-
-## 8. 建议实施批次
-
-1. 锁定现有打熊行为并加入默认关闭的高级策略总开关。
-2. 数值解析、策略和 TTL 纯逻辑。
-3. 独立的高级打熊卡片扫描与配置 UI。
-4. 医院素材、规则确认与纯计算。
-5. 医院无加速闭环。
-6. 医院加速安全分支。
-7. 恢复、异常截图与熔断。
-
-每个批次都以前一批次的测试和证据为入口条件；这是本地代码的实现依赖顺序，不限定提交数量。
+| **普通打熊兼容加入** | ✅ 已保留 | 维持上游默认加号点击与出征流程，高级开关关闭时不改变原行为 |
+| **打熊紧凑数值解析** | ✅ 已完成 | `CompactGameNumberParser` 支持整数、千分位、`K/M` 缩写与防溢出，带独立单元测试 |
+| **打熊卡片扫描 (`BearRallyScanner`)** | ✅ 已完成 | 基于 `BEAR_JOIN_PLUS_ICON` 锚点计算发起人、成员数、容量、倒计时 4 组相对 ROI，解耦函数式接口支持无 ADB 极速测试 |
+| **打熊决策策略与狂热模式** | ✅ 已完成 | `BearRallyDecisionPolicy` 分别过滤成员数、总容量、剩余容量门槛；狂热模式在 22 分钟后自动放宽成员数门槛 |
+| **打熊分域 TTL 去重缓存** | ✅ 已完成 | `BearRallyDedupCache` 复合签名去重，300 秒过期、256 条容量上限、时钟回拨安全重置，仅在出征成功后写入 |
+| **打熊出征部署与弹窗安全闭环** | ✅ 已完成 | 6 编队独立轮换、`BEAR_DEPLOY_BUTTON` 定位出征、`isMarchQueueFull()` 和 `isSameTargetDialog()` 弹窗检测与回退 |
+| **野外/城内双入口策略** | ✅ 已完成 | 独立配置开关控制，优先 WORLD 快捷图标 `HOSPITAL_FIELD_ICON`，未出现时平滑回退至 HOME 城内建筑 `HOSPITAL_CITY_BUILDING` |
+| **医院全选状态智能反转** | ✅ 已完成 | 循环检测 Heal 按钮状态，若亮起则点击快速选择 `(134, 852)` 清零所有兵种选择，输入 1 激活治疗按钮 |
+| **伤兵总数读取与智能批次计算** | ✅ 已完成 | `HOSPITAL_WOUNDED_COUNT_OCR_AREA` 提取伤兵总数；`HealBatchCalculator` 支持精确模式 `[1, woundedCount]` 与兼容模式 |
+| **数量输入 OCR 回读防错** | ✅ 已完成 | 写入批次数量后收起键盘，重新提取输入框文本校验，不一致最多重试 2 次，多次不一致安全切换至 `ABORT` |
+| **倒计时监控与调度重排** | ✅ 已完成 | 优先使用 `HOSPITAL_HEAL_TIME_OCR_AREA` 监控治疗剩余时间；根据退出结果（进行中/无伤兵/识别失败/配置不支持）精确重排 |
+| **手动集结安全检查** | ✅ 已保留 | 绿色像素判定、出征数限制、队列满与同目标弹窗校验 |
+| **异常 PNG 取证** | ✅ 已接入 | 任务异常时自动截图并脱敏写入工作区 `logs/screenshots/` |
+| **医院加速安全分支** | ⏳ 待素材 | 配置项已预留，待获取加速弹窗真实素材后完成安全校验分支，目前在 UI 中安全禁用 |
+
+---
+
+## 2. 打熊高级加入系统设计
+
+### 2.1 动态锚点扫描几何设计
+打熊集结列表支持多卡片并存。`BearRallyScanner` 在同一帧画面中先使用 `TemplatesEnum.BEAR_JOIN_PLUS_ICON` 模板定位所有可用加号按钮坐标 $(P_x, P_y)$，并按 $P_y$ 升序排序。
+
+以每个加号按钮左上角 $(P_x, P_y)$ 为基准，计算卡片各字段的相对 OCR 识别区域：
+
+| 字段名称 | X 范围 ($X_1 \sim X_2$) | Y 相对偏移 ($DY_1 \sim DY_2$) | 示例识别文本 | 解析结果 |
+| --- | --- | --- | --- | --- |
+| **发起人 (Host)** | $281 \sim 691$ | $-102 \sim -63$ | `LeaderName` | `LeaderName` |
+| **成员数 (Members)** | $626 \sim 688$ | $-57 \sim -24$ | `3/6` | 当前成员: 3, 最大成员: 6 |
+| **容量 (Capacity)** | $284 \sim 521$ | $-57 \sim -25$ | `50.0K/200.0K` | 剩余容量: 50,000, 总容量: 200,000 |
+| **倒计时 (Countdown)** | $571 \sim 691$ | $-163 \sim -124$ | `04:30` | 剩余时长: 270 秒 |
+
+推导兵量公式：
+$$\text{currentTroops} = \text{totalCapacity} - \text{remainingCapacity}$$
+
+### 2.2 决策策略与狂热模式
+输入参数：`BearRallyCandidate`、用户配置项、活动基准开始时间 `referenceTrapTime`、系统时钟 `Clock`。
+
+```mermaid
+flowchart TD
+    Start[候选卡片输入] --> CheckFields{必要字段与几何是否完整?}
+    CheckFields -- 否 --> RejectInvalid[拒绝: 关键字段缺失]
+    CheckFields -- 是 --> CheckFrenzy{是否处于狂热模式?<br/>开启且经过时间 >= 22min}
+    CheckFrenzy -- 是 --> SkipMember[放宽成员数限制]
+    CheckFrenzy -- 否 --> CheckMember{当前成员数 >= 最低门槛?}
+    CheckMember -- 否 --> RejectMember[拒绝: 成员数不足]
+    CheckMember -- 是 --> CheckTotal
+    SkipMember --> CheckTotal{总容量 >= 最低总容量门槛?}
+    CheckTotal -- 否 --> RejectTotal[拒绝: 总容量不足]
+    CheckTotal -- 是 --> CheckRemaining{剩余容量 >= 最低剩余容量门槛?}
+    CheckRemaining -- 否 --> RejectRemaining[拒绝: 剩余容量不足]
+    CheckRemaining -- 是 --> AcceptJoin[接受加入: JOIN]
+```
+
+### 2.3 TTL 缓存与出征安全闭环
+- **复合签名**：`host:members=X/Y:troops=A/B:remaining=C:completion=D`。
+  - 其中 `completion` 为由采集时刻加剩余秒数推导出的 15 秒归一化时间桶：$\lfloor (T_{\text{now}} + T_{\text{countdown}}) / 15 \rfloor$。这样同一车在倒计时自然递减时，签名保持稳定，不会被误判为新车。
+- **出征时序与弹窗拦截**：
+  1. 点击加号按钮 `candidate.joinButtonPoint()`，等待 500ms；
+  2. 调用 `marchHelper.selectFlag(selectedFlag)` 选择对应保存编队。若编队不存在则 `pressBack()` 并尝试下一候选；
+  3. 搜索定位 `BEAR_DEPLOY_BUTTON`；若未找到则 `pressBack()` 退出；
+  4. 点击 Deploy 按钮，等待 500ms；
+  5. 弹窗安全检查：
+     - 若触发 `deploymentHelper.isMarchQueueFull()`：说明队列已满，`pressBack()` 并中止本轮出征；
+     - 若触发 `deploymentHelper.isSameTargetDialog()`：说明已有部队前往同一目标，`pressBack()` 两次关闭弹窗与出征页，继续评估下一个候选；
+  6. 仅在无弹窗阻塞、出征成功完成后，才执行 `dedupCache.markJoined(scope, key)`，防止误锁 TTL。
+
+---
+
+## 3. 医院治疗状态机系统设计
+
+### 3.1 状态转换图
+
+```mermaid
+stateDiagram-v2
+    [*] --> DISCOVER_ENTRY
+    
+    state "DISCOVER_ENTRY (入口发现)" as DISCOVER_ENTRY
+    state "ENTER_FIELD (野外快捷入口)" as ENTER_FIELD
+    state "ENTER_CITY (城内建筑入口)" as ENTER_CITY
+    state "CONFIRM_HEAL_SCREEN (全选反转与确认)" as CONFIRM_HEAL_SCREEN
+    state "SELECT_TIER (兵阶选择)" as SELECT_TIER
+    state "READ (读取伤兵与单兵耗时)" as READ
+    state "CALCULATE (智能批次计算)" as CALCULATE
+    state "INPUT (写入数量与OCR回读)" as INPUT
+    state "START (点击治疗)" as START
+    state "REQUEST_HELP (请求联盟帮助)" as REQUEST_HELP
+    state "MONITOR (倒计时监控与调度)" as MONITOR
+    state "COMPLETE (正常完成)" as COMPLETE
+    state "ABORT (安全中止)" as ABORT
+
+    DISCOVER_ENTRY --> ENTER_FIELD: 启用野外入口
+    DISCOVER_ENTRY --> ENTER_CITY: 仅启用城内入口
+    
+    ENTER_FIELD --> CONFIRM_HEAL_SCREEN: 检测到野外图标并点击
+    ENTER_FIELD --> ENTER_CITY: 图标未出现且启用城内入口
+    ENTER_FIELD --> COMPLETE: 图标未出现且未启用城内入口 (NO_ENTRY)
+    
+    ENTER_CITY --> CONFIRM_HEAL_SCREEN: 检测到城内建筑并点击
+    ENTER_CITY --> COMPLETE: 城内建筑未找到 (NO_ENTRY)
+    
+    CONFIRM_HEAL_SCREEN --> SELECT_TIER: 智能取消全选并在第一槽位输入1成功
+    CONFIRM_HEAL_SCREEN --> COMPLETE: 输入1后Heal按钮仍未亮起 (NO_WOUNDED)
+    CONFIRM_HEAL_SCREEN --> ABORT: 无法清空选择/页面异常
+    
+    SELECT_TIER --> READ: 进入读取阶段
+    
+    READ --> CALCULATE: 成功读取单兵治疗耗时
+    READ --> ABORT: 耗时OCR识别失败
+    
+    CALCULATE --> INPUT: 成功计算出批次数量 (>0)
+    CALCULATE --> ABORT: 帮助参数无效/批次 <= 0
+    
+    INPUT --> START: 写入批次并经 OCR 回读验证一致
+    INPUT --> ABORT: OCR 回读重试仍不一致
+    
+    START --> REQUEST_HELP: 点击治疗按钮成功
+    START --> ABORT: 治疗按钮未找到
+    
+    REQUEST_HELP --> MONITOR: 点击联盟帮助完成
+    
+    MONITOR --> COMPLETE: 读取到剩余时间 (ACTIVE_HEAL)
+    MONITOR --> ABORT: 倒计时识别失败 (RECOGNITION_FAILURE)
+    
+    COMPLETE --> [*]
+    ABORT --> [*]
+```
+
+### 3.2 关键步骤技术细节
+1. **全选智能反转算法**：
+   - 检查 `HOSPITAL_HEAL_BUTTON` 是否存在：
+     - 若存在且阈值达标（按钮为彩色，表示游戏默认全选了伤兵）：点击快速选择切换点 `(134, 852)`，等待 1500ms；
+     - 循环最多 3 次，直至治疗按钮变为灰色未激活状态；
+     - 随后点击第一兵种输入框 `TROOP_1_INPUT_BOX_CENTER (590, 390)`，清除文本并写入 `1\n`，激活治疗按钮为可用状态。
+2. **批次计算公式**：
+   - 最大帮助总减免秒数：$$T_{\text{help}} = \text{helpCount} \times \text{reductionSec}$$
+   - **精确批次**（当读取到 $\text{totalWounded} > 0$ 时）：
+     $$\text{batchSize} = \max\left(1, \min\left(\text{totalWounded}, \left\lfloor \frac{T_{\text{help}}}{\text{singleTroopTimeSec}} \right\rfloor\right)\right)$$
+   - **兼容批次**（当未能置信读取伤兵总数时）：
+     $$\text{batchSize} = \max\left(1, \left\lfloor \frac{T_{\text{help}}}{\text{singleTroopTimeSec}} \right\rfloor\right)$$
+3. **输入 OCR 回读校验**：
+   - 写入目标批次数后，调用 `provider.extractText` 读取输入框 `[540, 360, 640, 420]`。
+   - 解析文本数值，若 $\text{readBackVal} == \text{batchedAmountToHeal}$，标记校验通过并进入 `START`；
+   - 若不匹配，执行清空并重新输入，最多重试 2 次；若依然不匹配则切换为 `ABORT`，绝不盲点治疗。
+4. **调度重排策略矩阵 (`HospitalSchedulePolicy`)**：
+
+| 退出状态 (`Outcome`) | 重排延迟 | 业务理由 |
+| --- | --- | --- |
+| `ACTIVE_HEAL` | 剩余秒数 + 30s 缓冲（无倒计时则回退 15 分钟） | 治疗进行中，等待本批治疗完成并利用完联盟帮助后准时执行下一批 |
+| `NO_WOUNDED` | 正常轮询（由调度器接管） | 医院无伤兵，无需频繁重试 |
+| `NO_ENTRY` | 正常轮询（由调度器接管） | 野外快捷图标未达阈值或城内不可见，等待下个周期 |
+| `RECOGNITION_FAILURE` | 15 分钟固定退避 | 视觉识别或输入回读异常，防止死循环刷屏 |
+| `CONFIGURATION_UNSUPPORTED`| 1 小时长退避 | 配置异常（如两个入口均关闭或参数错误），避免无效运行 |
+
+---
+
+## 4. 自动化测试与验证证据
+
+### 4.1 测试用例覆盖清单
+| 测试类 | 覆盖模块 | 测试要点 |
+| --- | --- | --- |
+| `BearRallyScannerTest` | 打熊扫描器 | 0 候选空列表返回、多候选由上至下 Y 轴排序、各字段相对 ROI 提取与数值转换 |
+| `BearRallyCandidateTest` | 打熊候选模型 | 倒计时自然衰减时复合签名的稳定性 |
+| `BearRallyDecisionPolicyTest` | 打熊决策策略 | 成员数门槛、总容量门槛、剩余容量门槛、狂热模式放宽、非法数值防御 |
+| `BearRallyDedupCacheTest` | 打熊去重缓存 | 实例级隔离、300 秒 TTL 过期、256 条并发容量限制、时钟回拨安全清空 |
+| `HealBatchCalculatorTest` | 医院批次计算 | 精确模式伤兵截断、兼容模式计算、超大数值防溢出、非法耗时保护 |
+| `HospitalSchedulePolicyTest` | 医院调度策略 | 进行中时间加缓冲重排、识别失败退避、无伤兵轮询、非法配置长延迟 |
+| `ManualRallyJoinRoutineTest` | 手动集结 | 编队数量范围校验与归一化 |
+
+### 4.2 编译与测试运行证据
+- **运行命令**：`.\mvnw.cmd -pl modules/tasks -am test`
+- **执行环境**：Java 21 (Temurin-21.0.12), Windows 11 PowerShell
+- **运行结果**：
+  - `frostguard-api`: SUCCESS
+  - `frostguard-persistence`: SUCCESS
+  - `frostguard-vision`: SUCCESS
+  - `frostguard-automation`: SUCCESS
+  - `frostguard-tasks`: SUCCESS
+  - **总计运行测试**: 130 个，**0 失败，0 错误，0 跳过**。
