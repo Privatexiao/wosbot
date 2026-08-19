@@ -1,7 +1,6 @@
 package dev.frostguard.tasks.city;
 
 import dev.frostguard.api.configs.ConfigurationKeyEnum;
-import dev.frostguard.api.configs.TemplatesEnum;
 import dev.frostguard.api.configs.TpDailyTaskEnum;
 import dev.frostguard.api.domain.AccountDescriptor;
 import dev.frostguard.api.domain.ImageSearchResultData;
@@ -12,6 +11,8 @@ import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
 import dev.frostguard.tasks.city.hospital.HealBatchCalculator;
 import dev.frostguard.tasks.city.hospital.HospitalHealState;
+import dev.frostguard.tasks.city.hospital.HospitalPageEvidencePolicy;
+import dev.frostguard.tasks.city.hospital.HospitalPageEvidencePolicy.WoundedCountEvidence;
 import dev.frostguard.tasks.city.hospital.HospitalSchedulePolicy;
 import dev.frostguard.vision.convert.GameTimeUtils;
 import java.time.Duration;
@@ -36,7 +37,6 @@ public class HospitalHealRoutine extends DelayedTask {
     }
 
     private HospitalHealState state = HospitalHealState.DISCOVER_ENTRY;
-    private TemplatesEnum detectedEntryTemplate;
     private int batchedAmountToHeal = -1;
     private boolean useFieldEntry = true;
     private boolean useCityEntry = false;
@@ -55,6 +55,7 @@ public class HospitalHealRoutine extends DelayedTask {
 
     private static final PointData HEAL_TIME_TL = new PointData(510, 660);
     private static final PointData HEAL_TIME_BR = new PointData(640, 695);
+    private static final boolean CITY_HOSPITAL_ENTRY_SUPPORTED = false;
 
     private boolean resolveConfigBoolean(ConfigurationKeyEnum key, boolean defaultValue) {
         if (profile == null) return defaultValue;
@@ -76,7 +77,12 @@ public class HospitalHealRoutine extends DelayedTask {
         }
 
         useFieldEntry = resolveConfigBoolean(HOSPITAL_HEAL_FIELD_ENABLED_BOOL, true);
-        useCityEntry = resolveConfigBoolean(HOSPITAL_HEAL_CITY_ENABLED_BOOL, false);
+        boolean cityEntryConfigured = resolveConfigBoolean(HOSPITAL_HEAL_CITY_ENABLED_BOOL, false);
+        useCityEntry = CITY_HOSPITAL_ENTRY_SUPPORTED && cityEntryConfigured;
+        if (cityEntryConfigured && !CITY_HOSPITAL_ENTRY_SUPPORTED) {
+            logWarning(routineLogHospitalLine(
+                    "City hospital entry remains disabled until its English real-frame template is verified."));
+        }
 
         if (!useFieldEntry && !useCityEntry) {
             logWarning(routineLogHospitalLine("Both field and city hospital entry options are disabled; exiting."));
@@ -96,7 +102,6 @@ public class HospitalHealRoutine extends DelayedTask {
         lastHealBtnPos = null;
         runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
         remainingHealTime = null;
-        detectedEntryTemplate = null;
         int safetyCounter = 0;
 
         try {
@@ -160,11 +165,21 @@ public class HospitalHealRoutine extends DelayedTask {
                 logInfo(routineLogHospitalLine("Waiting for hospital popup to fully open..."));
                 sleepTask(2500);
 
-                if (!isHealScreenRecognized()) {
+                WoundedCountEvidence pageWounded = readWoundedCountEvidence("page identity");
+                boolean coloredHealButtonVisible = isColoredHealButtonVisible();
+                if (!HospitalPageEvidencePolicy.recognizesHealScreen(
+                        pageWounded, coloredHealButtonVisible)) {
                     logWarning(routineLogHospitalLine(
                             "Hospital heal screen was not identified; aborting before fixed-area interaction."));
                     runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
                     state = HospitalHealState.ABORT;
+                    break;
+                }
+                if (HospitalPageEvidencePolicy.provesNoWounded(pageWounded)) {
+                    logInfo(routineLogHospitalLine(
+                            "Hospital wounded count is explicitly zero; exiting before fixed-area interaction."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.NO_WOUNDED;
+                    state = HospitalHealState.COMPLETE;
                     break;
                 }
 
@@ -204,13 +219,25 @@ public class HospitalHealRoutine extends DelayedTask {
                 ImageSearchResultData healBtn = templateSearchHelper.locatePattern(
                         HOSPITAL_HEAL_BUTTON,
                         SearchConfig.builder().withThreshold(70).withMaxAttempts(6).build());
-                if (healBtn.isFound()) {
-                    lastHealBtnPos = healBtn.getPoint();
-                    state = HospitalHealState.READ;
-                } else {
-                    logInfo(routineLogHospitalLine("Heal button not found even after inputting 1, maybe no wounded troops."));
-                    runOutcome = HospitalSchedulePolicy.Outcome.NO_WOUNDED;
-                    state = HospitalHealState.COMPLETE;
+                WoundedCountEvidence postInputWounded = healBtn.isFound()
+                        ? WoundedCountEvidence.unknown()
+                        : readWoundedCountEvidence("post-input classification");
+                switch (HospitalPageEvidencePolicy.classifyAfterInput(healBtn.isFound(), postInputWounded)) {
+                    case READY:
+                        lastHealBtnPos = healBtn.getPoint();
+                        state = HospitalHealState.READ;
+                        break;
+                    case NO_WOUNDED:
+                        logInfo(routineLogHospitalLine("Hospital wounded count explicitly reported zero."));
+                        runOutcome = HospitalSchedulePolicy.Outcome.NO_WOUNDED;
+                        state = HospitalHealState.COMPLETE;
+                        break;
+                    case RECOGNITION_FAILURE:
+                        logWarning(routineLogHospitalLine(
+                                "Heal button was not detected after input and zero wounded was not proven; aborting safely."));
+                        runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
+                        state = HospitalHealState.ABORT;
+                        break;
                 }
                 break;
 
@@ -222,16 +249,9 @@ public class HospitalHealRoutine extends DelayedTask {
                 logInfo(routineLogHospitalLine("Reading total wounded and single troop time..."));
                 
                 // Read total wounded count
-                dev.frostguard.api.domain.AreaData woundedArea = dev.frostguard.engine.nav.CommonGameAreas.HOSPITAL_WOUNDED_COUNT_OCR_AREA;
-                String woundedRaw = null;
-                try {
-                    woundedRaw = provider.extractText(null, woundedArea.topLeft(), woundedArea.bottomRight());
-                } catch (Exception e) {
-                    logWarning(routineLogHospitalLine("Exception while reading wounded count OCR: " + e.getMessage()));
-                }
-                if (woundedRaw != null && woundedRaw.contains("/")) {
-                    String[] parts = woundedRaw.split("/", 2);
-                    totalWounded = (int) dev.frostguard.vision.convert.CompactGameNumberParser.parseCompactNumber(parts[0]);
+                WoundedCountEvidence woundedEvidence = readWoundedCountEvidence("batch calculation");
+                if (woundedEvidence.recognized() && woundedEvidence.count() <= Integer.MAX_VALUE) {
+                    totalWounded = (int) woundedEvidence.count();
                     logInfo(routineLogHospitalLine("Read total wounded count: " + totalWounded));
                 } else {
                     totalWounded = 0;
@@ -401,20 +421,20 @@ public class HospitalHealRoutine extends DelayedTask {
                     );
                 }
                 
-                int configuredMaxWait = resolveConfigInt(ConfigurationKeyEnum.HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT, 30);
-                
+                int configuredMaxWait = resolveConfigInt(
+                        ConfigurationKeyEnum.HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT, 30);
+
                 if (remaining != null) {
                     long remainingSec = remaining.getSeconds();
                     remainingHealTime = remaining;
                     runOutcome = HospitalSchedulePolicy.Outcome.ACTIVE_HEAL;
                     logInfo(routineLogHospitalLine("Remaining heal time after helps: " + remainingSec + "s"));
-                    if (remainingSec > configuredMaxWait * 60) {
+                    if (HospitalSchedulePolicy.exceedsWarningThreshold(
+                            remaining, configuredMaxWait)) {
                         logWarning(routineLogHospitalLine(
-                                "Remaining heal time exceeds the configured wait limit; leaving the active heal untouched."));
-                        state = HospitalHealState.COMPLETE;
-                    } else {
-                        state = HospitalHealState.COMPLETE;
+                                "Remaining heal time exceeds the configured warning threshold; leaving the active heal untouched."));
                     }
+                    state = HospitalHealState.COMPLETE;
                 } else {
                     logWarning(routineLogHospitalLine("Could not read remaining time; scheduling a conservative retry."));
                     runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
@@ -438,33 +458,22 @@ public class HospitalHealRoutine extends DelayedTask {
             return EntryResult.NOT_AVAILABLE;
         }
         logInfo(routineLogHospitalLine("Field hospital shortcut detected."));
-        detectedEntryTemplate = HOSPITAL_FIELD_ICON;
         tapInside(fieldIcon);
         sleepTask(1200);
         return EntryResult.ENTERED;
     }
 
-    private boolean isHealScreenRecognized() {
+    private WoundedCountEvidence readWoundedCountEvidence(String purpose) {
         dev.frostguard.api.domain.AreaData woundedArea =
                 dev.frostguard.engine.nav.CommonGameAreas.HOSPITAL_WOUNDED_COUNT_OCR_AREA;
         try {
-            String woundedText = provider.extractText(null, woundedArea.topLeft(), woundedArea.bottomRight());
-            if (woundedText != null && woundedText.contains("/")) return true;
+            String raw = provider.extractText(null, woundedArea.topLeft(), woundedArea.bottomRight());
+            return HospitalPageEvidencePolicy.parseWoundedCount(raw);
         } catch (Exception e) {
-            logDebug(routineLogHospitalLine("Hospital identity OCR was unavailable: " + e.getMessage()));
+            logDebug(routineLogHospitalLine(
+                    "Hospital wounded-count OCR was unavailable during " + purpose + ": " + e.getMessage()));
+            return WoundedCountEvidence.unknown();
         }
-        if (isColoredHealButtonVisible()) return true;
-        if (detectedEntryTemplate != null) {
-            ImageSearchResultData entryStillVisible = templateSearchHelper.locatePattern(
-                    detectedEntryTemplate,
-                    SearchConfig.builder().withThreshold(85).withMaxAttempts(1).build());
-            if (!entryStillVisible.isFound()) {
-                logInfo(routineLogHospitalLine(
-                        "Hospital entry disappeared after a verified entry click; using compatibility page-transition evidence."));
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean isColoredHealButtonVisible() {
@@ -488,7 +497,6 @@ public class HospitalHealRoutine extends DelayedTask {
             return EntryResult.NOT_AVAILABLE;
         }
         logInfo(routineLogHospitalLine("City hospital detected."));
-        detectedEntryTemplate = HOSPITAL_CITY_BUILDING;
         tapInside(cityBuilding);
         sleepTask(1200);
         return EntryResult.ENTERED;

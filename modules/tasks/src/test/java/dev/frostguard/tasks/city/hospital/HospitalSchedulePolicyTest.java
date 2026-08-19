@@ -39,4 +39,47 @@ class HospitalSchedulePolicyTest {
         assertEquals(NOW.plusHours(1), HospitalSchedulePolicy.nextRun(
                 NOW, HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED, null));
     }
+
+    @Test
+    void appliesExactBackoffsToEveryTerminalOutcome() {
+        assertEquals(NOW.plusMinutes(5), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.NO_ENTRY, null));
+        assertEquals(NOW.plusMinutes(30), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.NO_WOUNDED, null));
+        assertEquals(NOW.plusMinutes(30), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.COMPLETED, null));
+    }
+
+    @Test
+    void rejectsZeroAndNegativeActiveDurations() {
+        assertEquals(NOW.plusMinutes(15), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.ACTIVE_HEAL, Duration.ZERO));
+        assertEquals(NOW.plusMinutes(15), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.ACTIVE_HEAL, Duration.ofSeconds(-1)));
+    }
+
+    @Test
+    void acceptsTheMaximumTrustedDurationAndAddsBuffer() {
+        assertEquals(NOW.plusDays(30).plusSeconds(30), HospitalSchedulePolicy.nextRun(
+                NOW, HospitalSchedulePolicy.Outcome.ACTIVE_HEAL, Duration.ofDays(30)));
+    }
+
+    @Test
+    void capsUnrepresentableFutureTimesInsteadOfThrowing() {
+        assertEquals(LocalDateTime.MAX, HospitalSchedulePolicy.nextRun(
+                LocalDateTime.MAX.minusMinutes(1),
+                HospitalSchedulePolicy.Outcome.CONFIGURATION_UNSUPPORTED, null));
+    }
+
+    @Test
+    void treatsMaximumWaitAsAnOverflowSafeWarningThreshold() {
+        assertEquals(true, HospitalSchedulePolicy.exceedsWarningThreshold(
+                Duration.ofMinutes(31), 30));
+        assertEquals(false, HospitalSchedulePolicy.exceedsWarningThreshold(
+                Duration.ofMinutes(30), 30));
+        assertEquals(false, HospitalSchedulePolicy.exceedsWarningThreshold(
+                Duration.ofDays(30), Integer.MAX_VALUE));
+        assertEquals(false, HospitalSchedulePolicy.exceedsWarningThreshold(
+                Duration.ofMinutes(31), 0));
+    }
 }

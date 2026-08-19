@@ -46,6 +46,12 @@ public class HospitalLayoutController extends AbstractProfileController {
     }
 
     private void applyUnsupportedFeatureGuards() {
+        checkBoxCityHospital.setSelected(false);
+        checkBoxCityHospital.setDisable(true);
+        checkBoxCityHospital.setTooltip(new Tooltip(
+                "City hospital entry is unavailable until its English real-frame template is verified."));
+
+        checkBoxUseSpeedup.setSelected(false);
         checkBoxUseSpeedup.setDisable(true);
         checkBoxUseSpeedup.setTooltip(new Tooltip(
                 "Healing speedups remain disabled until item-only payment can be verified safely."));

@@ -19,7 +19,7 @@
                     </HBox>
                     <VBox spacing="12" styleClass="task-section-inner">
                         <Label styleClass="task-card-description"
-                               text="Automatically manages and heals wounded troops using Dual-Entry detection (Field hospital and City hospital)." wrapText="true" />
+                               text="Automatically manages wounded troops through the verified Field hospital shortcut. City hospital entry remains unavailable pending verification." wrapText="true" />
                         
                         <Separator style="-fx-opacity: 0.25;" />
 
@@ -29,14 +29,14 @@
                         <CheckBox fx:id="checkBoxFieldHospital" graphicTextGap="6.0"
                                   mnemonicParsing="false" text="Process Field Hospital shortcut icon (from World screen)" />
 
-                        <CheckBox fx:id="checkBoxCityHospital" graphicTextGap="6.0"
-                                  mnemonicParsing="false" text="Process City Hospital building (from Home screen)" />
+                        <CheckBox fx:id="checkBoxCityHospital" disable="true" graphicTextGap="6.0"
+                                  mnemonicParsing="false" text="City Hospital building (Unavailable: awaiting verification)" />
 
-                        <CheckBox fx:id="checkBoxUseSpeedup" graphicTextGap="6.0"
+                        <CheckBox fx:id="checkBoxUseSpeedup" disable="true" graphicTextGap="6.0"
                                   mnemonicParsing="false" text="Allow using healing speedups (Default: Disabled for safety)" />
 
                         <HBox alignment="CENTER_LEFT" spacing="10">
-                            <Label styleClass="task-field-label" text="Max Wait Minutes:" />
+                            <Label styleClass="task-field-label" text="Warn if Wait Exceeds Minutes:" />
                             <TextField fx:id="textFieldMaxWaitMinutes" prefWidth="80.0" text="30" />
                         </HBox>
                     </VBox>

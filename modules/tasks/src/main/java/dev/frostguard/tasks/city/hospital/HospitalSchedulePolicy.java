@@ -1,6 +1,7 @@
 package dev.frostguard.tasks.city.hospital;
 
 import java.time.Duration;
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
 
 public final class HospitalSchedulePolicy {
@@ -23,13 +24,21 @@ public final class HospitalSchedulePolicy {
         if (now == null || outcome == null) {
             throw new IllegalArgumentException("Current time and outcome are required");
         }
-        return switch (outcome) {
-            case NO_ENTRY -> now.plusMinutes(5);
-            case NO_WOUNDED, COMPLETED -> now.plusMinutes(30);
-            case CONFIGURATION_UNSUPPORTED -> now.plusHours(1);
-            case RECOGNITION_FAILURE -> now.plusMinutes(15);
-            case ACTIVE_HEAL -> now.plus(safeRemainingDelay(remaining));
+        Duration delay = switch (outcome) {
+            case NO_ENTRY -> Duration.ofMinutes(5);
+            case NO_WOUNDED, COMPLETED -> Duration.ofMinutes(30);
+            case CONFIGURATION_UNSUPPORTED -> Duration.ofHours(1);
+            case RECOGNITION_FAILURE -> Duration.ofMinutes(15);
+            case ACTIVE_HEAL -> safeRemainingDelay(remaining);
         };
+        return safeFutureTime(now, delay);
+    }
+
+    public static boolean exceedsWarningThreshold(Duration remaining, int warningMinutes) {
+        if (remaining == null || remaining.isNegative() || warningMinutes <= 0) {
+            return false;
+        }
+        return remaining.compareTo(Duration.ofMinutes((long) warningMinutes)) > 0;
     }
 
     private static Duration safeRemainingDelay(Duration remaining) {
@@ -42,6 +51,14 @@ public final class HospitalSchedulePolicy {
             return withBuffer.compareTo(Duration.ofMinutes(1)) < 0 ? Duration.ofMinutes(1) : withBuffer;
         } catch (ArithmeticException overflow) {
             return UNKNOWN_ACTIVE_HEAL_RETRY;
+        }
+    }
+
+    private static LocalDateTime safeFutureTime(LocalDateTime now, Duration delay) {
+        try {
+            return now.plus(delay);
+        } catch (DateTimeException | ArithmeticException invalidFutureTime) {
+            return LocalDateTime.MAX;
         }
     }
 }
