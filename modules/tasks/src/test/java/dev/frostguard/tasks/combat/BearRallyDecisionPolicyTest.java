@@ -124,4 +124,19 @@ public class BearRallyDecisionPolicyTest {
 
         assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_INVALID_CANDIDATE, decision.result());
     }
+
+    @Test
+    void rejectsUnknownCapacityInsteadOfPrioritizingIt() {
+        AccountDescriptor account = new AccountDescriptor(1L);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);
+        BearRallyCandidate candidate = new BearRallyCandidate(
+                new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
+                "Host1", 1, 6, -1L, -1L, -1L,
+                Duration.ofMinutes(4), Instant.now(), true);
+
+        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, account, null, Clock.systemUTC());
+
+        assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_INVALID_CANDIDATE, decision.result());
+    }
 }

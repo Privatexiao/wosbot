@@ -8,6 +8,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class BearRallyDedupCacheTest {
@@ -94,6 +96,56 @@ class BearRallyDedupCacheTest {
 
         assertTrue(cache.isDuplicate(scope, "one"));
         assertFalse(cache.isDuplicate(scope, "two"));
+    }
+
+    @Test
+    void excludesCollidingCardsFromTtlDeduplication() {
+        Instant observedAt = Instant.parse("2026-08-18T10:00:00Z");
+        BearRallyCandidate first = candidate("SameHost", observedAt, Duration.ofMinutes(4));
+        BearRallyCandidate second = candidate("SameHost", observedAt, Duration.ofMinutes(4));
+
+        Set<String> uniqueKeys = BearRallyDedupCache.uniqueCandidateKeys(List.of(first, second));
+
+        assertTrue(uniqueKeys.isEmpty());
+    }
+
+    @Test
+    void keepsDifferentHostsOrCompletionTimesIndependentlyDeduplicated() {
+        Instant observedAt = Instant.parse("2026-08-18T10:00:00Z");
+        BearRallyCandidate first = candidate("FirstHost", observedAt, Duration.ofMinutes(4));
+        BearRallyCandidate second = candidate("SecondHost", observedAt, Duration.ofMinutes(4));
+        BearRallyCandidate third = candidate("FirstHost", observedAt, Duration.ofSeconds(260));
+
+        Set<String> uniqueKeys = BearRallyDedupCache.uniqueCandidateKeys(List.of(first, second, third));
+
+        assertEquals(3, uniqueKeys.size());
+    }
+
+    @Test
+    void positionalKeysSeparateCollidingCardsAtDifferentScreenRows() {
+        Instant observedAt = Instant.parse("2026-08-18T10:00:00Z");
+        BearRallyCandidate upper = candidate(
+                "SameHost", observedAt, Duration.ofMinutes(4), 300);
+        BearRallyCandidate lower = candidate(
+                "SameHost", observedAt, Duration.ofMinutes(4), 500);
+
+        assertFalse(BearRallyDedupCache.positionalCandidateKey(upper)
+                .equals(BearRallyDedupCache.positionalCandidateKey(lower)));
+    }
+
+    private static BearRallyCandidate candidate(String host, Instant observedAt, Duration countdown) {
+        return candidate(host, observedAt, countdown, 300);
+    }
+
+    private static BearRallyCandidate candidate(
+            String host, Instant observedAt, Duration countdown, int buttonY) {
+        return new BearRallyCandidate(
+                new dev.frostguard.api.domain.PointData(600, buttonY),
+                new dev.frostguard.api.domain.AreaData(
+                        new dev.frostguard.api.domain.PointData(0, 200),
+                        new dev.frostguard.api.domain.PointData(719, 360)),
+                host, 2, 6, 50_000L, 100_000L, 50_000L,
+                countdown, observedAt, true);
     }
 
     private static final class MutableClock extends Clock {

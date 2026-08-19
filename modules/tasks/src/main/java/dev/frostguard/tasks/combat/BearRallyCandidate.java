@@ -12,6 +12,7 @@ import java.util.Locale;
  */
 public record BearRallyCandidate(
         PointData joinButtonPoint,
+        AreaData joinButtonArea,
         AreaData cardArea,
         String hostName,
         int currentMembers,
@@ -23,6 +24,18 @@ public record BearRallyCandidate(
         Instant observedAt,
         boolean isJoinable
 ) {
+    public BearRallyCandidate(PointData joinButtonPoint, AreaData cardArea, String hostName,
+            int currentMembers, int maxMembers, long currentTroops, long rallyCapacity,
+            long remainingCapacity, Duration countdown, Instant observedAt, boolean isJoinable) {
+        this(joinButtonPoint, pointArea(joinButtonPoint), cardArea, hostName, currentMembers,
+                maxMembers, currentTroops, rallyCapacity, remainingCapacity, countdown,
+                observedAt, isJoinable);
+    }
+
+    private static AreaData pointArea(PointData point) {
+        return point == null ? null : new AreaData(point, point);
+    }
+
     public String getCandidateKey() {
         String cleanHost = hostName == null || hostName.isBlank()
                 ? "unknown"

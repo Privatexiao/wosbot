@@ -4,8 +4,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Thread-safe candidate deduplication TTL cache for Bear Trap rally join requests.
@@ -97,6 +101,32 @@ public class BearRallyDedupCache {
 
     synchronized int size() {
         return cache.size();
+    }
+
+    static Set<String> uniqueCandidateKeys(List<BearRallyCandidate> candidates) {
+        Map<String, Integer> counts = new HashMap<>();
+        if (candidates != null) {
+            for (BearRallyCandidate candidate : candidates) {
+                if (candidate != null) {
+                    counts.merge(candidate.getCandidateKey(), 1, Integer::sum);
+                }
+            }
+        }
+        Set<String> uniqueKeys = new HashSet<>();
+        counts.forEach((key, count) -> {
+            if (count == 1) {
+                uniqueKeys.add(key);
+            }
+        });
+        return uniqueKeys;
+    }
+
+    static String positionalCandidateKey(BearRallyCandidate candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        if (candidate.joinButtonPoint() == null) {
+            throw new IllegalArgumentException("Candidate position is required");
+        }
+        return candidate.getCandidateKey() + ":screenY=" + candidate.joinButtonPoint().getY();
     }
 
     private Instant observeTime() {

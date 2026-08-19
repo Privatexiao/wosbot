@@ -22,6 +22,10 @@ import java.util.List;
 public class BearRallyScanner {
 
     private static final Logger log = LoggerFactory.getLogger(BearRallyScanner.class);
+    private static final int SCREEN_WIDTH = 720;
+    private static final int SCREEN_HEIGHT = 1280;
+    private static final int MAX_VISIBLE_RALLIES = 8;
+    private static final int DUPLICATE_HIT_TOLERANCE = 8;
     
     @FunctionalInterface
     public interface PatternLocator {
@@ -63,7 +67,10 @@ public class BearRallyScanner {
         // Use the default matching params but maybe higher confidence.
         List<ImageSearchResultData> joinButtons = patternLocator.locate(
                 TemplatesEnum.BEAR_JOIN_PLUS_ICON, 
-                TemplateSearchHelper.SearchConfig.builder().withThreshold(80).build()
+                TemplateSearchHelper.SearchConfig.builder()
+                        .withThreshold(80)
+                        .withMaxResults(MAX_VISIBLE_RALLIES)
+                        .build()
         );
         
         if (joinButtons == null || joinButtons.isEmpty()) {
@@ -71,19 +78,36 @@ public class BearRallyScanner {
         }
         
         // Process from top to bottom
-        List<ImageSearchResultData> sortedButtons = new ArrayList<>(joinButtons);
-        sortedButtons.sort(Comparator.comparingInt(img -> img.getPoint().getY()));
-        
+        List<ImageSearchResultData> sortedButtons = joinButtons.stream()
+                .filter(BearRallyScanner::isUsableHit)
+                .sorted(Comparator.comparingInt(img -> img.getPoint().getY()))
+                .toList();
+
+        PointData previousAcceptedPoint = null;
         for (ImageSearchResultData btn : sortedButtons) {
             PointData p = btn.getPoint();
+            if (previousAcceptedPoint != null
+                    && Math.abs(previousAcceptedPoint.getX() - p.getX()) <= DUPLICATE_HIT_TOLERANCE
+                    && Math.abs(previousAcceptedPoint.getY() - p.getY()) <= DUPLICATE_HIT_TOLERANCE) {
+                log.debug("Ignoring duplicate Bear join-button match at {}", p);
+                continue;
+            }
             // OCR offsets are calibrated from the template's top-left edge, while match points are centers.
             int anchorY = btn.hasMatchedArea() ? btn.getMatchedArea().topLeft().getY() : p.getY();
             PointData anchor = new PointData(p.getX(), anchorY);
+            if (!hasValidOcrGeometry(anchorY)) {
+                log.debug("Ignoring Bear join-button match with out-of-bounds OCR geometry at {}", p);
+                continue;
+            }
+            previousAcceptedPoint = p;
+            AreaData joinButtonArea = btn.hasMatchedArea()
+                    ? btn.getMatchedArea()
+                    : new AreaData(p, p);
             
             // Reconstruct full card AreaData for debugging
             AreaData cardArea = new AreaData(
-                new PointData(0, anchorY + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1 - 10),
-                new PointData(720, anchorY + 60)
+                new PointData(0, Math.max(0, anchorY + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1 - 10)),
+                new PointData(SCREEN_WIDTH - 1, Math.min(SCREEN_HEIGHT - 1, anchorY + 60))
             );
             
             String hostName = readHostName(anchor);
@@ -117,14 +141,33 @@ public class BearRallyScanner {
             }
 
             BearRallyCandidate candidate = new BearRallyCandidate(
-                p, cardArea, hostName, currentMem, maxMem, currentTroops, total, remaining, cd, now, true
+                p, joinButtonArea, cardArea, hostName, currentMem, maxMem,
+                currentTroops, total, remaining, cd, now, true
             );
             
-            log.info("Scanned Bear Candidate: {}", candidate.getCandidateKey());
+            log.info("Scanned Bear candidate at y={}: members={}/{}, capacity={}, remaining={}, countdown={}s",
+                    p.getY(), currentMem, maxMem, total, remaining,
+                    cd == null ? -1 : cd.getSeconds());
             candidates.add(candidate);
         }
         
         return candidates;
+    }
+
+    private static boolean isUsableHit(ImageSearchResultData hit) {
+        return hit != null && hit.isFound() && hit.getPoint() != null;
+    }
+
+    private static boolean hasValidOcrGeometry(int anchorY) {
+        int minY = Math.min(
+                Math.min(CommonGameAreas.BEAR_TRAP_INITIATOR_DY1, CommonGameAreas.BEAR_TRAP_MEMBERS_DY1),
+                Math.min(CommonGameAreas.BEAR_TRAP_CAPACITY_DY1, CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1));
+        int maxY = Math.max(
+                Math.max(CommonGameAreas.BEAR_TRAP_INITIATOR_DY2, CommonGameAreas.BEAR_TRAP_MEMBERS_DY2),
+                Math.max(CommonGameAreas.BEAR_TRAP_CAPACITY_DY2, CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY2));
+        return anchorY + minY >= 0 && anchorY + maxY <= SCREEN_HEIGHT
+                && CommonGameAreas.BEAR_TRAP_INITIATOR_X1 >= 0
+                && CommonGameAreas.BEAR_TRAP_COUNTDOWN_X2 <= SCREEN_WIDTH;
     }
 
     private String readHostName(PointData btnPoint) {
