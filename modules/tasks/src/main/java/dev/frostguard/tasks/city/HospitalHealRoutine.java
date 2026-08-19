@@ -36,6 +36,7 @@ public class HospitalHealRoutine extends DelayedTask {
     }
 
     private HospitalHealState state = HospitalHealState.DISCOVER_ENTRY;
+    private TemplatesEnum detectedEntryTemplate;
     private int batchedAmountToHeal = -1;
     private boolean useFieldEntry = true;
     private boolean useCityEntry = false;
@@ -95,6 +96,7 @@ public class HospitalHealRoutine extends DelayedTask {
         lastHealBtnPos = null;
         runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
         remainingHealTime = null;
+        detectedEntryTemplate = null;
         int safetyCounter = 0;
 
         try {
@@ -157,6 +159,14 @@ public class HospitalHealRoutine extends DelayedTask {
             case CONFIRM_HEAL_SCREEN:
                 logInfo(routineLogHospitalLine("Waiting for hospital popup to fully open..."));
                 sleepTask(2500);
+
+                if (!isHealScreenRecognized()) {
+                    logWarning(routineLogHospitalLine(
+                            "Hospital heal screen was not identified; aborting before fixed-area interaction."));
+                    runOutcome = HospitalSchedulePolicy.Outcome.RECOGNITION_FAILURE;
+                    state = HospitalHealState.ABORT;
+                    break;
+                }
 
                 logInfo(routineLogHospitalLine("Ensuring all troops are unselected by checking Heal button state..."));
                 boolean isZeroedOut = false;
@@ -308,6 +318,11 @@ public class HospitalHealRoutine extends DelayedTask {
                         logInfo(routineLogHospitalLine("Input amount verified via OCR: " + readBackVal));
                         inputVerified = true;
                         break;
+                    } else if (readBackVal < 0 && isColoredHealButtonVisible()) {
+                        logWarning(routineLogHospitalLine(
+                                "Input OCR was unavailable, but the Heal button became active; continuing on the legacy-compatible path."));
+                        inputVerified = true;
+                        break;
                     } else {
                         logWarning(routineLogHospitalLine("Input amount OCR mismatch: expected " + batchedAmountToHeal
                                 + ", read '" + readBackRaw + "' (" + readBackVal + "). Retrying..."));
@@ -329,7 +344,13 @@ public class HospitalHealRoutine extends DelayedTask {
                 if (btn.isFound()) {
                     tapInside(btn);
                     sleepTask(1000);
-                    state = HospitalHealState.REQUEST_HELP;
+                    if (isColoredHealButtonVisible()) {
+                        logWarning(routineLogHospitalLine(
+                                "Heal button remained active after tapping; treatment start was not confirmed."));
+                        state = HospitalHealState.ABORT;
+                    } else {
+                        state = HospitalHealState.REQUEST_HELP;
+                    }
                 } else {
                     logInfo(routineLogHospitalLine("Heal button not found at START."));
                     state = HospitalHealState.ABORT;
@@ -417,9 +438,39 @@ public class HospitalHealRoutine extends DelayedTask {
             return EntryResult.NOT_AVAILABLE;
         }
         logInfo(routineLogHospitalLine("Field hospital shortcut detected."));
-        tapInside(fieldIcon.getPoint(), fieldIcon.getPoint(), 1, 100);
+        detectedEntryTemplate = HOSPITAL_FIELD_ICON;
+        tapInside(fieldIcon);
         sleepTask(1200);
         return EntryResult.ENTERED;
+    }
+
+    private boolean isHealScreenRecognized() {
+        dev.frostguard.api.domain.AreaData woundedArea =
+                dev.frostguard.engine.nav.CommonGameAreas.HOSPITAL_WOUNDED_COUNT_OCR_AREA;
+        try {
+            String woundedText = provider.extractText(null, woundedArea.topLeft(), woundedArea.bottomRight());
+            if (woundedText != null && woundedText.contains("/")) return true;
+        } catch (Exception e) {
+            logDebug(routineLogHospitalLine("Hospital identity OCR was unavailable: " + e.getMessage()));
+        }
+        if (isColoredHealButtonVisible()) return true;
+        if (detectedEntryTemplate != null) {
+            ImageSearchResultData entryStillVisible = templateSearchHelper.locatePattern(
+                    detectedEntryTemplate,
+                    SearchConfig.builder().withThreshold(85).withMaxAttempts(1).build());
+            if (!entryStillVisible.isFound()) {
+                logInfo(routineLogHospitalLine(
+                        "Hospital entry disappeared after a verified entry click; using compatibility page-transition evidence."));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isColoredHealButtonVisible() {
+        return templateSearchHelper.locatePattern(
+                HOSPITAL_HEAL_BUTTON,
+                SearchConfig.builder().withThreshold(70).withMaxAttempts(1).build()).isFound();
     }
 
     private EntryResult tryCityHospitalEntry() {
@@ -437,7 +488,8 @@ public class HospitalHealRoutine extends DelayedTask {
             return EntryResult.NOT_AVAILABLE;
         }
         logInfo(routineLogHospitalLine("City hospital detected."));
-        tapInside(cityBuilding.getPoint(), cityBuilding.getPoint(), 1, 100);
+        detectedEntryTemplate = HOSPITAL_CITY_BUILDING;
+        tapInside(cityBuilding);
         sleepTask(1200);
         return EntryResult.ENTERED;
     }
