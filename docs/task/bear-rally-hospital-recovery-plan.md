@@ -191,7 +191,7 @@ stateDiagram-v2
   - `frostguard-vision`: SUCCESS
   - `frostguard-automation`: SUCCESS
   - `frostguard-tasks`: SUCCESS
-  - `modules/desktop -am test` 完整通过；Surefire 报告合计 565 个测试，0 失败、0 错误、0 跳过。
+  - 合并 `upstream/main@24795a0` 后，`modules/desktop -am test` 完整通过；Surefire 报告合计 594 个测试，0 失败、0 错误、0 跳过。
   - 仍缺少 `720x1280` 未缩放真实帧与实机日志，高级打熊和医院不能标记为实机验证完成。
 
 ### 4.3 下一步真实画面证据清单
