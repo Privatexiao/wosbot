@@ -185,6 +185,9 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
                         sleepTask(300);
                     } else {
                         logWarning(routineLogManualRallyJoinLine("Equalize button not detected for march " + (deployedCount + 1) + "."));
+                        pressBack();
+                        reschedule(LocalDateTime.now().plusMinutes(3));
+                        return;
                     }
                 }
 
@@ -215,6 +218,15 @@ public ManualRallyJoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask)
                     logInfo(routineLogManualRallyJoinLine("A march is already targeting this rally. Cancelling duplicate deployment."));
                     pressBack();
                     sleepTask(300);
+                    pressBack();
+                    reschedule(LocalDateTime.now().plusMinutes(3));
+                    return;
+                }
+                ImageSearchResultData deployStillVisible = templateSearchHelper.locatePattern(
+                        TemplatesEnum.RALLY_DEPLOY_BUTTON, SearchConfigConstants.DEFAULT_SINGLE);
+                if (!isDeploymentConfirmed(false, false, deployStillVisible.isFound())) {
+                    logWarning(routineLogManualRallyJoinLine(
+                            "Deploy button remained visible; deployment was not confirmed and will not be registered."));
                     pressBack();
                     reschedule(LocalDateTime.now().plusMinutes(3));
                     return;
@@ -259,11 +271,15 @@ private TemplatesEnum resolveTargetTemplateFlow(String key) {
         }
     }
 
-static int normalizeMarchLimit(Integer configured) {
+    static int normalizeMarchLimit(Integer configured) {
         if (configured == null) {
             return 1;
         }
         return Math.max(1, Math.min(6, configured));
+    }
+
+    static boolean isDeploymentConfirmed(boolean queueFull, boolean sameTarget, boolean deployStillVisible) {
+        return !queueFull && !sameTarget && !deployStillVisible;
     }
 
 private boolean hasJoinButtonGreen(PointData center) {

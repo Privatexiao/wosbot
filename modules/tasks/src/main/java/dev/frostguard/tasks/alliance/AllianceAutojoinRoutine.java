@@ -8,7 +8,10 @@ import dev.frostguard.api.domain.PointData;
 import dev.frostguard.engine.helper.NavigationHelper;
 import dev.frostguard.engine.schedule.DelayedTask;
 import dev.frostguard.engine.schedule.LaunchPoint;
+import dev.frostguard.engine.schedule.TaskQueue;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import dev.frostguard.api.domain.RawImageData;
 import dev.frostguard.vision.color.PixelStats;
 import dev.frostguard.vision.ocr.TesseractOcrProvider;
@@ -51,6 +54,8 @@ private static final int SCHEDULE_HOURS_VALUE = 7;
 
 private static final int SCHEDULE_MINUTES_VALUE = 50;
 
+private static final int LOOKAHEAD_RETRY_MINUTES_VALUE = 5;
+
 private boolean useAllTroops;
 
 private int queueCount;
@@ -67,6 +72,10 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 		Boolean autojoinEnabled = profile.getConfig(ConfigurationKeyEnum.ALLIANCE_AUTOJOIN_BOOL, Boolean.class);
 		if (!Boolean.TRUE.equals(autojoinEnabled)) {
 			logInfo(routineLogAllianceAutojoinLine("Alliance autojoin task turned OFF in GUI profile configuration. Skipping autojoin execution."));
+			return;
+		}
+
+		if (deferForUpcomingAutoJoinReset()) {
 			return;
 		}
 
@@ -87,6 +96,19 @@ public AllianceAutojoinRoutine(AccountDescriptor profile, TpDailyTaskEnum tpTask
 		enableAutoJoinFlow();
 
 		queueNextRun();
+	}
+
+private boolean deferForUpcomingAutoJoinReset() {
+		TaskQueue queue = scheduleService.getCoordinator().getQueue(profile.getId());
+		if (queue == null) return false;
+		List<TpDailyTaskEnum> queuedTasks = queue.getNextQueuedTaskTypes(
+				AutojoinActivationPolicy.LOOKAHEAD_TASK_COUNT);
+		Optional<TpDailyTaskEnum> resetTask = AutojoinActivationPolicy.findUpcomingResetTask(queuedTasks);
+		if (resetTask.isEmpty()) return false;
+		reschedule(LocalDateTime.now().plusMinutes(LOOKAHEAD_RETRY_MINUTES_VALUE));
+		logInfo(routineLogAllianceAutojoinLine("Deferring activation because "
+				+ resetTask.get().getName() + " will restore auto-join shortly"));
+		return true;
 	}
 
 @Override
@@ -228,17 +250,20 @@ private void setAutoJoinQueuesFlow(int count) {
 			AreaData checkboxArea = new AreaData(new PointData(checkboxCenter.getX() - 15, checkboxCenter.getY() - 15),
 					new PointData(checkboxCenter.getX() + 15, checkboxCenter.getY() + 15));
 
-			boolean isCurrentlyChecked = false;
+			Boolean isCurrentlyChecked = null;
 			try {
 				RawImageData frame = emuManager.captureScreen(EMULATOR_NUMBER);
 				BufferedImage img = dev.frostguard.vision.convert.ImageConverter.toBufferedImage(frame);
 				Color golden = new Color(0xFF, 0xC3, 0x33);
 				int goldenCount = PixelStats.count(img, checkboxArea, PixelStats.near(golden, 40));
-				if (goldenCount > 10) {
-					isCurrentlyChecked = true;
-				}
+				isCurrentlyChecked = goldenCount > 10;
 			} catch (Exception e) {
 				logWarning(routineLogAllianceAutojoinLine("Color check failed for checkbox at " + checkboxCenter + ": " + e.getMessage()));
+			}
+			if (isCurrentlyChecked == null) {
+				logWarning(routineLogAllianceAutojoinLine(
+						"Checkbox state is unknown for " + targetName + "; leaving it unchanged."));
+				return true;
 			}
 
 			if (isCurrentlyChecked != shouldBeChecked) {
@@ -310,10 +335,13 @@ private void manageTaskFailure(String reason) {
 	}
 
 	private void queueNextRun() {
-		LocalDateTime nextExecutionTime = LocalDateTime.now().plusHours(1);
+		LocalDateTime nextExecutionTime = LocalDateTime.now()
+				.plusHours(SCHEDULE_HOURS_VALUE)
+				.plusMinutes(SCHEDULE_MINUTES_VALUE);
 
 		reschedule(nextExecutionTime);
 
-		logInfo(routineLogAllianceAutojoinLine("Alliance auto-join configured successfully. Next execution in 1 hour"));
+		logInfo(routineLogAllianceAutojoinLine("Alliance auto-join configured successfully. Next execution in "
+				+ SCHEDULE_HOURS_VALUE + "h " + SCHEDULE_MINUTES_VALUE + "m"));
 	}
 }
