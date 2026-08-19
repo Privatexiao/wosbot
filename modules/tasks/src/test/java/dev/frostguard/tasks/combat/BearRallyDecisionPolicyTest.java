@@ -54,6 +54,30 @@ public class BearRallyDecisionPolicyTest {
     }
 
     @Test
+    void frenzyStillEnforcesRemainingCapacity() {
+        AccountDescriptor account = new AccountDescriptor(1L);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL, true);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_FRENZY_START_MINUTE_INT, 22);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, 5);
+        account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_REMAINING_CAPACITY_INT, 80_000);
+        Instant fixedNow = Instant.parse("2026-08-14T10:25:00Z");
+        Clock fixedClock = Clock.fixed(fixedNow, ZoneId.of("UTC"));
+        LocalDateTime start = LocalDateTime.ofInstant(
+                Instant.parse("2026-08-14T10:00:00Z"), ZoneId.of("UTC"));
+        BearRallyCandidate candidate = new BearRallyCandidate(
+                new PointData(100, 100), new AreaData(new PointData(0, 0), new PointData(200, 200)),
+                "Host1", 1, 6, 50_000L, 100_000L, 50_000L,
+                Duration.ofMinutes(4), fixedNow, true);
+
+        BearRallyDecisionPolicy.Decision decision = BearRallyDecisionPolicy.evaluate(
+                candidate, account, start, fixedClock);
+
+        assertEquals(BearRallyDecisionPolicy.DecisionResult.SKIP_MIN_REMAINING_CAPACITY_NOT_MET,
+                decision.result());
+    }
+
+    @Test
     public void rejectsCandidateWhenCurrentMembersAreBelowThreshold() {
         AccountDescriptor account = new AccountDescriptor(1L);
         account.setConfig(ConfigurationKeyEnum.BEAR_TRAP_ADVANCED_JOIN_ENABLED_BOOL, true);

@@ -40,7 +40,7 @@ class BearRallyDedupCacheTest {
     }
 
     @Test
-    void clearsConservativelyWhenClockMovesBackward() {
+    void toleratesSmallClockCorrection() {
         Instant start = Instant.parse("2026-08-18T10:00:00Z");
         MutableClock clock = new MutableClock(start);
         BearRallyDedupCache cache = new BearRallyDedupCache(clock, Duration.ofMinutes(5));
@@ -48,6 +48,19 @@ class BearRallyDedupCacheTest {
         cache.markJoined(scope, "candidate");
 
         clock.instant = start.minusSeconds(1);
+
+        assertTrue(cache.isDuplicate(scope, "candidate"));
+    }
+
+    @Test
+    void clearsConservativelyWhenClockMovesBackwardBeyondTolerance() {
+        Instant start = Instant.parse("2026-08-18T10:00:00Z");
+        MutableClock clock = new MutableClock(start);
+        BearRallyDedupCache cache = new BearRallyDedupCache(clock, Duration.ofMinutes(5));
+        BearRallyDedupCache.Scope scope = new BearRallyDedupCache.Scope("profile-1", "trap-1");
+        cache.markJoined(scope, "candidate");
+
+        clock.instant = start.minusSeconds(61);
 
         assertFalse(cache.isDuplicate(scope, "candidate"));
     }
@@ -66,6 +79,21 @@ class BearRallyDedupCacheTest {
 
         assertEquals(2, cache.size());
         assertFalse(cache.isDuplicate(scope, "one"));
+    }
+
+    @Test
+    void evictsLeastRecentlyUsedEntry() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-08-18T10:00:00Z"));
+        BearRallyDedupCache cache = new BearRallyDedupCache(clock, Duration.ofMinutes(5), 2);
+        BearRallyDedupCache.Scope scope = new BearRallyDedupCache.Scope("profile-1", "trap-1");
+        cache.markJoined(scope, "one");
+        cache.markJoined(scope, "two");
+        assertTrue(cache.isDuplicate(scope, "one"));
+
+        cache.markJoined(scope, "three");
+
+        assertTrue(cache.isDuplicate(scope, "one"));
+        assertFalse(cache.isDuplicate(scope, "two"));
     }
 
     private static final class MutableClock extends Clock {

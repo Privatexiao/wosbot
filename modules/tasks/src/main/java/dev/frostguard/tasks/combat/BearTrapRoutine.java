@@ -813,7 +813,10 @@ private void manageJoinRallies(int freeMarches) {
         } else {
             tapInside(deploy);
             sleepTask(500);
-
+            if (!confirmBearDeployment()) {
+                logWarning(routineLogBearTrapLine("Bear deployment was not confirmed."));
+                pressBack();
+            }
         }
 
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
@@ -840,7 +843,9 @@ private void manageJoinRallies(int freeMarches) {
             return;
         }
         
-        BearRallyDedupCache.Scope scope = new BearRallyDedupCache.Scope(profile.getId().toString(), String.valueOf(this.trapNumber));
+        String activityInstanceId = this.trapNumber + ":" + String.valueOf(this.referenceTrapTime);
+        BearRallyDedupCache.Scope scope = new BearRallyDedupCache.Scope(
+                profile.getId().toString(), activityInstanceId);
         Clock clock = Clock.systemUTC();
         
         // Ensure candidates are sorted: usually top-down or by lowest remaining capacity.
@@ -900,6 +905,13 @@ private void manageJoinRallies(int freeMarches) {
                     continue;
                 }
 
+                if (!confirmBearDeployment()) {
+                    logWarning(routineLogBearTrapLine(
+                            "Deploy button remained visible; deployment was not confirmed."));
+                    pressBack();
+                    continue;
+                }
+
                 dedupCache.markJoined(scope, key);
                 logInfo(routineLogBearTrapLine("Deployment successful for candidate: " + key));
                 navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
@@ -910,6 +922,13 @@ private void manageJoinRallies(int freeMarches) {
         }
         
         navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
+    }
+
+    private boolean confirmBearDeployment() {
+        ImageSearchResultData deployStillVisible = templateSearchHelper.locatePattern(
+                BEAR_DEPLOY_BUTTON,
+                SearchConfig.builder().withThreshold(90).withMaxAttempts(2).build());
+        return !deployStillVisible.isFound();
     }
 
 private void logTrapTimingFlow(TrapTimingShape timing) {

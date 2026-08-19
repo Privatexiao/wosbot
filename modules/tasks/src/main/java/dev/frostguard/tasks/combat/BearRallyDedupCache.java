@@ -3,7 +3,7 @@ package dev.frostguard.tasks.combat;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,7 +14,8 @@ public class BearRallyDedupCache {
 
     private static final Duration DEFAULT_TTL = Duration.ofSeconds(300);
     private static final int DEFAULT_MAX_ENTRIES = 256;
-    private final Map<CacheKey, Instant> cache = new HashMap<>();
+    private static final Duration CLOCK_ROLLBACK_TOLERANCE = Duration.ofSeconds(60);
+    private final Map<CacheKey, Instant> cache = new LinkedHashMap<>(16, 0.75f, true);
     private final Clock clock;
     private final Duration ttl;
     private final int maxEntries;
@@ -78,10 +79,11 @@ public class BearRallyDedupCache {
 
         Instant now = observeTime();
         cleanExpired(now);
-        if (cache.size() >= maxEntries) {
-            cache.entrySet().stream().min(Map.Entry.comparingByValue()).ifPresent(entry -> cache.remove(entry.getKey()));
+        CacheKey cacheKey = new CacheKey(scope, key);
+        if (!cache.containsKey(cacheKey) && cache.size() >= maxEntries) {
+            cache.keySet().stream().findFirst().ifPresent(cache::remove);
         }
-        cache.put(new CacheKey(scope, key), now.plus(ttl));
+        cache.put(cacheKey, now.plus(ttl));
     }
 
     public synchronized void clearScope(Scope scope) {
@@ -99,7 +101,7 @@ public class BearRallyDedupCache {
 
     private Instant observeTime() {
         Instant now = clock.instant();
-        if (now.isBefore(lastObservedTime)) {
+        if (now.isBefore(lastObservedTime.minus(CLOCK_ROLLBACK_TOLERANCE))) {
             cache.clear();
         }
         lastObservedTime = now;

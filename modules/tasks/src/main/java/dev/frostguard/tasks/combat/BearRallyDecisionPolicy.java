@@ -58,13 +58,9 @@ public final class BearRallyDecisionPolicy {
             }
         }
 
-        if (frenzyActive) {
-            return new Decision(DecisionResult.JOIN, "Frenzy mode active (minute " + frenzyStartMinute + "+); skipping minimum member thresholds", true);
-        }
-
         // Check 1: Minimum member count threshold
         Integer minMembers = profile.getConfig(ConfigurationKeyEnum.BEAR_TRAP_MIN_MEMBER_COUNT_INT, Integer.class);
-        if (minMembers != null && minMembers > 0) {
+        if (!frenzyActive && minMembers != null && minMembers > 0) {
             if (candidate.currentMembers() < minMembers) {
                 return new Decision(DecisionResult.SKIP_MIN_MEMBERS_NOT_MET,
                         "Candidate members (" + candidate.currentMembers() + "/" + candidate.maxMembers()
@@ -91,7 +87,10 @@ public final class BearRallyDecisionPolicy {
             }
         }
 
-        return new Decision(DecisionResult.JOIN, "Candidate met all threshold criteria", false);
+        String reason = frenzyActive
+                ? "Frenzy mode active; member threshold relaxed while capacity thresholds remain enforced"
+                : "Candidate met all threshold criteria";
+        return new Decision(DecisionResult.JOIN, reason, frenzyActive);
     }
 
     private static boolean isCandidateValid(BearRallyCandidate candidate) {

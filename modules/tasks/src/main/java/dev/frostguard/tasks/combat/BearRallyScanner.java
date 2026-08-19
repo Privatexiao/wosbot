@@ -33,16 +33,15 @@ public class BearRallyScanner {
         String extract(PointData topLeft, PointData bottomRight);
     }
 
-    private final EmulatorController emulator;
     private final PatternLocator patternLocator;
     private final TextExtractor textExtractor;
 
     public BearRallyScanner(EmulatorController emulator, BotOcrEngine ocrEngine, TemplateSearchHelper searchHelper) {
-        this.emulator = emulator;
         this.patternLocator = searchHelper != null ? searchHelper::locateAllPatterns : (t, c) -> List.of();
-        this.textExtractor = ocrEngine != null ? (tl, br) -> {
+        BotOcrEngine frameOcr = ocrEngine != null ? ocrEngine.reusingLastFrame() : null;
+        this.textExtractor = frameOcr != null ? (tl, br) -> {
             try {
-                return ocrEngine.extractText(null, tl, br);
+                return frameOcr.extractText(null, tl, br);
             } catch (Exception e) {
                 return null;
             }
@@ -50,7 +49,6 @@ public class BearRallyScanner {
     }
 
     public BearRallyScanner(PatternLocator patternLocator, TextExtractor textExtractor) {
-        this.emulator = null;
         this.patternLocator = patternLocator != null ? patternLocator : (t, c) -> List.of();
         this.textExtractor = textExtractor != null ? textExtractor : (tl, br) -> null;
     }
@@ -78,18 +76,20 @@ public class BearRallyScanner {
         
         for (ImageSearchResultData btn : sortedButtons) {
             PointData p = btn.getPoint();
-            // p is the top-left of the match
+            // OCR offsets are calibrated from the template's top-left edge, while match points are centers.
+            int anchorY = btn.hasMatchedArea() ? btn.getMatchedArea().topLeft().getY() : p.getY();
+            PointData anchor = new PointData(p.getX(), anchorY);
             
             // Reconstruct full card AreaData for debugging
             AreaData cardArea = new AreaData(
-                new PointData(0, p.getY() + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1 - 10),
-                new PointData(720, p.getY() + 60)
+                new PointData(0, anchorY + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1 - 10),
+                new PointData(720, anchorY + 60)
             );
             
-            String hostName = readHostName(p);
-            String membersRaw = readMembers(p);
-            String capacityRaw = readCapacity(p);
-            String countdownRaw = readCountdown(p);
+            String hostName = readHostName(anchor);
+            String membersRaw = readMembers(anchor);
+            String capacityRaw = readCapacity(anchor);
+            String countdownRaw = readCountdown(anchor);
             
             // Parse Capacity: "Remaining / Total"
             long remaining = -1, total = -1;

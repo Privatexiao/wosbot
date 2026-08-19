@@ -8,6 +8,7 @@ import dev.frostguard.api.domain.PointData;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 class BearRallyScannerTest {
@@ -72,5 +73,25 @@ class BearRallyScannerTest {
         assertEquals(100_000L, second.remainingCapacity());
         assertEquals(50_000L, second.currentTroops());
         assertEquals(Duration.ofSeconds(135), second.countdown());
+    }
+
+    @Test
+    void anchorsOcrRegionsFromMatchedTemplateTopEdge() {
+        ImageSearchResultData button = ImageSearchResultData.hit(600, 300, 95.0, 20, 40);
+        List<PointData> observedTopLefts = new ArrayList<>();
+        BearRallyScanner scanner = new BearRallyScanner(
+                (template, config) -> List.of(button),
+                (tl, br) -> {
+                    observedTopLefts.add(tl);
+                    if (tl.getX() == 281) return "Host";
+                    if (tl.getX() == 626) return "1/6";
+                    if (tl.getX() == 284) return "50K/100K";
+                    return "04:00";
+                });
+
+        scanner.scanCandidates(Instant.parse("2026-08-19T10:00:00Z"));
+
+        assertEquals(280 + dev.frostguard.engine.nav.CommonGameAreas.BEAR_TRAP_INITIATOR_DY1,
+                observedTopLefts.get(0).getY());
     }
 }
