@@ -22,8 +22,8 @@
 
 | 特性标识 | 对应模块与文件 | 功能定位与做什么的 | 上游原生行为 (Upstream) | 本 Fork 自定义行为 (Custom) | 验证级别 |
 | --- | --- | --- | --- | --- | --- |
-| **`BEAR_TRAP_ADVANCED_JOIN`** | `modules/tasks`<br>• `BearTrapRoutine.java`<br>• `BearRallyScanner.java`<br>• `BearRallyDecisionPolicy.java`<br>• `BearRallyDedupCache.java` | 打熊活动期间，对联盟集结列表进行单次捕获、多卡片 OCR 筛选；支持狂热放宽成员门槛、300s 活动实例级去重、6 编队轮换和部署确认。 | 普通路径只加入第一个可用集结。 | 模板匹配后 OCR 复用同一缓存帧；匹配中心按模板尺寸换算为 ROI 左上角锚点；狂热不绕过容量门槛；仅在 Deploy 消失且无阻断弹窗时写入去重缓存。 | ✅ 自动化测试；⚠️ 待真实帧与实机日志 |
-| **`HOSPITAL_HEAL`** | `modules/tasks`<br>• `HospitalHealRoutine.java`<br>• `HealBatchCalculator.java`<br>• `HospitalSchedulePolicy.java` | 自动执行伤兵分批治疗、联盟帮助和有界重排。 | 上游没有该状态机。 | 固定区域交互前必须由伤兵 OCR 或彩色 Heal 模板确认页面；有效 OCR 不一致时中止，OCR 不可用但 Heal 已激活时保留基础兼容路径；Heal 点击后按钮必须消失。野外入口已接入；城内入口因缺少真实模板保持不支持。 | ✅ 纯逻辑与加载测试；⚠️ 待真实帧与实机日志 |
+| **`BEAR_TRAP_ADVANCED_JOIN`** | `modules/tasks`<br>• `BearTrapRoutine.java`<br>• `BearRallyScanner.java`<br>• `BearRallyDecisionPolicy.java`<br>• `BearRallyDedupCache.java` | 打熊活动期间，对联盟集结列表进行单次捕获、多卡片 OCR 筛选；支持狂热放宽成员门槛、300s 活动实例级去重、6 编队轮换和部署确认。 | 普通路径只加入第一个可用集结。 | 候选保持从上到下顺序；局部复核成功后才推进编队，页面往返后废弃旧坐标。同帧相同签名及明确同目标使用“签名+纵坐标”5 秒短期抑制，其他成功候选使用 300 秒 TTL；日志不输出玩家名或完整签名，短期抑制不冒充成功部署。 | ✅ 自动化测试；⚠️ 待真实帧与实机日志 |
+| **`HOSPITAL_HEAL`** | `modules/tasks`<br>• `HospitalHealRoutine.java`<br>• `HospitalPageEvidencePolicy.java`<br>• `HealBatchCalculator.java`<br>• `HospitalSchedulePolicy.java`<br>`modules/desktop`<br>• `HospitalLayoutController.java` | 自动执行伤兵分批治疗、联盟帮助和有界重排。 | 上游没有该状态机。 | 固定区域交互前必须由合法伤兵 OCR 或彩色 Heal 模板确认页面；页面确认时明确 `0/容量` 会在任何固定点击前退出。最大等待分钟数是防溢出的警告阈值，不会中断已开始的治疗。城内医院和加速由 UI 与运行时双重封闭，待英文真实帧验证后开放。 | ✅ 纯逻辑、模板映射与 FXML 测试；⚠️ 待真实帧与实机日志 |
 | **`MANUAL_RALLY_JOIN`** | `modules/tasks`<br>• `ManualRallyJoinRoutine.java` | 手动集结加入安全控制。 | 缺乏严格的编队数量规范化与防呆保护。 | 编队数限制 `[1,6]`；绿色 Join 校验；找不到保存编队或 Equalize 即退出；队列满、同目标或 Deploy 仍可见时均不登记出征。 | ✅ 自动化测试 |
 | **`INTELLIGENCE_SAFETY`** | `modules/tasks`<br>• `IntelligenceRoutine.java` | 情报任务零触屏关停、类型隔离和彩色/灰度双匹配。 | 上游流程不会覆盖这些分支保护。 | 主开关或全部子类型关闭时在打开页面前退出；普通与火晶模板隔离；误触后关闭遮罩并有界重试。 | ✅ 自动化测试；⚠️ 视觉证据仍需实机确认 |
 | **`POLAR_TERROR_AUTOJOIN`** | `modules/tasks`<br>• `PolarTerrorHuntingRoutine.java`<br>• `AllianceAutojoinRoutine.java` | 极地恶魔与联盟自动集结扩展。 | 上游不含按目标 OCR 配置。 | 极地页签无法识别时保守退出；复选框截图失败时保持原状态；恢复上游即将重置 AutoJoin 的前瞻延迟和 7h50m 周期。 | ✅ 编译与既有策略测试；⚠️ 待真实帧 |
@@ -184,7 +184,8 @@ stateDiagram-v2
     ENTER_CITY --> COMPLETE: 城内模板缺失或建筑未找到 (NO_ENTRY)
     
     CONFIRM_HEAL_SCREEN --> SELECT_TIER: 智能取消全选并在第一槽位输入1成功激活
-    CONFIRM_HEAL_SCREEN --> COMPLETE: 输入1后Heal按钮仍未激活 (NO_WOUNDED)
+    CONFIRM_HEAL_SCREEN --> COMPLETE: 输入1后Heal未激活且OCR明确为0/容量 (NO_WOUNDED)
+    CONFIRM_HEAL_SCREEN --> ABORT: 输入1后Heal未激活且OCR为正数或未知 (RECOGNITION_FAILURE)
     CONFIRM_HEAL_SCREEN --> ABORT: 3次尝试仍无法清空全选状态
     
     SELECT_TIER --> READ: 进入数据读取
@@ -212,13 +213,13 @@ stateDiagram-v2
 
 #### (2) 页面身份确认与全选状态智能反转机制
 1. 打开医院弹窗后等待 2500ms 待动画完成；
-2. 固定区域点击前必须满足至少一项页面证据：伤兵区域 OCR 包含数量结构、彩色 `HOSPITAL_HEAL_BUTTON` 存在，或经过模板确认的医院入口在点击后已经消失；三项均不成立时进入 `ABORT`；
+2. 固定区域点击前必须满足至少一项医院页面强证据：伤兵区域 OCR 是合法的 `当前值/容量`（`0 <= 当前值 <= 容量` 且 `容量 > 0`），或彩色 `HOSPITAL_HEAL_BUTTON` 存在；入口消失不能单独证明页面身份，没有强证据时进入 `ABORT`；
 3. 循环最多 3 次检测 `HOSPITAL_HEAL_BUTTON` 模板：
    - 若匹配度 $\ge 70\%$（按钮为彩色，说明游戏默认勾选了全部伤兵）：点击快速选择切换点 `PointData(134, 852)` 清零所有兵种选择，等待 1500ms；
    - 直至 Heal 按钮变为灰色（模板匹配失败），确认选择已清空；
    - 若 3 次尝试后仍为彩色，判定为页面异常，立即切换至 `ABORT`；
 4. 点击第一兵种输入框 `TROOP_1_INPUT_BOX_CENTER (590, 390)`，清除原内容并写入 `1\n`，点击空白区域 `(360, 320)` 收起软键盘；
-5. 重新检测 `HOSPITAL_HEAL_BUTTON`：若此时按钮亮起，说明存在伤兵且已成功就绪，记录按钮坐标进入 `READ`；若仍未亮起，说明医院当前**没有任何伤兵**，设置 `runOutcome = NO_WOUNDED` 并直接 `COMPLETE` 退出。
+5. 重新检测 `HOSPITAL_HEAL_BUTTON`：若此时按钮亮起，说明已成功就绪，记录按钮坐标进入 `READ`；若仍未亮起，仅当伤兵 OCR 明确为合法 `0/容量` 时设置 `runOutcome = NO_WOUNDED`，正数伤兵或未知 OCR 均以 `RECOGNITION_FAILURE` 安全退出并退避。
 
 #### (3) 智能批次计算公式 (`HealBatchCalculator`)
 - 联盟帮助最大减免总时长：
@@ -258,7 +259,7 @@ stateDiagram-v2
 | `HOSPITAL_HEAL_ENABLED_BOOL` | Boolean | `false` | 城市面板 | 医院自动分批治疗总开关。 |
 | `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` | Boolean | `true` | 城市面板 | 野外快捷图标入口开关（出城后界面左侧十字图标）。 |
 | `HOSPITAL_HEAL_CITY_ENABLED_BOOL` | Boolean | `false` | 城市面板 | 预留城内医院入口；当前缺少真实模板，保持禁用且不执行盲点。 |
-| `HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT` | Integer | `30` | 城市面板 | 单批治疗允许的最大等待时间（超过则记录警告）。 |
+| `HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT` | Integer | `30` | 城市面板 | 单批治疗剩余时间的警告阈值；超过时仅记录警告并按实际剩余时间调度，不中断已开始的治疗。 |
 | `ALLIANCE_HELP_MAX_COUNT_INT` | Integer | `15` | 联盟面板 | 联盟最大帮助次数（用于估算单批最大减免时长）。 |
 | `ALLIANCE_HELP_TIME_REDUCTION_SEC_INT` | Integer | `210` | 联盟面板 | 每次联盟帮助减少的秒数（默认 210 秒 = 3.5 分钟）。 |
 | `HOSPITAL_HEAL_USE_SPEEDUP_BOOL` | Boolean | `false` | 城市面板 | 治疗加速道具开关（**目前安全禁用**，待获取纯道具支付校验素材后开放）。 |
@@ -349,16 +350,19 @@ stateDiagram-v2
 
 | 测试类 (Test Class) | 归属模块 | 覆盖特性 | 核心测试场景与用例 |
 | --- | --- | --- | --- |
-| `BearRallyScannerTest` | `modules/tasks` | 打熊扫描器 | • 0 候选安全返回<br>• 多候选排序<br>• 模板中心换算左上角锚点<br>• ROI 与数值转换 |
+| `BearRallyScannerTest` | `modules/tasks` | 打熊扫描器 | • 0 候选安全返回<br>• 最多 8 个候选与屏幕顺序<br>• 容量不改变候选方向<br>• 重复命中合并和越界过滤<br>• 候选消失、相邻顶替与新帧替换<br>• ROI、数值转换与真实按钮矩形保留 |
 | `BearRallyCandidateTest` | `modules/tasks` | 打熊候选模型 | • 复合签名跨秒倒计时衰减稳定性验证（15s时间桶） |
 | `BearRallyDecisionPolicyTest` | `modules/tasks` | 打熊决策策略 | • 三类门槛<br>• 狂热只放宽成员门槛<br>• 损坏数据安全跳过 |
-| `BearRallyDedupCacheTest` | `modules/tasks` | 打熊去重缓存 | • 活动分域<br>• 300 秒 TTL<br>• LRU<br>• 60 秒回拨容差 |
+| `BearRallyDedupCacheTest` | `modules/tasks` | 打熊去重缓存 | • 活动分域<br>• 300 秒 TTL<br>• LRU<br>• 60 秒回拨容差<br>• 同签名冲突排除<br>• 不同纵坐标短期位置键隔离 |
 | `HealBatchCalculatorTest` | `modules/tasks` | 医院批次计算 | • 精确模式伤兵总数截断 `[1, totalWounded]`<br>• 兼容模式批次计算<br>• 超大数值防溢出保护<br>• 非法单兵耗时异常保护 |
-| `HospitalSchedulePolicyTest` | `modules/tasks` | 医院调度策略 | • 进行中倒计时加 30s 缓冲重排<br>• 识别失败 15 分钟退避<br>• 缺少入口/无伤兵正常轮询<br>• 参数不支持 60 分钟长退避 |
+| `HospitalPageEvidencePolicyTest` | `modules/tasks` | 医院页面证据 | • 合法/非法伤兵结构<br>• 页面强证据<br>• 明确零伤兵<br>• 模板或 OCR 不明时识别失败 |
+| `HospitalHealRoutineTest` | `modules/tasks` | 医院总开关 | • 关闭时在视觉、导航和模拟器交互前直接返回 |
+| `HospitalSchedulePolicyTest` | `modules/tasks` | 医院调度策略 | • 所有退出状态精确重排<br>• 进行中倒计时加 30s 缓冲<br>• 零、负、超长持续时间退避<br>• 未来时间封顶<br>• 最大等待警告阈值防溢出 |
 | `ManualRallyJoinRoutineTest` | `modules/tasks` | 手动集结 | • 编队范围 `[1,6]`<br>• 部署必须有正向页面转换证据 |
 | `CompactGameNumberParserTest`| `modules/vision` | 紧凑数值解析 | • `K/M`<br>• 规范千分位<br>• 非法分隔与 long 溢出返回 `-1` |
 | `ExceptionScreenshotServiceTest` | `modules/automation` | 异常证据 | • 有效 PNG<br>• 全帧像素化<br>• metadata 最小化<br>• 7 天清理 |
-| `FxmlLoadabilityTest` | `modules/desktop` | 桌面界面 | • FXML 加载与控制器初始化 |
+| `FxmlLoadabilityTest` | `modules/desktop` | 桌面界面 | • FXML 资源存在性；控制器字段和处理器绑定由 `FxmlControllerBindingTest` 检查 |
+| `HospitalUnsupportedFeaturesTest` | `modules/desktop` | 医院安全 UI | • 城内医院禁用<br>• 治疗加速禁用<br>• 野外医院配置仍可用 |
 
 ### 9.1 最新验证执行记录
 - **执行时间**：2026-08-19
@@ -372,6 +376,43 @@ stateDiagram-v2
 - **验证范围**：合并 `upstream/main@7d0e8f3` 后运行 `build-support/verification` 全部 Python 单元测试。
 - **已完成证据**：47 个测试全部通过，覆盖 Stable/Nightly 渠道选择器、工作流契约与打包产物校验逻辑。
 - **边界**：本次上游提交未改动 Java 模块、任务状态机、视觉模板或运行时行为，因此没有重复执行桌面 Reactor 测试，也不改变现有真实帧与实机日志的未验证状态。
+
+### 9.3 打熊多卡片扫描验证记录
+- **执行时间**：2026-08-19
+- **定向验证**：`BearRallyScannerTest`、`BearRallyCandidateTest`、`BearRallyDecisionPolicyTest` 和 `BearRallyDedupCacheTest` 共 17 个测试通过。
+- **回归验证**：tasks Reactor 在排除当前 Windows 进程环境下会读取空 PID 的既有 `BoundedProcessRunnerTest` 后，共 440 个测试通过，0 失败、0 错误、0 跳过。
+- **证据边界**：尚无同时显示多个可加入卡片的 `720x1280` 原始帧，无法据此确认加号模板的真实重复距离、OCR 相对区域和点击后列表变化；医院 Heal 模板仍含动态倒计时且没有遮罩。
+
+### 9.4 医院页面证据收紧验证记录
+- **执行时间**：2026-08-19
+- **定向验证**：`HospitalPageEvidencePolicyTest`、`HealBatchCalculatorTest` 和 `HospitalSchedulePolicyTest` 共 19 个测试通过。
+- **回归验证**：tasks Reactor 在排除当前 Windows 进程环境下会读取空 PID 的既有 `BoundedProcessRunnerTest` 后，共 444 个测试通过，0 失败、0 错误、0 跳过。
+- **证据边界**：本次只证明错误状态会在固定区域交互前安全退出，并正确区分明确零伤兵与识别失败；没有英文 `720x1280` 原始帧和实机日志，不能据此宣称医院视觉流程可用。总开关已有代码早退，但尚无直接验证零截图、零 OCR、零触屏的例程交互测试。
+
+### 9.5 打熊候选顺序与旧坐标失效验证记录
+- **执行时间**：2026-08-19
+- **定向验证**：`BearRallyScannerTest`、`BearRallyCandidateTest`、`BearRallyDecisionPolicyTest` 和 `BearRallyDedupCacheTest` 共 20 个测试通过。
+- **回归验证**：tasks Reactor 在排除当前 Windows 进程环境下会读取空 PID 的既有 `BoundedProcessRunnerTest` 后，共 447 个测试通过，0 失败、0 错误、0 跳过。
+- **证据边界**：自动化测试证明新扫描不会保留已消失或被相邻卡片顶替的候选，代码路径在局部复核失败和页面返回后均废弃旧集合；尚无英文真实帧和实机日志，不能确认游戏列表动画结束所需等待时间。
+
+### 9.6 去重碰撞与医院调度边界验证记录
+- **执行时间**：2026-08-19
+- **定向验证**：打熊扫描、决策、候选、去重和医院页面、批次、调度策略共 45 个测试通过。
+- **回归验证**：tasks Reactor 在排除当前 Windows 进程环境下会读取空 PID 的既有 `BoundedProcessRunnerTest` 后，共 453 个测试通过，0 失败、0 错误、0 跳过。
+- **证据边界**：同帧完全相同签名因缺少游戏提供的唯一集结 ID，采用“不参与 TTL 去重”的保守策略以避免漏掉另一辆；真实页面中同签名候选的出现频率、列表变化和部署结果仍需英文原始帧及实机日志验证。
+
+### 9.7 未支持医院能力门禁验证记录
+- **执行时间**：2026-08-19
+- **定向验证**：`TemplatesEnumTest`、医院页面/批次/调度策略、`FxmlLoadabilityTest` 和 `HospitalUnsupportedFeaturesTest` 共 28 个测试通过。
+- **回归验证**：tasks Reactor 共 456 个测试通过，0 失败、0 错误、0 跳过。完整 Desktop Reactor 首次运行仅在无关的 `WindowsInstallerHandoffTest` Windows 进程时序用例失败；该测试随后单独复跑 6 个用例全部通过。
+- **证据边界**：城内医院与治疗加速已经从 UI 和运行时双重封闭，但野外治疗视觉流程仍缺英文 `720x1280` 原始帧与实机日志，不能宣称医院自动治疗已具备实机可用证据。
+
+### 9.8 双轮审查修复与复审记录
+- **执行时间**：2026-08-19
+- **修复内容**：明确零伤兵在固定点击前退出；候选局部复核成功后才推进编队；同签名和同目标使用 5 秒位置抑制；最大等待配置明确为防溢出的警告阈值；修正 FXML 测试证据描述。
+- **定向验证**：打熊、医院、模板与医院 UI 共 53 个测试通过；随后 `FxmlLoadabilityTest`、`FxmlControllerBindingTest` 和 `HospitalUnsupportedFeaturesTest` 共 6 个测试通过。
+- **回归验证**：tasks Reactor 在排除当前 Windows 进程环境下会读取空 PID 的既有 `BoundedProcessRunnerTest` 后，共 460 个测试通过，0 失败、0 错误、0 跳过；`git diff --check` 通过。
+- **复审结论**：第三轮发现并补齐“同目标”短期抑制；第四轮未发现新的代码级控制流缺陷。没有英文真实帧与实机日志，因此视觉模板分数、点击坐标和页面动画时序仍保持未验证状态。
 
 ## 10. 最近一次上游同步
 
