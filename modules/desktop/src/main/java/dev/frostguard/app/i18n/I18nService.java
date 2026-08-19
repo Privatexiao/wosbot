@@ -1,6 +1,7 @@
 package dev.frostguard.app.i18n;
 
 import javafx.collections.ListChangeListener;
+import javafx.beans.property.Property;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -26,6 +27,7 @@ public class I18nService {
     private static final Map<String, String> DICTIONARY = new ConcurrentHashMap<>();
     private static final Map<String, String> WORD_DICTIONARY = new ConcurrentHashMap<>();
     private static final String I18N_MARKER = "i18n_done_flag_v4";
+    private static final String I18N_LIVE_MARKER = "i18n_live_listener_v1";
 
     static {
         loadBuiltinDictionary();
@@ -215,7 +217,7 @@ public class I18nService {
             if (root instanceof TabPane tabPane) {
                 for (Tab tab : tabPane.getTabs()) {
                     if (tab.getText() != null && !Boolean.TRUE.equals(tab.getProperties().get(I18N_MARKER))) {
-                        tab.setText(tr(tab.getText()));
+                        translateProperty(tab.getProperties(), tab.textProperty());
                         tab.getProperties().put(I18N_MARKER, Boolean.TRUE);
                     }
                     if (tab.getContent() != null) {
@@ -227,7 +229,7 @@ public class I18nService {
             if (root instanceof TableView<?> tableView) {
                 for (TableColumn<?, ?> column : tableView.getColumns()) {
                     if (column.getText() != null && !Boolean.TRUE.equals(column.getProperties().get(I18N_MARKER))) {
-                        column.setText(tr(column.getText()));
+                        translateProperty(column.getProperties(), column.textProperty());
                         column.getProperties().put(I18N_MARKER, Boolean.TRUE);
                     }
                 }
@@ -243,44 +245,40 @@ public class I18nService {
             return;
         }
 
-        if (node instanceof Labeled labeled) {
+        if (node instanceof MenuButton menuButton) {
+            translateProperty(menuButton.getProperties(), menuButton.textProperty());
+            for (MenuItem item : menuButton.getItems()) {
+                translateProperty(item.getProperties(), item.textProperty());
+            }
+        } else if (node instanceof TitledPane titledPane) {
+            translateProperty(titledPane.getProperties(), titledPane.textProperty());
+            if (titledPane.getContent() != null) translateNode(titledPane.getContent());
+        } else if (node instanceof Labeled labeled) {
             if (labeled.getText() != null && !labeled.getText().trim().isEmpty()) {
                 labeled.setText(tr(labeled.getText()));
             }
+            installLiveTranslation(labeled.getProperties(), labeled.textProperty());
         } else if (node instanceof Text textNode) {
             if (textNode.getText() != null && !textNode.getText().trim().isEmpty()) {
                 textNode.setText(tr(textNode.getText()));
             }
-        } else if (node instanceof TitledPane titledPane) {
-            if (titledPane.getText() != null) {
-                titledPane.setText(tr(titledPane.getText()));
-            }
-            if (titledPane.getContent() != null) {
-                translateNode(titledPane.getContent());
-            }
-        } else if (node instanceof MenuButton menuButton) {
-            if (menuButton.getText() != null) {
-                menuButton.setText(tr(menuButton.getText()));
-            }
-            for (MenuItem item : menuButton.getItems()) {
-                if (item.getText() != null && !Boolean.TRUE.equals(item.getProperties().get(I18N_MARKER))) {
-                    item.setText(tr(item.getText()));
-                    item.getProperties().put(I18N_MARKER, Boolean.TRUE);
-                }
-            }
+            installLiveTranslation(textNode.getProperties(), textNode.textProperty());
         }
 
         if (node instanceof TextInputControl textInput) {
             if (textInput.getPromptText() != null && !textInput.getPromptText().trim().isEmpty()) {
                 textInput.setPromptText(tr(textInput.getPromptText()));
             }
+            installLiveTranslation(textInput.getProperties(), textInput.promptTextProperty());
         }
 
         if (node instanceof ComboBox comboBox) {
             if (comboBox.getPromptText() != null && !comboBox.getPromptText().trim().isEmpty()) {
                 comboBox.setPromptText(tr(comboBox.getPromptText()));
             }
-            if (!Boolean.TRUE.equals(comboBox.getProperties().get("i18n_combo_cell_set"))) {
+            installLiveTranslation(comboBox.getProperties(), comboBox.promptTextProperty());
+            if (!Boolean.TRUE.equals(comboBox.getProperties().get("i18n_combo_cell_set"))
+                    && comboBox.getCellFactory() == null && comboBox.getButtonCell() == null) {
                 comboBox.getProperties().put("i18n_combo_cell_set", Boolean.TRUE);
                 try {
                     comboBox.setCellFactory(lv -> new ListCell<Object>() {
@@ -310,7 +308,8 @@ public class I18nService {
         }
 
         if (node instanceof ChoiceBox choiceBox) {
-            if (!Boolean.TRUE.equals(choiceBox.getProperties().get("i18n_choice_cell_set"))) {
+            if (!Boolean.TRUE.equals(choiceBox.getProperties().get("i18n_choice_cell_set"))
+                    && choiceBox.getConverter() == null) {
                 choiceBox.getProperties().put("i18n_choice_cell_set", Boolean.TRUE);
                 try {
                     choiceBox.setConverter(new javafx.util.StringConverter<Object>() {
@@ -331,11 +330,28 @@ public class I18nService {
         if (node instanceof Control control && control.getTooltip() != null) {
             Tooltip tt = control.getTooltip();
             if (tt.getText() != null && !Boolean.TRUE.equals(tt.getProperties().get(I18N_MARKER))) {
-                tt.setText(tr(tt.getText()));
+                translateProperty(tt.getProperties(), tt.textProperty());
                 tt.getProperties().put(I18N_MARKER, Boolean.TRUE);
             }
         }
 
         node.getProperties().put(I18N_MARKER, Boolean.TRUE);
+    }
+
+    private static void translateProperty(Map<Object, Object> properties, Property<String> property) {
+        if (property.getValue() != null && !property.getValue().trim().isEmpty()) {
+            property.setValue(tr(property.getValue()));
+        }
+        installLiveTranslation(properties, property);
+    }
+
+    private static void installLiveTranslation(Map<Object, Object> properties, Property<String> property) {
+        if (Boolean.TRUE.equals(properties.get(I18N_LIVE_MARKER))) return;
+        properties.put(I18N_LIVE_MARKER, Boolean.TRUE);
+        property.addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isBlank()) return;
+            String translated = tr(newValue);
+            if (!Objects.equals(newValue, translated)) property.setValue(translated);
+        });
     }
 }
