@@ -286,13 +286,40 @@ public class HospitalHealRoutine extends DelayedTask {
 
             case INPUT:
                 logInfo(routineLogHospitalLine("Inputting batch amount: " + batchedAmountToHeal));
-                tapInside(TROOP_1_INPUT_BOX_CENTER, TROOP_1_INPUT_BOX_CENTER, 1, 1500);
-                emuManager.clearText(EMULATOR_NUMBER, 6);
-                emuManager.writeText(EMULATOR_NUMBER, String.valueOf(batchedAmountToHeal));
-                sleepTask(1000);
-                // hide keyboard by clicking empty area inside popup
-                tapInside(new PointData(360, 320), new PointData(360, 320), 1, 500);
-                state = HospitalHealState.START;
+                boolean inputVerified = false;
+                for (int attempt = 0; attempt < 2; attempt++) {
+                    tapInside(TROOP_1_INPUT_BOX_CENTER, TROOP_1_INPUT_BOX_CENTER, 1, 1500);
+                    emuManager.clearText(EMULATOR_NUMBER, 6);
+                    emuManager.writeText(EMULATOR_NUMBER, String.valueOf(batchedAmountToHeal) + "\n");
+                    sleepTask(1000);
+                    // hide keyboard by clicking empty area inside popup
+                    tapInside(new PointData(360, 320), new PointData(360, 320), 1, 500);
+                    
+                    // OCR verification of the input box
+                    String readBackRaw = null;
+                    try {
+                        readBackRaw = provider.extractText(null, TROOP_1_INPUT_BOX_TL, TROOP_1_INPUT_BOX_BR);
+                    } catch (Exception e) {
+                        logWarning(routineLogHospitalLine("Exception while reading back troop input OCR: " + e.getMessage()));
+                    }
+                    
+                    long readBackVal = dev.frostguard.vision.convert.CompactGameNumberParser.parseCompactNumber(readBackRaw);
+                    if (readBackVal == batchedAmountToHeal) {
+                        logInfo(routineLogHospitalLine("Input amount verified via OCR: " + readBackVal));
+                        inputVerified = true;
+                        break;
+                    } else {
+                        logWarning(routineLogHospitalLine("Input amount OCR mismatch: expected " + batchedAmountToHeal
+                                + ", read '" + readBackRaw + "' (" + readBackVal + "). Retrying..."));
+                    }
+                }
+                
+                if (inputVerified) {
+                    state = HospitalHealState.START;
+                } else {
+                    logWarning(routineLogHospitalLine("Failed to verify input amount after retries; aborting to avoid improper heal batches."));
+                    state = HospitalHealState.ABORT;
+                }
                 break;
 
             case START:
@@ -325,8 +352,9 @@ public class HospitalHealRoutine extends DelayedTask {
                 logInfo(routineLogHospitalLine("Waiting 30 seconds for alliance helps to apply..."));
                 sleepTask(30000);
                 
-                PointData monitorTl = new PointData(100, 800); // Bottom half of screen
-                PointData monitorBr = new PointData(620, 1200);
+                dev.frostguard.api.domain.AreaData healTimeArea = dev.frostguard.engine.nav.CommonGameAreas.HOSPITAL_HEAL_TIME_OCR_AREA;
+                PointData monitorTl = healTimeArea.topLeft();
+                PointData monitorBr = healTimeArea.bottomRight();
                 
                 Duration remaining = durationHelper.attemptRecognition(
                     monitorTl,
@@ -337,6 +365,20 @@ public class HospitalHealRoutine extends DelayedTask {
                     GameTimeUtils::isAcceptedFormat,
                     GameTimeUtils::parseDuration
                 );
+                
+                if (remaining == null) {
+                    PointData fallbackTl = new PointData(100, 800);
+                    PointData fallbackBr = new PointData(620, 1200);
+                    remaining = durationHelper.attemptRecognition(
+                        fallbackTl,
+                        fallbackBr,
+                        2,
+                        500L,
+                        null,
+                        GameTimeUtils::isAcceptedFormat,
+                        GameTimeUtils::parseDuration
+                    );
+                }
                 
                 int configuredMaxWait = resolveConfigInt(ConfigurationKeyEnum.HOSPITAL_HEAL_MAX_WAIT_MINUTES_INT, 30);
                 
