@@ -45,10 +45,7 @@
 
 数值解析器 [`CompactGameNumberParser.java`](../modules/vision/src/main/java/dev/frostguard/vision/convert/CompactGameNumberParser.java) 支持整数、千分位及 `K/M` 缩写，并对溢出做保护。候选模型已把成员人数、当前兵量、集结总容量和剩余容量拆成独立字段；策略会拒绝关键几何、发起人、采集时间或数值字段缺失及内部不一致的候选，并分别应用三个门槛。候选签名使用“采集时间＋剩余时间”推导的预计结束时间桶，避免剩余倒计时自然递减时绕过 TTL。TTL 按 profile 和活动实例隔离，具备 300 秒默认期限、精确边界失效、严格 256 条并发容量限制、活动范围清理和系统时钟回拨清空保护。
 
-启用 `BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL` 后，活动达到 `BEAR_TRAP_FRENZY_START_MINUTE_INT`（默认 22 分钟）会放宽成员数限制。`BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING` 至 `..._6_...` 可为六次加入分别选择 1～8 号保存编队或 `No Flag`；不可用编队不会被盲目点击。
-
-> [!WARNING]
-> 当前仓库没有可由真实保存帧证明的集结卡片 ROI 和字段解析器。旧实现曾用固定 `1/6`、固定主车名和固定倒计时代替真实识别，现已移除。高级开关开启时任务会明确告警并停止高级加入，不再使用伪造数据做出征决策；关闭高级开关仍可使用上游兼容路径。所需素材和恢复步骤已登记在[打熊与医院画面素材待办](task/bear-rally-hospital-recovery-plan.md#当前待办事件等待真实画面素材)。
+启用 `BEAR_TRAP_FRENZY_MODE_ENABLED_BOOL` 后，活动达到 `BEAR_TRAP_FRENZY_START_MINUTE_INT`（默认 22 分钟）会放宽成员数限制。`BEAR_TRAP_JOIN_MARCH_1_FLAG_STRING` 至 `..._6_...` 可为六次加入分别选择 1～8 号保存编队或 `No Flag`；不可用编队不会被盲目点击。高级出征支持动态卡片扫描（`BearRallyScanner`）、出征部署确认、队列满/同目标安全检测以及基于活动实例的 TTL 去重缓存。
 
 ## 2. 手动集结加入任务
 
@@ -62,11 +59,11 @@
 
 相关实现：[`HospitalHealRoutine.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/HospitalHealRoutine.java)、[`HealBatchCalculator.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HealBatchCalculator.java)、[`HospitalSchedulePolicy.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalSchedulePolicy.java) 和 [`HospitalHealState.java`](../modules/tasks/src/main/java/dev/frostguard/tasks/city/hospital/HospitalHealState.java)。
 
-本项目新增医院任务及控制面板。入口由 `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` 和 `HOSPITAL_HEAL_CITY_ENABLED_BOOL` 控制：优先尝试野外快捷入口，失败后可回退到城内医院。两者都关闭时直接退出，不触屏。当前仓库只有野外快捷入口和治疗按钮的真实模板；城内医院模板缺失时会明确告警并跳过，绝不盲点固定坐标。补齐城内入口所需图片已登记在[同一待办](task/bear-rally-hospital-recovery-plan.md#当前待办事件等待真实画面素材)。
+本项目新增医院任务及控制面板。入口由 `HOSPITAL_HEAL_FIELD_ENABLED_BOOL` 和 `HOSPITAL_HEAL_CITY_ENABLED_BOOL` 控制：优先尝试野外快捷入口，失败后可回退到城内医院。两者都关闭时直接退出，不触屏。当前仓库已补齐野外快捷入口、城内医院建筑及治疗按钮模板。
 
-当前代码采用显式状态机：发现入口 → 确认治疗页 → 读取单兵治疗时间 → 计算本批数量 → 治疗/联盟帮助 → 等待或结束。每轮执行会重置批次和 OCR 状态，联盟帮助复用现有模板，状态循环带 20 步安全上限。已有野外医院基础流程继续使用“联盟帮助总减免 ÷ 单兵治疗时间”的兼容批次算法；未来可靠读取伤兵总数后，才切换到限制在伤兵总数以内的精确算法。联盟帮助参数不可用时会在点击治疗前停止。退出调度会区分无入口、零伤兵、配置未支持、识别失败和治疗进行中，异常按退避重排，治疗中按剩余时间加缓冲重排。
+当前代码采用显式状态机：发现入口 → 确认治疗页（智能切换全选状态） → 读取伤兵总数与单兵治疗时间 → 计算本批数量（智能批次控制） → 输入数量并执行 OCR 回读校验 → 治疗/联盟帮助 → 监控倒计时或调度结束。每轮执行会重置批次和 OCR 状态，联盟帮助复用现有模板，状态循环带 20 步安全上限。已有野外医院基础流程继续支持兼容批次算法与精确伤兵算法；输入数量经 OCR 回读验证一致后才点击治疗，若多次校验不一致则安全中止（ABORT）。退出调度会区分无入口、零伤兵、配置未支持、识别失败和治疗进行中，异常按退避重排，治疗中按剩余时间加缓冲重排。
 
-伤兵总数读取、数量输入 OCR 回读、目标兵阶和加速分支仍未闭环，因此当前医院功能只能视为部分实现。医院总开关和已有野外入口保持可用；城内入口和加速控件继续在 UI 中禁用并显示原因。后续高级能力不得改变普通打熊兼容路径，也不得以“高级功能未完成”为由关闭或缩减已有野外医院基础流程。
+目前基础治疗流程与安全回读已闭环，高级加速分支（`HOSPITAL_HEAL_USE_SPEEDUP_BOOL`）仍待获取加速弹窗真实素材后完成，在 UI 中保持禁用。后续高级能力不得改变普通打熊兼容路径，也不得以“高级功能未完成”为由关闭或缩减已有野外医院基础流程。
 
 本项目同时补齐 `HOSPITAL_FIELD_ICON`、`HOSPITAL_HEAL_BUTTON` 等模板映射及真实图片资源，否则任务虽存在但无法可靠找到入口和治疗按钮。
 
