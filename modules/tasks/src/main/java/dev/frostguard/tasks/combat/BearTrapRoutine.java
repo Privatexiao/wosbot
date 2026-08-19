@@ -822,6 +822,12 @@ private void manageJoinRallies(int freeMarches) {
     private BearRallyDedupCache dedupCache = new BearRallyDedupCache();
 
     private void manageAdvancedJoinRallies(int freeMarches) {
+        if (freeMarches <= 0) {
+            logInfo(routineLogBearTrapLine("Zero free marches available for Advanced Rally Join"));
+            navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
+            return;
+        }
+
         logInfo(routineLogBearTrapLine("Scanning for joinable Bear Rally candidates (Advanced Mode)..."));
         
         BotOcrEngine ocrProvider = new BotOcrEngine(emuManager, EMULATOR_NUMBER);
@@ -864,8 +870,38 @@ private void manageJoinRallies(int freeMarches) {
                     continue; // try next candidate if any, or wait for next iteration
                 }
                 
+                ImageSearchResultData deploy = templateSearchHelper.locatePattern(
+                        BEAR_DEPLOY_BUTTON,
+                        SearchConfig.builder()
+                                .withThreshold(90)
+                                .withMaxAttempts(TEMPLATE_SEARCH_RETRIES_MAX_VALUE)
+                                .build());
+
+                if (!deploy.isFound()) {
+                    logWarning(routineLogBearTrapLine("Deploy button not detected after selecting flag. Cancelling join."));
+                    pressBack();
+                    continue;
+                }
+
+                tapInside(deploy);
+                sleepTask(500);
+
+                if (deploymentHelper.isMarchQueueFull()) {
+                    logWarning(routineLogBearTrapLine("March queue is full after tapping deploy."));
+                    pressBack();
+                    break;
+                }
+
+                if (deploymentHelper.isSameTargetDialog()) {
+                    logWarning(routineLogBearTrapLine("A march is already targeting this rally; cancelling duplicate deployment."));
+                    pressBack();
+                    sleepTask(300);
+                    pressBack();
+                    continue;
+                }
+
                 dedupCache.markJoined(scope, key);
-                logInfo(routineLogBearTrapLine("Deployment successful."));
+                logInfo(routineLogBearTrapLine("Deployment successful for candidate: " + key));
                 navigationHelper.ensureCorrectScreenLocation(LaunchPoint.ANY);
                 return; // Only join one per iteration to avoid spamming and UI states
             } else {

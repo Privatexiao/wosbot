@@ -23,14 +23,36 @@ public class BearRallyScanner {
 
     private static final Logger log = LoggerFactory.getLogger(BearRallyScanner.class);
     
+    @FunctionalInterface
+    public interface PatternLocator {
+        List<ImageSearchResultData> locate(TemplatesEnum template, TemplateSearchHelper.SearchConfig config);
+    }
+
+    @FunctionalInterface
+    public interface TextExtractor {
+        String extract(PointData topLeft, PointData bottomRight);
+    }
+
     private final EmulatorController emulator;
-    private final BotOcrEngine ocrEngine;
-    private final TemplateSearchHelper searchHelper;
+    private final PatternLocator patternLocator;
+    private final TextExtractor textExtractor;
 
     public BearRallyScanner(EmulatorController emulator, BotOcrEngine ocrEngine, TemplateSearchHelper searchHelper) {
         this.emulator = emulator;
-        this.ocrEngine = ocrEngine;
-        this.searchHelper = searchHelper;
+        this.patternLocator = searchHelper != null ? searchHelper::locateAllPatterns : (t, c) -> List.of();
+        this.textExtractor = ocrEngine != null ? (tl, br) -> {
+            try {
+                return ocrEngine.extractText(null, tl, br);
+            } catch (Exception e) {
+                return null;
+            }
+        } : (tl, br) -> null;
+    }
+
+    public BearRallyScanner(PatternLocator patternLocator, TextExtractor textExtractor) {
+        this.emulator = null;
+        this.patternLocator = patternLocator != null ? patternLocator : (t, c) -> List.of();
+        this.textExtractor = textExtractor != null ? textExtractor : (tl, br) -> null;
     }
 
     /**
@@ -41,19 +63,20 @@ public class BearRallyScanner {
         List<BearRallyCandidate> candidates = new ArrayList<>();
         
         // Use the default matching params but maybe higher confidence.
-        List<ImageSearchResultData> joinButtons = searchHelper.locateAllPatterns(
+        List<ImageSearchResultData> joinButtons = patternLocator.locate(
                 TemplatesEnum.BEAR_JOIN_PLUS_ICON, 
                 TemplateSearchHelper.SearchConfig.builder().withThreshold(80).build()
         );
         
-        if (joinButtons.isEmpty()) {
+        if (joinButtons == null || joinButtons.isEmpty()) {
             return candidates;
         }
         
         // Process from top to bottom
-        joinButtons.sort(Comparator.comparingInt(img -> img.getPoint().getY()));
+        List<ImageSearchResultData> sortedButtons = new ArrayList<>(joinButtons);
+        sortedButtons.sort(Comparator.comparingInt(img -> img.getPoint().getY()));
         
-        for (ImageSearchResultData btn : joinButtons) {
+        for (ImageSearchResultData btn : sortedButtons) {
             PointData p = btn.getPoint();
             // p is the top-left of the match
             
@@ -109,11 +132,7 @@ public class BearRallyScanner {
             new PointData(CommonGameAreas.BEAR_TRAP_INITIATOR_X1, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_INITIATOR_DY1),
             new PointData(CommonGameAreas.BEAR_TRAP_INITIATOR_X2, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_INITIATOR_DY2)
         );
-        try {
-            return ocrEngine.extractText(null, area.topLeft(), area.bottomRight());
-        } catch (Exception e) {
-            return null;
-        }
+        return textExtractor.extract(area.topLeft(), area.bottomRight());
     }
 
     private String readMembers(PointData btnPoint) {
@@ -121,11 +140,7 @@ public class BearRallyScanner {
             new PointData(CommonGameAreas.BEAR_TRAP_MEMBERS_X1, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_MEMBERS_DY1),
             new PointData(CommonGameAreas.BEAR_TRAP_MEMBERS_X2, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_MEMBERS_DY2)
         );
-        try {
-            return ocrEngine.extractText(null, area.topLeft(), area.bottomRight());
-        } catch (Exception e) {
-            return null;
-        }
+        return textExtractor.extract(area.topLeft(), area.bottomRight());
     }
 
     private String readCapacity(PointData btnPoint) {
@@ -133,11 +148,7 @@ public class BearRallyScanner {
             new PointData(CommonGameAreas.BEAR_TRAP_CAPACITY_X1, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_CAPACITY_DY1),
             new PointData(CommonGameAreas.BEAR_TRAP_CAPACITY_X2, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_CAPACITY_DY2)
         );
-        try {
-            return ocrEngine.extractText(null, area.topLeft(), area.bottomRight());
-        } catch (Exception e) {
-            return null;
-        }
+        return textExtractor.extract(area.topLeft(), area.bottomRight());
     }
 
     private String readCountdown(PointData btnPoint) {
@@ -145,10 +156,6 @@ public class BearRallyScanner {
             new PointData(CommonGameAreas.BEAR_TRAP_COUNTDOWN_X1, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY1),
             new PointData(CommonGameAreas.BEAR_TRAP_COUNTDOWN_X2, btnPoint.getY() + CommonGameAreas.BEAR_TRAP_COUNTDOWN_DY2)
         );
-        try {
-            return ocrEngine.extractText(null, area.topLeft(), area.bottomRight());
-        } catch (Exception e) {
-            return null;
-        }
+        return textExtractor.extract(area.topLeft(), area.bottomRight());
     }
 }
