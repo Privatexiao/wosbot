@@ -28,8 +28,11 @@ public final class CompactGameNumberParser {
             return -1L;
         }
 
-        // Clean thousand separators and leading/trailing whitespace
-        String cleaned = input.replaceAll(",", "").trim().toUpperCase(Locale.ROOT);
+        String trimmed = input.trim();
+        if (trimmed.contains(",") && !trimmed.matches("[0-9]{1,3}(?:,[0-9]{3})+(?:\\.[0-9]+)?\\s*[KMkm]?")) {
+            return -1L;
+        }
+        String cleaned = trimmed.replace(",", "").toUpperCase(Locale.ROOT);
         Matcher matcher = COMPACT_NUMBER_PATTERN.matcher(cleaned);
         if (!matcher.matches()) {
             return -1L;
@@ -55,7 +58,7 @@ public final class CompactGameNumberParser {
                 }
             }
 
-            long result = baseValue.longValue();
+            long result = baseValue.longValueExact();
             return result >= 0 ? result : -1L;
         } catch (Exception ex) {
             return -1L;

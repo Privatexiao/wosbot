@@ -29,5 +29,9 @@ public class CompactGameNumberParserTest {
         assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("-500"));
         assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("abc"));
         assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("1.2.3K"));
+        assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("1,2,3"));
+        assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("12,34"));
+        assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("9223372036854775808"));
+        assertEquals(-1L, CompactGameNumberParser.parseCompactNumber("9223372036854.776M"));
     }
 }
