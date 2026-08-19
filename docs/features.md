@@ -25,6 +25,7 @@ the release notes for recent changes.
 - Resource gathering
 - Hero recruitment
 - Crystal Lab and War Academy collection
+- Fork-specific hospital batch healing is available through the field shortcut; the city-building entry remains pending real-frame calibration
 - Daily missions, Mail, VIP, and recurring city rewards
 
 ## Pets and exploration
@@ -70,4 +71,6 @@ It does not modify the game client.
 
 For required emulator and game settings, see the
 [installation guide](installation.md). For implementation boundaries and
-technical ownership, see [architecture.md](architecture.md).
+technical ownership, see [architecture.md](architecture.md). Fork-specific
+behavior, safety boundaries, and verification status are tracked in
+[custom-features.md](custom-features.md).

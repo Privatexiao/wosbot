@@ -4,7 +4,7 @@
 
 本计划旨在 Frostguard 现有 Java 21/Maven 架构下完成三项核心能力升级：
 1. **打熊集结高级筛选与出征闭环**：基于同帧动态相对 ROI 的卡片识别、多维度条件决策策略、狂热放宽模式、实例级分域 TTL 去重缓存、以及严格的出征部署与弹窗安全检测。
-2. **医院智能批量治疗与防错回读**：支持野外快捷与城内建筑双入口、全选状态智能反转、伤兵总数读取、精确与兼容双模式批次计算、数量输入 OCR 回读校验、倒计时区域校准及有界调度重排。
+2. **医院智能批量治疗与防错回读**：野外快捷入口已接入；城内入口等待真实模板。流程包含页面身份确认、全选反转、伤兵读取、精确与兼容批次计算、OCR 回读和有界调度。
 3. **运行时异常取证与有界恢复**：结构化异常帧截取脱敏保存、队列级状态恢复与退避熔断。
 
 ### 1.1 当前实施状态矩阵
@@ -13,17 +13,17 @@
 | --- | --- | --- |
 | **普通打熊兼容加入** | ✅ 已保留 | 维持上游默认加号点击与出征流程，高级开关关闭时不改变原行为 |
 | **打熊紧凑数值解析** | ✅ 已完成 | `CompactGameNumberParser` 支持整数、千分位、`K/M` 缩写与防溢出，带独立单元测试 |
-| **打熊卡片扫描 (`BearRallyScanner`)** | ✅ 已完成 | 基于 `BEAR_JOIN_PLUS_ICON` 锚点计算发起人、成员数、容量、倒计时 4 组相对 ROI，解耦函数式接口支持无 ADB 极速测试 |
+| **打熊卡片扫描 (`BearRallyScanner`)** | ✅ 逻辑完成，待真实帧 | 模板匹配后 OCR 复用同一缓存帧；匹配中心按模板尺寸换算为左上角锚点；4 组相对 ROI 有单元测试 |
 | **打熊决策策略与狂热模式** | ✅ 已完成 | `BearRallyDecisionPolicy` 分别过滤成员数、总容量、剩余容量门槛；狂热模式在 22 分钟后自动放宽成员数门槛 |
 | **打熊分域 TTL 去重缓存** | ✅ 已完成 | `BearRallyDedupCache` 复合签名去重，300 秒过期、256 条容量上限、时钟回拨安全重置，仅在出征成功后写入 |
-| **打熊出征部署与弹窗安全闭环** | ✅ 已完成 | 6 编队独立轮换、`BEAR_DEPLOY_BUTTON` 定位出征、`isMarchQueueFull()` 和 `isSameTargetDialog()` 弹窗检测与回退 |
-| **野外/城内双入口策略** | ✅ 已完成 | 独立配置开关控制，优先 WORLD 快捷图标 `HOSPITAL_FIELD_ICON`，未出现时平滑回退至 HOME 城内建筑 `HOSPITAL_CITY_BUILDING` |
+| **打熊出征部署与弹窗安全闭环** | ✅ 逻辑完成，待实机 | 6 编队轮换；队列满/同目标拦截；Deploy 必须消失才登记成功 |
+| **医院入口策略** | ⚠️ 部分完成 | WORLD 快捷图标已接入；`HOSPITAL_CITY_BUILDING` 缺少真实模板，城内入口保持不支持且不盲点 |
 | **医院全选状态智能反转** | ✅ 已完成 | 循环检测 Heal 按钮状态，若亮起则点击快速选择 `(134, 852)` 清零所有兵种选择，输入 1 激活治疗按钮 |
 | **伤兵总数读取与智能批次计算** | ✅ 已完成 | `HOSPITAL_WOUNDED_COUNT_OCR_AREA` 提取伤兵总数；`HealBatchCalculator` 支持精确模式 `[1, woundedCount]` 与兼容模式 |
-| **数量输入 OCR 回读防错** | ✅ 已完成 | 写入批次数量后收起键盘，重新提取输入框文本校验，不一致最多重试 2 次，多次不一致安全切换至 `ABORT` |
+| **数量输入 OCR 回读防错** | ✅ 已完成 | 有效 OCR 不一致时最多重试 2 次并中止；OCR 不可用时仅在 Heal 已激活的独立证据下走基础兼容路径 |
 | **倒计时监控与调度重排** | ✅ 已完成 | 优先使用 `HOSPITAL_HEAL_TIME_OCR_AREA` 监控治疗剩余时间；根据退出结果（进行中/无伤兵/识别失败/配置不支持）精确重排 |
-| **手动集结安全检查** | ✅ 已保留 | 绿色像素判定、出征数限制、队列满与同目标弹窗校验 |
-| **异常 PNG 取证** | ✅ 已接入 | 任务异常时自动截图并脱敏写入工作区 `logs/screenshots/` |
+| **手动集结安全检查** | ✅ 已保留 | 绿色像素判定、出征数限制、Equalize 必须存在、阻断弹窗与 Deploy 消失确认 |
+| **异常 PNG 取证** | ✅ 已接入 | 全帧像素化，metadata 最小化，成对写入；只对 `exception_*` 按 7 天/100 文件/50MiB 清理 |
 | **医院加速安全分支** | ⏳ 待素材 | 配置项已预留，待获取加速弹窗真实素材后完成安全校验分支，目前在 UI 中安全禁用 |
 
 ---
@@ -33,7 +33,7 @@
 ### 2.1 动态锚点扫描几何设计
 打熊集结列表支持多卡片并存。`BearRallyScanner` 在同一帧画面中先使用 `TemplatesEnum.BEAR_JOIN_PLUS_ICON` 模板定位所有可用加号按钮坐标 $(P_x, P_y)$，并按 $P_y$ 升序排序。
 
-以每个加号按钮左上角 $(P_x, P_y)$ 为基准，计算卡片各字段的相对 OCR 识别区域：
+匹配结果是模板中心点；有模板尺寸时先换算为匹配区域左上角 $(P_x, P_y)$。模板定位与后续 OCR 使用控制器同一缓存帧，再计算各字段区域：
 
 | 字段名称 | X 范围 ($X_1 \sim X_2$) | Y 相对偏移 ($DY_1 \sim DY_2$) | 示例识别文本 | 解析结果 |
 | --- | --- | --- | --- | --- |
@@ -75,7 +75,7 @@ flowchart TD
   5. 弹窗安全检查：
      - 若触发 `deploymentHelper.isMarchQueueFull()`：说明队列已满，`pressBack()` 并中止本轮出征；
      - 若触发 `deploymentHelper.isSameTargetDialog()`：说明已有部队前往同一目标，`pressBack()` 两次关闭弹窗与出征页，继续评估下一个候选；
-  6. 仅在无弹窗阻塞、出征成功完成后，才执行 `dedupCache.markJoined(scope, key)`，防止误锁 TTL。
+  6. 无弹窗后继续检查 Deploy 按钮已经消失；只有该正向证据成立才执行 `dedupCache.markJoined(scope, key)`。
 
 ---
 
@@ -108,8 +108,7 @@ stateDiagram-v2
     ENTER_FIELD --> ENTER_CITY: 图标未出现且启用城内入口
     ENTER_FIELD --> COMPLETE: 图标未出现且未启用城内入口 (NO_ENTRY)
     
-    ENTER_CITY --> CONFIRM_HEAL_SCREEN: 检测到城内建筑并点击
-    ENTER_CITY --> COMPLETE: 城内建筑未找到 (NO_ENTRY)
+    ENTER_CITY --> COMPLETE: 城内模板缺失或建筑未找到 (NO_ENTRY)
     
     CONFIRM_HEAL_SCREEN --> SELECT_TIER: 智能取消全选并在第一槽位输入1成功
     CONFIRM_HEAL_SCREEN --> COMPLETE: 输入1后Heal按钮仍未亮起 (NO_WOUNDED)
@@ -123,11 +122,11 @@ stateDiagram-v2
     CALCULATE --> INPUT: 成功计算出批次数量 (>0)
     CALCULATE --> ABORT: 帮助参数无效/批次 <= 0
     
-    INPUT --> START: 写入批次并经 OCR 回读验证一致
-    INPUT --> ABORT: OCR 回读重试仍不一致
+    INPUT --> START: OCR 一致，或 OCR 不可用但 Heal 已明确激活
+    INPUT --> ABORT: 有效 OCR 不一致，或缺少兼容状态证据
     
-    START --> REQUEST_HELP: 点击治疗按钮成功
-    START --> ABORT: 治疗按钮未找到
+    START --> REQUEST_HELP: 点击后 Heal 按钮消失
+    START --> ABORT: 治疗按钮未找到或点击后仍存在
     
     REQUEST_HELP --> MONITOR: 点击联盟帮助完成
     
@@ -139,22 +138,26 @@ stateDiagram-v2
 ```
 
 ### 3.2 关键步骤技术细节
-1. **全选智能反转算法**：
+1. **页面身份与兼容转换证据**：
+   - 点击经过模板确认的医院入口后，优先使用伤兵区域 OCR 或彩色 Heal 模板确认治疗页；
+   - 两项视觉证据暂时不可用时，只有“已确认的医院入口图标在点击后消失”才能作为基础兼容转换证据；
+   - 无任何身份或转换证据时进入 `ABORT`，不执行后续固定区域点击。
+2. **全选智能反转算法**：
    - 检查 `HOSPITAL_HEAL_BUTTON` 是否存在：
      - 若存在且阈值达标（按钮为彩色，表示游戏默认全选了伤兵）：点击快速选择切换点 `(134, 852)`，等待 1500ms；
      - 循环最多 3 次，直至治疗按钮变为灰色未激活状态；
      - 随后点击第一兵种输入框 `TROOP_1_INPUT_BOX_CENTER (590, 390)`，清除文本并写入 `1\n`，激活治疗按钮为可用状态。
-2. **批次计算公式**：
+3. **批次计算公式**：
    - 最大帮助总减免秒数：$$T_{\text{help}} = \text{helpCount} \times \text{reductionSec}$$
    - **精确批次**（当读取到 $\text{totalWounded} > 0$ 时）：
      $$\text{batchSize} = \max\left(1, \min\left(\text{totalWounded}, \left\lfloor \frac{T_{\text{help}}}{\text{singleTroopTimeSec}} \right\rfloor\right)\right)$$
    - **兼容批次**（当未能置信读取伤兵总数时）：
      $$\text{batchSize} = \max\left(1, \left\lfloor \frac{T_{\text{help}}}{\text{singleTroopTimeSec}} \right\rfloor\right)$$
-3. **输入 OCR 回读校验**：
+4. **输入 OCR 回读校验**：
    - 写入目标批次数后，调用 `provider.extractText` 读取输入框 `[540, 360, 640, 420]`。
    - 解析文本数值，若 $\text{readBackVal} == \text{batchedAmountToHeal}$，标记校验通过并进入 `START`；
-   - 若不匹配，执行清空并重新输入，最多重试 2 次；若依然不匹配则切换为 `ABORT`，绝不盲点治疗。
-4. **调度重排策略矩阵 (`HospitalSchedulePolicy`)**：
+   - 有效数值不匹配时最多重试 2 次，仍不匹配则 `ABORT`；OCR 无有效数值时，仅在 Heal 按钮已经激活时走基础兼容路径。
+5. **调度重排策略矩阵 (`HospitalSchedulePolicy`)**：
 
 | 退出状态 (`Outcome`) | 重排延迟 | 业务理由 |
 | --- | --- | --- |
@@ -171,16 +174,16 @@ stateDiagram-v2
 ### 4.1 测试用例覆盖清单
 | 测试类 | 覆盖模块 | 测试要点 |
 | --- | --- | --- |
-| `BearRallyScannerTest` | 打熊扫描器 | 0 候选空列表返回、多候选由上至下 Y 轴排序、各字段相对 ROI 提取与数值转换 |
+| `BearRallyScannerTest` | 打熊扫描器 | 空列表、排序、模板中心换算左上角、ROI 与数值转换 |
 | `BearRallyCandidateTest` | 打熊候选模型 | 倒计时自然衰减时复合签名的稳定性 |
 | `BearRallyDecisionPolicyTest` | 打熊决策策略 | 成员数门槛、总容量门槛、剩余容量门槛、狂热模式放宽、非法数值防御 |
-| `BearRallyDedupCacheTest` | 打熊去重缓存 | 实例级隔离、300 秒 TTL 过期、256 条并发容量限制、时钟回拨安全清空 |
+| `BearRallyDedupCacheTest` | 打熊去重缓存 | 活动实例隔离、300 秒 TTL、LRU、60 秒回拨容差 |
 | `HealBatchCalculatorTest` | 医院批次计算 | 精确模式伤兵截断、兼容模式计算、超大数值防溢出、非法耗时保护 |
 | `HospitalSchedulePolicyTest` | 医院调度策略 | 进行中时间加缓冲重排、识别失败退避、无伤兵轮询、非法配置长延迟 |
-| `ManualRallyJoinRoutineTest` | 手动集结 | 编队数量范围校验与归一化 |
+| `ManualRallyJoinRoutineTest` | 手动集结 | 编队范围与部署正向确认策略 |
 
 ### 4.2 编译与测试运行证据
-- **运行命令**：`.\mvnw.cmd -pl modules/tasks -am test`
+- **运行命令**：本机 Maven 3.9.16 执行受影响模块测试；当前 PowerShell 下 Maven Wrapper 自身启动失败。
 - **执行环境**：Java 21 (Temurin-21.0.12), Windows 11 PowerShell
 - **运行结果**：
   - `frostguard-api`: SUCCESS
@@ -188,4 +191,15 @@ stateDiagram-v2
   - `frostguard-vision`: SUCCESS
   - `frostguard-automation`: SUCCESS
   - `frostguard-tasks`: SUCCESS
-  - **总计运行测试**: 130 个，**0 失败，0 错误，0 跳过**。
+  - `modules/desktop -am test` 完整通过；Surefire 报告合计 565 个测试，0 失败、0 错误、0 跳过。
+  - 仍缺少 `720x1280` 未缩放真实帧与实机日志，高级打熊和医院不能标记为实机验证完成。
+
+### 4.3 下一步真实画面证据清单
+
+- [ ] 打熊联盟集结列表：至少同时显示两个可加入卡片，并清楚显示成员数、总容量、剩余容量和倒计时。
+- [ ] 野外 WORLD 完整画面：野外快捷医院图标可见，用于复核入口模板和点击后的页面转换。
+- [ ] 点击野外快捷医院图标后的完整治疗界面：伤兵数、数量框、治疗时间和 Heal 按钮区域可见。
+- [ ] 城内 HOME 完整画面：医院建筑完整可见，用于制作当前缺失的城内入口模板。
+- [ ] 点击城内医院后的完整治疗界面：用于确认城内入口结果是否与野外治疗页一致。
+- [ ] 治疗开始并请求联盟帮助后的完整页面：帮助状态或剩余倒计时可见。
+- [ ] 说明游戏界面语言。图片必须是未经裁剪、缩放的原始 PNG；玩家名和联盟名可以脱敏，但不得遮挡按钮、数值和 OCR 区域。
